@@ -1,0 +1,29 @@
+#!/bin/bash
+set -euo pipefail
+role=${1:-player}
+install -d -m 755 /run/sshd /run/frost
+install -d -m 700 /run/bootstrap
+install -m 600 /run/bootstrap/shadow /run/frost/shadow
+install -m 644 /run/bootstrap/authorized_keys /run/frost/authorized_keys
+install -d -m 700 /var/lib/frost/hostkeys
+printf '%s\n' "$role" > /run/frost/role
+if [[ ! -f /var/lib/frost/hostkeys/ssh_host_ed25519_key ]]; then
+    ssh-keygen -q -t ed25519 -N '' -f /var/lib/frost/hostkeys/ssh_host_ed25519_key
+fi
+# Docker initializes fresh named volumes from the ownership in the image.
+sshd_config=/etc/frost/sshd_config
+if [[ $role == gateway ]]; then
+    install -m 644 /run/bootstrap/entry-player.pub /run/frost/authorized_keys.player
+    install -m 644 /run/bootstrap/entry-score.pub /run/frost/authorized_keys.score
+    sshd_config=/etc/frost/gateway_sshd_config
+    python3 -m frost.gateway &
+elif [[ $role == scoreboard ]]; then
+    python3 -m frost.board &
+else
+    python3 -m frost.daemon &
+fi
+service_pid=$!
+/usr/sbin/sshd -D -e -f "$sshd_config" &
+ssh_pid=$!
+trap 'kill "$service_pid" "$ssh_pid" 2>/dev/null || true; wait || true' TERM INT EXIT
+wait -n "$service_pid" "$ssh_pid"

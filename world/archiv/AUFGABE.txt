@@ -1,0 +1,7 @@
+PASSWORT FINDEN  /  +150 Punkte und Heilung
+
+cat system.log                       Finde das geheime Wort.
+echo GEFUNDENES_WORT > abgabe/passwort.txt
+
+cp stern ~/rucksack/                  Starken Zauber mitnehmen.
+Weiter: cd ../zitadelle

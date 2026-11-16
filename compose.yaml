@@ -1,0 +1,1763 @@
+{
+  "name": "shell-game",
+  "services": {
+    "scoreboard": {
+      "image": "frostbyte:local",
+      "command": [
+        "scoreboard"
+      ],
+      "init": true,
+      "restart": "unless-stopped",
+      "read_only": true,
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "cap_drop": [
+        "NET_RAW"
+      ],
+      "pids_limit": 128,
+      "mem_limit": "256m",
+      "cpus": "1.0",
+      "ports": [
+        "${SSH_BIND:-0.0.0.0}:2200:22",
+        "${SCORE_BIND:-127.0.0.1}:8080:8080"
+      ],
+      "tmpfs": [
+        "/run:rw,nosuid,nodev,size=16m",
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+      ],
+      "volumes": [
+        "scoreboard-state:/var/lib/frost",
+        "scoreboard-home:/home/player",
+        "./secrets/scoreboard/shadow:/run/bootstrap/shadow:ro",
+        "./secrets/scoreboard/authorized_keys:/run/bootstrap/authorized_keys:ro",
+        "./secrets/scoreboard/tokens.json:/run/bootstrap/score_tokens:ro"
+      ],
+      "networks": [
+        "lane01",
+        "lane02",
+        "lane03",
+        "lane04",
+        "lane05",
+        "lane06",
+        "lane07",
+        "lane08",
+        "lane09",
+        "lane10",
+        "lane11",
+        "lane12",
+        "lane13",
+        "lane14",
+        "lane15",
+        "lane16",
+        "lane17",
+        "lane18",
+        "lane19",
+        "lane20",
+        "lane21",
+        "lane22",
+        "lane23"
+      ],
+      "logging": {
+        "driver": "json-file",
+        "options": {
+          "max-size": "5m",
+          "max-file": "2"
+        }
+      },
+      "build": {
+        "context": "."
+      },
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "python3",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health',timeout=2)"
+        ],
+        "interval": "10s",
+        "timeout": "3s",
+        "retries": 3
+      }
+    },
+    "player01": {
+      "image": "frostbyte:local",
+      "command": [
+        "player"
+      ],
+      "init": true,
+      "restart": "unless-stopped",
+      "read_only": true,
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "cap_drop": [
+        "NET_RAW"
+      ],
+      "pids_limit": 96,
+      "mem_limit": "256m",
+      "cpus": "0.50",
+      "ports": [
+        "${SSH_BIND:-0.0.0.0}:2201:22"
+      ],
+      "tmpfs": [
+        "/run:rw,nosuid,nodev,size=16m",
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+      ],
+      "volumes": [
+        "player01-state:/var/lib/frost",
+        "player01-home:/home/player",
+        "./secrets/player01/shadow:/run/bootstrap/shadow:ro",
+        "./secrets/player01/authorized_keys:/run/bootstrap/authorized_keys:ro",
+        "./secrets/player01/token:/run/bootstrap/score_token:ro"
+      ],
+      "networks": [
+        "lane01"
+      ],
+      "logging": {
+        "driver": "json-file",
+        "options": {
+          "max-size": "5m",
+          "max-file": "2"
+        }
+      },
+      "environment": {
+        "SCORE_URL": "http://scoreboard:8080"
+      },
+      "depends_on": {
+        "scoreboard": {
+          "condition": "service_healthy"
+        }
+      },
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "python3",
+          "-c",
+          "from frost.client import request; request()"
+        ],
+        "interval": "15s",
+        "timeout": "4s",
+        "retries": 3,
+        "start_period": "10s"
+      }
+    },
+    "player02": {
+      "image": "frostbyte:local",
+      "command": [
+        "player"
+      ],
+      "init": true,
+      "restart": "unless-stopped",
+      "read_only": true,
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "cap_drop": [
+        "NET_RAW"
+      ],
+      "pids_limit": 96,
+      "mem_limit": "256m",
+      "cpus": "0.50",
+      "ports": [
+        "${SSH_BIND:-0.0.0.0}:2202:22"
+      ],
+      "tmpfs": [
+        "/run:rw,nosuid,nodev,size=16m",
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+      ],
+      "volumes": [
+        "player02-state:/var/lib/frost",
+        "player02-home:/home/player",
+        "./secrets/player02/shadow:/run/bootstrap/shadow:ro",
+        "./secrets/player02/authorized_keys:/run/bootstrap/authorized_keys:ro",
+        "./secrets/player02/token:/run/bootstrap/score_token:ro"
+      ],
+      "networks": [
+        "lane02"
+      ],
+      "logging": {
+        "driver": "json-file",
+        "options": {
+          "max-size": "5m",
+          "max-file": "2"
+        }
+      },
+      "environment": {
+        "SCORE_URL": "http://scoreboard:8080"
+      },
+      "depends_on": {
+        "scoreboard": {
+          "condition": "service_healthy"
+        }
+      },
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "python3",
+          "-c",
+          "from frost.client import request; request()"
+        ],
+        "interval": "15s",
+        "timeout": "4s",
+        "retries": 3,
+        "start_period": "10s"
+      }
+    },
+    "player03": {
+      "image": "frostbyte:local",
+      "command": [
+        "player"
+      ],
+      "init": true,
+      "restart": "unless-stopped",
+      "read_only": true,
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "cap_drop": [
+        "NET_RAW"
+      ],
+      "pids_limit": 96,
+      "mem_limit": "256m",
+      "cpus": "0.50",
+      "ports": [
+        "${SSH_BIND:-0.0.0.0}:2203:22"
+      ],
+      "tmpfs": [
+        "/run:rw,nosuid,nodev,size=16m",
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+      ],
+      "volumes": [
+        "player03-state:/var/lib/frost",
+        "player03-home:/home/player",
+        "./secrets/player03/shadow:/run/bootstrap/shadow:ro",
+        "./secrets/player03/authorized_keys:/run/bootstrap/authorized_keys:ro",
+        "./secrets/player03/token:/run/bootstrap/score_token:ro"
+      ],
+      "networks": [
+        "lane03"
+      ],
+      "logging": {
+        "driver": "json-file",
+        "options": {
+          "max-size": "5m",
+          "max-file": "2"
+        }
+      },
+      "environment": {
+        "SCORE_URL": "http://scoreboard:8080"
+      },
+      "depends_on": {
+        "scoreboard": {
+          "condition": "service_healthy"
+        }
+      },
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "python3",
+          "-c",
+          "from frost.client import request; request()"
+        ],
+        "interval": "15s",
+        "timeout": "4s",
+        "retries": 3,
+        "start_period": "10s"
+      }
+    },
+    "player04": {
+      "image": "frostbyte:local",
+      "command": [
+        "player"
+      ],
+      "init": true,
+      "restart": "unless-stopped",
+      "read_only": true,
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "cap_drop": [
+        "NET_RAW"
+      ],
+      "pids_limit": 96,
+      "mem_limit": "256m",
+      "cpus": "0.50",
+      "ports": [
+        "${SSH_BIND:-0.0.0.0}:2204:22"
+      ],
+      "tmpfs": [
+        "/run:rw,nosuid,nodev,size=16m",
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+      ],
+      "volumes": [
+        "player04-state:/var/lib/frost",
+        "player04-home:/home/player",
+        "./secrets/player04/shadow:/run/bootstrap/shadow:ro",
+        "./secrets/player04/authorized_keys:/run/bootstrap/authorized_keys:ro",
+        "./secrets/player04/token:/run/bootstrap/score_token:ro"
+      ],
+      "networks": [
+        "lane04"
+      ],
+      "logging": {
+        "driver": "json-file",
+        "options": {
+          "max-size": "5m",
+          "max-file": "2"
+        }
+      },
+      "environment": {
+        "SCORE_URL": "http://scoreboard:8080"
+      },
+      "depends_on": {
+        "scoreboard": {
+          "condition": "service_healthy"
+        }
+      },
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "python3",
+          "-c",
+          "from frost.client import request; request()"
+        ],
+        "interval": "15s",
+        "timeout": "4s",
+        "retries": 3,
+        "start_period": "10s"
+      }
+    },
+    "player05": {
+      "image": "frostbyte:local",
+      "command": [
+        "player"
+      ],
+      "init": true,
+      "restart": "unless-stopped",
+      "read_only": true,
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "cap_drop": [
+        "NET_RAW"
+      ],
+      "pids_limit": 96,
+      "mem_limit": "256m",
+      "cpus": "0.50",
+      "ports": [
+        "${SSH_BIND:-0.0.0.0}:2205:22"
+      ],
+      "tmpfs": [
+        "/run:rw,nosuid,nodev,size=16m",
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+      ],
+      "volumes": [
+        "player05-state:/var/lib/frost",
+        "player05-home:/home/player",
+        "./secrets/player05/shadow:/run/bootstrap/shadow:ro",
+        "./secrets/player05/authorized_keys:/run/bootstrap/authorized_keys:ro",
+        "./secrets/player05/token:/run/bootstrap/score_token:ro"
+      ],
+      "networks": [
+        "lane05"
+      ],
+      "logging": {
+        "driver": "json-file",
+        "options": {
+          "max-size": "5m",
+          "max-file": "2"
+        }
+      },
+      "environment": {
+        "SCORE_URL": "http://scoreboard:8080"
+      },
+      "depends_on": {
+        "scoreboard": {
+          "condition": "service_healthy"
+        }
+      },
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "python3",
+          "-c",
+          "from frost.client import request; request()"
+        ],
+        "interval": "15s",
+        "timeout": "4s",
+        "retries": 3,
+        "start_period": "10s"
+      }
+    },
+    "player06": {
+      "image": "frostbyte:local",
+      "command": [
+        "player"
+      ],
+      "init": true,
+      "restart": "unless-stopped",
+      "read_only": true,
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "cap_drop": [
+        "NET_RAW"
+      ],
+      "pids_limit": 96,
+      "mem_limit": "256m",
+      "cpus": "0.50",
+      "ports": [
+        "${SSH_BIND:-0.0.0.0}:2206:22"
+      ],
+      "tmpfs": [
+        "/run:rw,nosuid,nodev,size=16m",
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+      ],
+      "volumes": [
+        "player06-state:/var/lib/frost",
+        "player06-home:/home/player",
+        "./secrets/player06/shadow:/run/bootstrap/shadow:ro",
+        "./secrets/player06/authorized_keys:/run/bootstrap/authorized_keys:ro",
+        "./secrets/player06/token:/run/bootstrap/score_token:ro"
+      ],
+      "networks": [
+        "lane06"
+      ],
+      "logging": {
+        "driver": "json-file",
+        "options": {
+          "max-size": "5m",
+          "max-file": "2"
+        }
+      },
+      "environment": {
+        "SCORE_URL": "http://scoreboard:8080"
+      },
+      "depends_on": {
+        "scoreboard": {
+          "condition": "service_healthy"
+        }
+      },
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "python3",
+          "-c",
+          "from frost.client import request; request()"
+        ],
+        "interval": "15s",
+        "timeout": "4s",
+        "retries": 3,
+        "start_period": "10s"
+      }
+    },
+    "player07": {
+      "image": "frostbyte:local",
+      "command": [
+        "player"
+      ],
+      "init": true,
+      "restart": "unless-stopped",
+      "read_only": true,
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "cap_drop": [
+        "NET_RAW"
+      ],
+      "pids_limit": 96,
+      "mem_limit": "256m",
+      "cpus": "0.50",
+      "ports": [
+        "${SSH_BIND:-0.0.0.0}:2207:22"
+      ],
+      "tmpfs": [
+        "/run:rw,nosuid,nodev,size=16m",
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+      ],
+      "volumes": [
+        "player07-state:/var/lib/frost",
+        "player07-home:/home/player",
+        "./secrets/player07/shadow:/run/bootstrap/shadow:ro",
+        "./secrets/player07/authorized_keys:/run/bootstrap/authorized_keys:ro",
+        "./secrets/player07/token:/run/bootstrap/score_token:ro"
+      ],
+      "networks": [
+        "lane07"
+      ],
+      "logging": {
+        "driver": "json-file",
+        "options": {
+          "max-size": "5m",
+          "max-file": "2"
+        }
+      },
+      "environment": {
+        "SCORE_URL": "http://scoreboard:8080"
+      },
+      "depends_on": {
+        "scoreboard": {
+          "condition": "service_healthy"
+        }
+      },
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "python3",
+          "-c",
+          "from frost.client import request; request()"
+        ],
+        "interval": "15s",
+        "timeout": "4s",
+        "retries": 3,
+        "start_period": "10s"
+      }
+    },
+    "player08": {
+      "image": "frostbyte:local",
+      "command": [
+        "player"
+      ],
+      "init": true,
+      "restart": "unless-stopped",
+      "read_only": true,
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "cap_drop": [
+        "NET_RAW"
+      ],
+      "pids_limit": 96,
+      "mem_limit": "256m",
+      "cpus": "0.50",
+      "ports": [
+        "${SSH_BIND:-0.0.0.0}:2208:22"
+      ],
+      "tmpfs": [
+        "/run:rw,nosuid,nodev,size=16m",
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+      ],
+      "volumes": [
+        "player08-state:/var/lib/frost",
+        "player08-home:/home/player",
+        "./secrets/player08/shadow:/run/bootstrap/shadow:ro",
+        "./secrets/player08/authorized_keys:/run/bootstrap/authorized_keys:ro",
+        "./secrets/player08/token:/run/bootstrap/score_token:ro"
+      ],
+      "networks": [
+        "lane08"
+      ],
+      "logging": {
+        "driver": "json-file",
+        "options": {
+          "max-size": "5m",
+          "max-file": "2"
+        }
+      },
+      "environment": {
+        "SCORE_URL": "http://scoreboard:8080"
+      },
+      "depends_on": {
+        "scoreboard": {
+          "condition": "service_healthy"
+        }
+      },
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "python3",
+          "-c",
+          "from frost.client import request; request()"
+        ],
+        "interval": "15s",
+        "timeout": "4s",
+        "retries": 3,
+        "start_period": "10s"
+      }
+    },
+    "player09": {
+      "image": "frostbyte:local",
+      "command": [
+        "player"
+      ],
+      "init": true,
+      "restart": "unless-stopped",
+      "read_only": true,
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "cap_drop": [
+        "NET_RAW"
+      ],
+      "pids_limit": 96,
+      "mem_limit": "256m",
+      "cpus": "0.50",
+      "ports": [
+        "${SSH_BIND:-0.0.0.0}:2209:22"
+      ],
+      "tmpfs": [
+        "/run:rw,nosuid,nodev,size=16m",
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+      ],
+      "volumes": [
+        "player09-state:/var/lib/frost",
+        "player09-home:/home/player",
+        "./secrets/player09/shadow:/run/bootstrap/shadow:ro",
+        "./secrets/player09/authorized_keys:/run/bootstrap/authorized_keys:ro",
+        "./secrets/player09/token:/run/bootstrap/score_token:ro"
+      ],
+      "networks": [
+        "lane09"
+      ],
+      "logging": {
+        "driver": "json-file",
+        "options": {
+          "max-size": "5m",
+          "max-file": "2"
+        }
+      },
+      "environment": {
+        "SCORE_URL": "http://scoreboard:8080"
+      },
+      "depends_on": {
+        "scoreboard": {
+          "condition": "service_healthy"
+        }
+      },
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "python3",
+          "-c",
+          "from frost.client import request; request()"
+        ],
+        "interval": "15s",
+        "timeout": "4s",
+        "retries": 3,
+        "start_period": "10s"
+      }
+    },
+    "player10": {
+      "image": "frostbyte:local",
+      "command": [
+        "player"
+      ],
+      "init": true,
+      "restart": "unless-stopped",
+      "read_only": true,
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "cap_drop": [
+        "NET_RAW"
+      ],
+      "pids_limit": 96,
+      "mem_limit": "256m",
+      "cpus": "0.50",
+      "ports": [
+        "${SSH_BIND:-0.0.0.0}:2210:22"
+      ],
+      "tmpfs": [
+        "/run:rw,nosuid,nodev,size=16m",
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+      ],
+      "volumes": [
+        "player10-state:/var/lib/frost",
+        "player10-home:/home/player",
+        "./secrets/player10/shadow:/run/bootstrap/shadow:ro",
+        "./secrets/player10/authorized_keys:/run/bootstrap/authorized_keys:ro",
+        "./secrets/player10/token:/run/bootstrap/score_token:ro"
+      ],
+      "networks": [
+        "lane10"
+      ],
+      "logging": {
+        "driver": "json-file",
+        "options": {
+          "max-size": "5m",
+          "max-file": "2"
+        }
+      },
+      "environment": {
+        "SCORE_URL": "http://scoreboard:8080"
+      },
+      "depends_on": {
+        "scoreboard": {
+          "condition": "service_healthy"
+        }
+      },
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "python3",
+          "-c",
+          "from frost.client import request; request()"
+        ],
+        "interval": "15s",
+        "timeout": "4s",
+        "retries": 3,
+        "start_period": "10s"
+      }
+    },
+    "player11": {
+      "image": "frostbyte:local",
+      "command": [
+        "player"
+      ],
+      "init": true,
+      "restart": "unless-stopped",
+      "read_only": true,
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "cap_drop": [
+        "NET_RAW"
+      ],
+      "pids_limit": 96,
+      "mem_limit": "256m",
+      "cpus": "0.50",
+      "ports": [
+        "${SSH_BIND:-0.0.0.0}:2211:22"
+      ],
+      "tmpfs": [
+        "/run:rw,nosuid,nodev,size=16m",
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+      ],
+      "volumes": [
+        "player11-state:/var/lib/frost",
+        "player11-home:/home/player",
+        "./secrets/player11/shadow:/run/bootstrap/shadow:ro",
+        "./secrets/player11/authorized_keys:/run/bootstrap/authorized_keys:ro",
+        "./secrets/player11/token:/run/bootstrap/score_token:ro"
+      ],
+      "networks": [
+        "lane11"
+      ],
+      "logging": {
+        "driver": "json-file",
+        "options": {
+          "max-size": "5m",
+          "max-file": "2"
+        }
+      },
+      "environment": {
+        "SCORE_URL": "http://scoreboard:8080"
+      },
+      "depends_on": {
+        "scoreboard": {
+          "condition": "service_healthy"
+        }
+      },
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "python3",
+          "-c",
+          "from frost.client import request; request()"
+        ],
+        "interval": "15s",
+        "timeout": "4s",
+        "retries": 3,
+        "start_period": "10s"
+      }
+    },
+    "player12": {
+      "image": "frostbyte:local",
+      "command": [
+        "player"
+      ],
+      "init": true,
+      "restart": "unless-stopped",
+      "read_only": true,
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "cap_drop": [
+        "NET_RAW"
+      ],
+      "pids_limit": 96,
+      "mem_limit": "256m",
+      "cpus": "0.50",
+      "ports": [
+        "${SSH_BIND:-0.0.0.0}:2212:22"
+      ],
+      "tmpfs": [
+        "/run:rw,nosuid,nodev,size=16m",
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+      ],
+      "volumes": [
+        "player12-state:/var/lib/frost",
+        "player12-home:/home/player",
+        "./secrets/player12/shadow:/run/bootstrap/shadow:ro",
+        "./secrets/player12/authorized_keys:/run/bootstrap/authorized_keys:ro",
+        "./secrets/player12/token:/run/bootstrap/score_token:ro"
+      ],
+      "networks": [
+        "lane12"
+      ],
+      "logging": {
+        "driver": "json-file",
+        "options": {
+          "max-size": "5m",
+          "max-file": "2"
+        }
+      },
+      "environment": {
+        "SCORE_URL": "http://scoreboard:8080"
+      },
+      "depends_on": {
+        "scoreboard": {
+          "condition": "service_healthy"
+        }
+      },
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "python3",
+          "-c",
+          "from frost.client import request; request()"
+        ],
+        "interval": "15s",
+        "timeout": "4s",
+        "retries": 3,
+        "start_period": "10s"
+      }
+    },
+    "player13": {
+      "image": "frostbyte:local",
+      "command": [
+        "player"
+      ],
+      "init": true,
+      "restart": "unless-stopped",
+      "read_only": true,
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "cap_drop": [
+        "NET_RAW"
+      ],
+      "pids_limit": 96,
+      "mem_limit": "256m",
+      "cpus": "0.50",
+      "ports": [
+        "${SSH_BIND:-0.0.0.0}:2213:22"
+      ],
+      "tmpfs": [
+        "/run:rw,nosuid,nodev,size=16m",
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+      ],
+      "volumes": [
+        "player13-state:/var/lib/frost",
+        "player13-home:/home/player",
+        "./secrets/player13/shadow:/run/bootstrap/shadow:ro",
+        "./secrets/player13/authorized_keys:/run/bootstrap/authorized_keys:ro",
+        "./secrets/player13/token:/run/bootstrap/score_token:ro"
+      ],
+      "networks": [
+        "lane13"
+      ],
+      "logging": {
+        "driver": "json-file",
+        "options": {
+          "max-size": "5m",
+          "max-file": "2"
+        }
+      },
+      "environment": {
+        "SCORE_URL": "http://scoreboard:8080"
+      },
+      "depends_on": {
+        "scoreboard": {
+          "condition": "service_healthy"
+        }
+      },
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "python3",
+          "-c",
+          "from frost.client import request; request()"
+        ],
+        "interval": "15s",
+        "timeout": "4s",
+        "retries": 3,
+        "start_period": "10s"
+      }
+    },
+    "player14": {
+      "image": "frostbyte:local",
+      "command": [
+        "player"
+      ],
+      "init": true,
+      "restart": "unless-stopped",
+      "read_only": true,
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "cap_drop": [
+        "NET_RAW"
+      ],
+      "pids_limit": 96,
+      "mem_limit": "256m",
+      "cpus": "0.50",
+      "ports": [
+        "${SSH_BIND:-0.0.0.0}:2214:22"
+      ],
+      "tmpfs": [
+        "/run:rw,nosuid,nodev,size=16m",
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+      ],
+      "volumes": [
+        "player14-state:/var/lib/frost",
+        "player14-home:/home/player",
+        "./secrets/player14/shadow:/run/bootstrap/shadow:ro",
+        "./secrets/player14/authorized_keys:/run/bootstrap/authorized_keys:ro",
+        "./secrets/player14/token:/run/bootstrap/score_token:ro"
+      ],
+      "networks": [
+        "lane14"
+      ],
+      "logging": {
+        "driver": "json-file",
+        "options": {
+          "max-size": "5m",
+          "max-file": "2"
+        }
+      },
+      "environment": {
+        "SCORE_URL": "http://scoreboard:8080"
+      },
+      "depends_on": {
+        "scoreboard": {
+          "condition": "service_healthy"
+        }
+      },
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "python3",
+          "-c",
+          "from frost.client import request; request()"
+        ],
+        "interval": "15s",
+        "timeout": "4s",
+        "retries": 3,
+        "start_period": "10s"
+      }
+    },
+    "player15": {
+      "image": "frostbyte:local",
+      "command": [
+        "player"
+      ],
+      "init": true,
+      "restart": "unless-stopped",
+      "read_only": true,
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "cap_drop": [
+        "NET_RAW"
+      ],
+      "pids_limit": 96,
+      "mem_limit": "256m",
+      "cpus": "0.50",
+      "ports": [
+        "${SSH_BIND:-0.0.0.0}:2215:22"
+      ],
+      "tmpfs": [
+        "/run:rw,nosuid,nodev,size=16m",
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+      ],
+      "volumes": [
+        "player15-state:/var/lib/frost",
+        "player15-home:/home/player",
+        "./secrets/player15/shadow:/run/bootstrap/shadow:ro",
+        "./secrets/player15/authorized_keys:/run/bootstrap/authorized_keys:ro",
+        "./secrets/player15/token:/run/bootstrap/score_token:ro"
+      ],
+      "networks": [
+        "lane15"
+      ],
+      "logging": {
+        "driver": "json-file",
+        "options": {
+          "max-size": "5m",
+          "max-file": "2"
+        }
+      },
+      "environment": {
+        "SCORE_URL": "http://scoreboard:8080"
+      },
+      "depends_on": {
+        "scoreboard": {
+          "condition": "service_healthy"
+        }
+      },
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "python3",
+          "-c",
+          "from frost.client import request; request()"
+        ],
+        "interval": "15s",
+        "timeout": "4s",
+        "retries": 3,
+        "start_period": "10s"
+      }
+    },
+    "player16": {
+      "image": "frostbyte:local",
+      "command": [
+        "player"
+      ],
+      "init": true,
+      "restart": "unless-stopped",
+      "read_only": true,
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "cap_drop": [
+        "NET_RAW"
+      ],
+      "pids_limit": 96,
+      "mem_limit": "256m",
+      "cpus": "0.50",
+      "ports": [
+        "${SSH_BIND:-0.0.0.0}:2216:22"
+      ],
+      "tmpfs": [
+        "/run:rw,nosuid,nodev,size=16m",
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+      ],
+      "volumes": [
+        "player16-state:/var/lib/frost",
+        "player16-home:/home/player",
+        "./secrets/player16/shadow:/run/bootstrap/shadow:ro",
+        "./secrets/player16/authorized_keys:/run/bootstrap/authorized_keys:ro",
+        "./secrets/player16/token:/run/bootstrap/score_token:ro"
+      ],
+      "networks": [
+        "lane16"
+      ],
+      "logging": {
+        "driver": "json-file",
+        "options": {
+          "max-size": "5m",
+          "max-file": "2"
+        }
+      },
+      "environment": {
+        "SCORE_URL": "http://scoreboard:8080"
+      },
+      "depends_on": {
+        "scoreboard": {
+          "condition": "service_healthy"
+        }
+      },
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "python3",
+          "-c",
+          "from frost.client import request; request()"
+        ],
+        "interval": "15s",
+        "timeout": "4s",
+        "retries": 3,
+        "start_period": "10s"
+      }
+    },
+    "player17": {
+      "image": "frostbyte:local",
+      "command": [
+        "player"
+      ],
+      "init": true,
+      "restart": "unless-stopped",
+      "read_only": true,
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "cap_drop": [
+        "NET_RAW"
+      ],
+      "pids_limit": 96,
+      "mem_limit": "256m",
+      "cpus": "0.50",
+      "ports": [
+        "${SSH_BIND:-0.0.0.0}:2217:22"
+      ],
+      "tmpfs": [
+        "/run:rw,nosuid,nodev,size=16m",
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+      ],
+      "volumes": [
+        "player17-state:/var/lib/frost",
+        "player17-home:/home/player",
+        "./secrets/player17/shadow:/run/bootstrap/shadow:ro",
+        "./secrets/player17/authorized_keys:/run/bootstrap/authorized_keys:ro",
+        "./secrets/player17/token:/run/bootstrap/score_token:ro"
+      ],
+      "networks": [
+        "lane17"
+      ],
+      "logging": {
+        "driver": "json-file",
+        "options": {
+          "max-size": "5m",
+          "max-file": "2"
+        }
+      },
+      "environment": {
+        "SCORE_URL": "http://scoreboard:8080"
+      },
+      "depends_on": {
+        "scoreboard": {
+          "condition": "service_healthy"
+        }
+      },
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "python3",
+          "-c",
+          "from frost.client import request; request()"
+        ],
+        "interval": "15s",
+        "timeout": "4s",
+        "retries": 3,
+        "start_period": "10s"
+      }
+    },
+    "player18": {
+      "image": "frostbyte:local",
+      "command": [
+        "player"
+      ],
+      "init": true,
+      "restart": "unless-stopped",
+      "read_only": true,
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "cap_drop": [
+        "NET_RAW"
+      ],
+      "pids_limit": 96,
+      "mem_limit": "256m",
+      "cpus": "0.50",
+      "ports": [
+        "${SSH_BIND:-0.0.0.0}:2218:22"
+      ],
+      "tmpfs": [
+        "/run:rw,nosuid,nodev,size=16m",
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+      ],
+      "volumes": [
+        "player18-state:/var/lib/frost",
+        "player18-home:/home/player",
+        "./secrets/player18/shadow:/run/bootstrap/shadow:ro",
+        "./secrets/player18/authorized_keys:/run/bootstrap/authorized_keys:ro",
+        "./secrets/player18/token:/run/bootstrap/score_token:ro"
+      ],
+      "networks": [
+        "lane18"
+      ],
+      "logging": {
+        "driver": "json-file",
+        "options": {
+          "max-size": "5m",
+          "max-file": "2"
+        }
+      },
+      "environment": {
+        "SCORE_URL": "http://scoreboard:8080"
+      },
+      "depends_on": {
+        "scoreboard": {
+          "condition": "service_healthy"
+        }
+      },
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "python3",
+          "-c",
+          "from frost.client import request; request()"
+        ],
+        "interval": "15s",
+        "timeout": "4s",
+        "retries": 3,
+        "start_period": "10s"
+      }
+    },
+    "player19": {
+      "image": "frostbyte:local",
+      "command": [
+        "player"
+      ],
+      "init": true,
+      "restart": "unless-stopped",
+      "read_only": true,
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "cap_drop": [
+        "NET_RAW"
+      ],
+      "pids_limit": 96,
+      "mem_limit": "256m",
+      "cpus": "0.50",
+      "ports": [
+        "${SSH_BIND:-0.0.0.0}:2219:22"
+      ],
+      "tmpfs": [
+        "/run:rw,nosuid,nodev,size=16m",
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+      ],
+      "volumes": [
+        "player19-state:/var/lib/frost",
+        "player19-home:/home/player",
+        "./secrets/player19/shadow:/run/bootstrap/shadow:ro",
+        "./secrets/player19/authorized_keys:/run/bootstrap/authorized_keys:ro",
+        "./secrets/player19/token:/run/bootstrap/score_token:ro"
+      ],
+      "networks": [
+        "lane19"
+      ],
+      "logging": {
+        "driver": "json-file",
+        "options": {
+          "max-size": "5m",
+          "max-file": "2"
+        }
+      },
+      "environment": {
+        "SCORE_URL": "http://scoreboard:8080"
+      },
+      "depends_on": {
+        "scoreboard": {
+          "condition": "service_healthy"
+        }
+      },
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "python3",
+          "-c",
+          "from frost.client import request; request()"
+        ],
+        "interval": "15s",
+        "timeout": "4s",
+        "retries": 3,
+        "start_period": "10s"
+      }
+    },
+    "player20": {
+      "image": "frostbyte:local",
+      "command": [
+        "player"
+      ],
+      "init": true,
+      "restart": "unless-stopped",
+      "read_only": true,
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "cap_drop": [
+        "NET_RAW"
+      ],
+      "pids_limit": 96,
+      "mem_limit": "256m",
+      "cpus": "0.50",
+      "ports": [
+        "${SSH_BIND:-0.0.0.0}:2220:22"
+      ],
+      "tmpfs": [
+        "/run:rw,nosuid,nodev,size=16m",
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+      ],
+      "volumes": [
+        "player20-state:/var/lib/frost",
+        "player20-home:/home/player",
+        "./secrets/player20/shadow:/run/bootstrap/shadow:ro",
+        "./secrets/player20/authorized_keys:/run/bootstrap/authorized_keys:ro",
+        "./secrets/player20/token:/run/bootstrap/score_token:ro"
+      ],
+      "networks": [
+        "lane20"
+      ],
+      "logging": {
+        "driver": "json-file",
+        "options": {
+          "max-size": "5m",
+          "max-file": "2"
+        }
+      },
+      "environment": {
+        "SCORE_URL": "http://scoreboard:8080"
+      },
+      "depends_on": {
+        "scoreboard": {
+          "condition": "service_healthy"
+        }
+      },
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "python3",
+          "-c",
+          "from frost.client import request; request()"
+        ],
+        "interval": "15s",
+        "timeout": "4s",
+        "retries": 3,
+        "start_period": "10s"
+      }
+    },
+    "player21": {
+      "image": "frostbyte:local",
+      "command": [
+        "player"
+      ],
+      "init": true,
+      "restart": "unless-stopped",
+      "read_only": true,
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "cap_drop": [
+        "NET_RAW"
+      ],
+      "pids_limit": 96,
+      "mem_limit": "256m",
+      "cpus": "0.50",
+      "ports": [
+        "${SSH_BIND:-0.0.0.0}:2221:22"
+      ],
+      "tmpfs": [
+        "/run:rw,nosuid,nodev,size=16m",
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+      ],
+      "volumes": [
+        "player21-state:/var/lib/frost",
+        "player21-home:/home/player",
+        "./secrets/player21/shadow:/run/bootstrap/shadow:ro",
+        "./secrets/player21/authorized_keys:/run/bootstrap/authorized_keys:ro",
+        "./secrets/player21/token:/run/bootstrap/score_token:ro"
+      ],
+      "networks": [
+        "lane21"
+      ],
+      "logging": {
+        "driver": "json-file",
+        "options": {
+          "max-size": "5m",
+          "max-file": "2"
+        }
+      },
+      "environment": {
+        "SCORE_URL": "http://scoreboard:8080"
+      },
+      "depends_on": {
+        "scoreboard": {
+          "condition": "service_healthy"
+        }
+      },
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "python3",
+          "-c",
+          "from frost.client import request; request()"
+        ],
+        "interval": "15s",
+        "timeout": "4s",
+        "retries": 3,
+        "start_period": "10s"
+      }
+    },
+    "player22": {
+      "image": "frostbyte:local",
+      "command": [
+        "player"
+      ],
+      "init": true,
+      "restart": "unless-stopped",
+      "read_only": true,
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "cap_drop": [
+        "NET_RAW"
+      ],
+      "pids_limit": 96,
+      "mem_limit": "256m",
+      "cpus": "0.50",
+      "ports": [
+        "${SSH_BIND:-0.0.0.0}:2222:22"
+      ],
+      "tmpfs": [
+        "/run:rw,nosuid,nodev,size=16m",
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+      ],
+      "volumes": [
+        "player22-state:/var/lib/frost",
+        "player22-home:/home/player",
+        "./secrets/player22/shadow:/run/bootstrap/shadow:ro",
+        "./secrets/player22/authorized_keys:/run/bootstrap/authorized_keys:ro",
+        "./secrets/player22/token:/run/bootstrap/score_token:ro"
+      ],
+      "networks": [
+        "lane22"
+      ],
+      "logging": {
+        "driver": "json-file",
+        "options": {
+          "max-size": "5m",
+          "max-file": "2"
+        }
+      },
+      "environment": {
+        "SCORE_URL": "http://scoreboard:8080"
+      },
+      "depends_on": {
+        "scoreboard": {
+          "condition": "service_healthy"
+        }
+      },
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "python3",
+          "-c",
+          "from frost.client import request; request()"
+        ],
+        "interval": "15s",
+        "timeout": "4s",
+        "retries": 3,
+        "start_period": "10s"
+      }
+    },
+    "player23": {
+      "image": "frostbyte:local",
+      "command": [
+        "player"
+      ],
+      "init": true,
+      "restart": "unless-stopped",
+      "read_only": true,
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "cap_drop": [
+        "NET_RAW"
+      ],
+      "pids_limit": 96,
+      "mem_limit": "256m",
+      "cpus": "0.50",
+      "ports": [
+        "${SSH_BIND:-0.0.0.0}:2223:22"
+      ],
+      "tmpfs": [
+        "/run:rw,nosuid,nodev,size=16m",
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+      ],
+      "volumes": [
+        "player23-state:/var/lib/frost",
+        "player23-home:/home/player",
+        "./secrets/player23/shadow:/run/bootstrap/shadow:ro",
+        "./secrets/player23/authorized_keys:/run/bootstrap/authorized_keys:ro",
+        "./secrets/player23/token:/run/bootstrap/score_token:ro"
+      ],
+      "networks": [
+        "lane23"
+      ],
+      "logging": {
+        "driver": "json-file",
+        "options": {
+          "max-size": "5m",
+          "max-file": "2"
+        }
+      },
+      "environment": {
+        "SCORE_URL": "http://scoreboard:8080"
+      },
+      "depends_on": {
+        "scoreboard": {
+          "condition": "service_healthy"
+        }
+      },
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "python3",
+          "-c",
+          "from frost.client import request; request()"
+        ],
+        "interval": "15s",
+        "timeout": "4s",
+        "retries": 3,
+        "start_period": "10s"
+      }
+    },
+    "gateway": {
+      "image": "frostbyte:local",
+      "command": [
+        "gateway"
+      ],
+      "init": true,
+      "restart": "unless-stopped",
+      "read_only": true,
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "cap_drop": [
+        "NET_RAW"
+      ],
+      "pids_limit": 384,
+      "mem_limit": "512m",
+      "cpus": "2.0",
+      "ports": [
+        "${GATEWAY_BIND:-127.0.0.1}:${GATEWAY_PORT:-2299}:22"
+      ],
+      "tmpfs": [
+        "/run:rw,nosuid,nodev,size=16m",
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+      ],
+      "volumes": [
+        "gateway-state:/var/lib/frost",
+        "gateway-home:/home/player",
+        "./secrets/gateway/shadow:/run/bootstrap/shadow:ro",
+        "./secrets/gateway/authorized_keys:/run/bootstrap/authorized_keys:ro",
+        "./secrets/gateway/entry-player.pub:/run/bootstrap/entry-player.pub:ro",
+        "./secrets/gateway/entry-score.pub:/run/bootstrap/entry-score.pub:ro",
+        "./secrets/gateway/router.json:/run/bootstrap/router.json:ro",
+        "player01-state:/slots/player01:ro",
+        "player02-state:/slots/player02:ro",
+        "player03-state:/slots/player03:ro",
+        "player04-state:/slots/player04:ro",
+        "player05-state:/slots/player05:ro",
+        "player06-state:/slots/player06:ro",
+        "player07-state:/slots/player07:ro",
+        "player08-state:/slots/player08:ro",
+        "player09-state:/slots/player09:ro",
+        "player10-state:/slots/player10:ro",
+        "player11-state:/slots/player11:ro",
+        "player12-state:/slots/player12:ro",
+        "player13-state:/slots/player13:ro",
+        "player14-state:/slots/player14:ro",
+        "player15-state:/slots/player15:ro",
+        "player16-state:/slots/player16:ro",
+        "player17-state:/slots/player17:ro",
+        "player18-state:/slots/player18:ro",
+        "player19-state:/slots/player19:ro",
+        "player20-state:/slots/player20:ro",
+        "player21-state:/slots/player21:ro",
+        "player22-state:/slots/player22:ro",
+        "player23-state:/slots/player23:ro",
+        "scoreboard-state:/slots/scoreboard:ro"
+      ],
+      "networks": [
+        "lane01",
+        "lane02",
+        "lane03",
+        "lane04",
+        "lane05",
+        "lane06",
+        "lane07",
+        "lane08",
+        "lane09",
+        "lane10",
+        "lane11",
+        "lane12",
+        "lane13",
+        "lane14",
+        "lane15",
+        "lane16",
+        "lane17",
+        "lane18",
+        "lane19",
+        "lane20",
+        "lane21",
+        "lane22",
+        "lane23"
+      ],
+      "logging": {
+        "driver": "json-file",
+        "options": {
+          "max-size": "5m",
+          "max-file": "2"
+        }
+      },
+      "depends_on": {
+        "player01": {
+          "condition": "service_healthy"
+        },
+        "player02": {
+          "condition": "service_healthy"
+        },
+        "player03": {
+          "condition": "service_healthy"
+        },
+        "player04": {
+          "condition": "service_healthy"
+        },
+        "player05": {
+          "condition": "service_healthy"
+        },
+        "player06": {
+          "condition": "service_healthy"
+        },
+        "player07": {
+          "condition": "service_healthy"
+        },
+        "player08": {
+          "condition": "service_healthy"
+        },
+        "player09": {
+          "condition": "service_healthy"
+        },
+        "player10": {
+          "condition": "service_healthy"
+        },
+        "player11": {
+          "condition": "service_healthy"
+        },
+        "player12": {
+          "condition": "service_healthy"
+        },
+        "player13": {
+          "condition": "service_healthy"
+        },
+        "player14": {
+          "condition": "service_healthy"
+        },
+        "player15": {
+          "condition": "service_healthy"
+        },
+        "player16": {
+          "condition": "service_healthy"
+        },
+        "player17": {
+          "condition": "service_healthy"
+        },
+        "player18": {
+          "condition": "service_healthy"
+        },
+        "player19": {
+          "condition": "service_healthy"
+        },
+        "player20": {
+          "condition": "service_healthy"
+        },
+        "player21": {
+          "condition": "service_healthy"
+        },
+        "player22": {
+          "condition": "service_healthy"
+        },
+        "player23": {
+          "condition": "service_healthy"
+        },
+        "scoreboard": {
+          "condition": "service_healthy"
+        }
+      },
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "python3",
+          "-c",
+          "import socket; from frost.wire import send,receive; s=socket.socket(socket.AF_UNIX); s.settimeout(3); s.connect('/run/frost/gateway.sock'); send(s,b'J',{'action':'ping'}); assert receive(s)[0]==b'M'"
+        ],
+        "interval": "15s",
+        "timeout": "4s",
+        "retries": 3,
+        "start_period": "15s"
+      }
+    }
+  },
+  "volumes": {
+    "player01-state": {},
+    "player01-home": {},
+    "player02-state": {},
+    "player02-home": {},
+    "player03-state": {},
+    "player03-home": {},
+    "player04-state": {},
+    "player04-home": {},
+    "player05-state": {},
+    "player05-home": {},
+    "player06-state": {},
+    "player06-home": {},
+    "player07-state": {},
+    "player07-home": {},
+    "player08-state": {},
+    "player08-home": {},
+    "player09-state": {},
+    "player09-home": {},
+    "player10-state": {},
+    "player10-home": {},
+    "player11-state": {},
+    "player11-home": {},
+    "player12-state": {},
+    "player12-home": {},
+    "player13-state": {},
+    "player13-home": {},
+    "player14-state": {},
+    "player14-home": {},
+    "player15-state": {},
+    "player15-home": {},
+    "player16-state": {},
+    "player16-home": {},
+    "player17-state": {},
+    "player17-home": {},
+    "player18-state": {},
+    "player18-home": {},
+    "player19-state": {},
+    "player19-home": {},
+    "player20-state": {},
+    "player20-home": {},
+    "player21-state": {},
+    "player21-home": {},
+    "player22-state": {},
+    "player22-home": {},
+    "player23-state": {},
+    "player23-home": {},
+    "scoreboard-state": {},
+    "scoreboard-home": {},
+    "gateway-state": {},
+    "gateway-home": {}
+  },
+  "networks": {
+    "lane01": {},
+    "lane02": {},
+    "lane03": {},
+    "lane04": {},
+    "lane05": {},
+    "lane06": {},
+    "lane07": {},
+    "lane08": {},
+    "lane09": {},
+    "lane10": {},
+    "lane11": {},
+    "lane12": {},
+    "lane13": {},
+    "lane14": {},
+    "lane15": {},
+    "lane16": {},
+    "lane17": {},
+    "lane18": {},
+    "lane19": {},
+    "lane20": {},
+    "lane21": {},
+    "lane22": {},
+    "lane23": {}
+  }
+}

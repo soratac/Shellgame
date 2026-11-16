@@ -1,0 +1,74 @@
+{
+  "archiv/system.log": [
+    "b6117ae1c22dc29bd5702dde4fe487ee14c6cc445298e8668ad9b1fad8e1c1b9"
+  ],
+  "archiv/stern.spell": "8a87d9e2ab2b117f2ca9d34f925a153e834ff37b1cc541b47bdffb01682b5f00",
+  "archiv/AUFGABE.txt": [
+    "85b884691bddc15dc2a6fef01a8c941e9b5934e17a0d988e6550eb64a10a6d08",
+    "575839ed1bcfa9a55c210227f3192cb401756a5351611a745e112057b5f4d1fd"
+  ],
+  "werkstatt/maschine.conf": [
+    "1cda889dfa608c7447fcdf48036823b6063c25d7d8fd943284426b2416856d82"
+  ],
+  "werkstatt/AUFGABE.txt": [
+    "7bb077d6e63f3a4d434416085a3895d9e8b1e870d121cf577ba27de4c8d355c9",
+    "687d0f06cd57e6708e0b9565f7e4cca819d81062a1ce2adba5c15fa052dee501"
+  ],
+  "werkstatt/schild.spell": "a6670495f6e9ae12cf6a54dab1af4601b71fd4b18c0eb89bd23a48f8500e5882",
+  "zitadelle/BOSS.txt": [
+    "b62f35a36a5a985f6081b6991379df09645d991e18061de5264662ab28859df0",
+    "81db61d42b717258bc5c15f0ee384c4eec2ec82c46e15e937981ed624d1beb90"
+  ],
+  "wald/WEGWEISER.txt": [
+    "9925c9b67ed96ce7c5f7ca22a08fe1dbd6345ad8d4774b52cbdc4b9a1844c1be",
+    "8f8640731444a82755ccf7793698861cd9839ce7904bf84a8f84a2a3cf3b8a49"
+  ],
+  "dorf/HILFE.txt": [
+    "7b6e02efea393edb770488673b2e34688816c40111dc0c87bfac80a384410211",
+    "8a58c8d81c22f4dad37fa7edd13827ccbb44d28ec2c70a2f6dd08672da07b766"
+  ],
+  "dorf/funke.spell": "16c360cca1247d553bd74516e2c2f16e93577cca2ff551959ae1e9133987e46d",
+  "dorf/AUFGABE.txt": [
+    "69f29b1d1a259a5962558adfc0864a6a761871f8a7e34efa0a0cce4816ed5c05",
+    "faa84554c3f9939b918f29503b8eb9dac9b9fc99e0ad388f4e1592b3f28515e1"
+  ],
+  "dorf/post/wunschzettel.txt": [
+    "00d5f4b9504071ef40759542ae2e35837595651b6c74e0aa5fef174ba464d245"
+  ],
+  "wald/wurzeln/frost.spell": "a00a05f1e161770e2b03ee47370bf81e186a179bbac7a958ab8fdfc095a1188a",
+  "archiv/handbuch/scheduler.txt": [
+    "4dd47317ac0b434d63ba5aa51174ca7c84ae6e4a154107ef71ffccea4692dcbc",
+    "2ac8de8f46031f1e4731f172426fbd8ee3522ffbaa4794071b8c75b0c30ccc2f"
+  ],
+  "archiv/handbuch/kernel.txt": [
+    "bf3b4aa92ec69e7e72fd57babef48ab1476c0d699c019ef8f51266ba940ca682",
+    "753e51d32e9f2ae7835a0cbcf9a939f7676812738c2e9c618569ac1a280d5bad"
+  ],
+  "archiv/stern": [
+    "a9d472299018fa07fbaad11f434d622bb68dbab61edbecc8f0b95f683105a2ed"
+  ],
+  "werkstatt/schild": [
+    "e926df321dfd4c166766232d5fd673e58471a345df14c1ad8111114c48bcdb10"
+  ],
+  "wald/beeren": [
+    "34ea21969d1b380eb1dc369fbd03aad45caeba18bf7973a7bf46c81504002959"
+  ],
+  "dorf/kakao": [
+    "94f43374dbd8183270c797c72b300259f3948d03046f2168a1e7745437eeb198"
+  ],
+  "dorf/funke": [
+    "f7b3970d0d810e93c87530460390a045fc72b5ad62fe365aa09664675c8a24a6"
+  ],
+  "dorf/abgabe/.gitkeep": [
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  ],
+  "wald/wurzeln/frost": [
+    "0fd221677bfe6ad7422576f0d7d2b607514a20ebe7442a3416961e70c1020988"
+  ],
+  "werkstatt/abgabe/.gitkeep": [
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  ],
+  "archiv/abgabe/.gitkeep": [
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  ]
+}

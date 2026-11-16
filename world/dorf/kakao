@@ -1,0 +1,5 @@
+#!/bin/sh
+# Heilt einmal bis zu 35 Leben.
+# Mitnehmen: cp kakao ~/rucksack/
+# Benutzen: ~/rucksack/kakao
+exec /usr/local/bin/frost use kakao

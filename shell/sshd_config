@@ -1,0 +1,28 @@
+Port 22
+HostKey /var/lib/frost/hostkeys/ssh_host_ed25519_key
+PidFile /run/sshd.pid
+PermitRootLogin no
+AllowUsers player
+PasswordAuthentication yes
+KbdInteractiveAuthentication no
+PubkeyAuthentication yes
+AuthorizedKeysFile /run/frost/authorized_keys
+PermitEmptyPasswords no
+UsePAM no
+PrintMotd no
+PrintLastLog no
+X11Forwarding no
+AllowTcpForwarding no
+AllowAgentForwarding no
+PermitTunnel no
+GatewayPorts no
+PermitUserEnvironment no
+MaxAuthTries 3
+MaxSessions 1
+MaxStartups 3:30:6
+LoginGraceTime 30
+ClientAliveInterval 30
+ClientAliveCountMax 3
+ForceCommand /usr/local/bin/frost-login
+AcceptEnv LANG LC_*
+Subsystem sftp internal-sftp

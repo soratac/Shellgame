@@ -1,0 +1,11 @@
+KRAMPUS / VORHER ENTSCHEIDEN
+
+Im Fenster: J + Enter kaempft, N + Enter geht zurueck.
+Nach JA ist das Tor zu: kein Rueckweg und keine neuen Funde!
+
+~/rucksack/funke    Angreifen. Wiederholen.
+~/rucksack/kakao    Heilen, falls vorher mitgenommen.
+~/rucksack/frost    Einfrieren, falls vorher mitgenommen.
+
+Lesen kostet keine Leben. Falsche Befehle schon.
+Neu anfangen: neustart

@@ -1,0 +1,14 @@
+.git
+.env
+secrets
+access.csv
+join-access.txt
+__pycache__
+*.pyc
+tests
+scripts
+README.md
+HOST.md
+TESTING.md
+backups
+.integration

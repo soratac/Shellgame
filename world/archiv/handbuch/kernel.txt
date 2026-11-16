@@ -1,0 +1,5 @@
+PROFI: TREIBER ENTFERNEN (im Bossraum)
+lsmod
+modprobe -r frost_armor    Panzer weg; mehr Schaden.
+modprobe -r blizzard      Schwaechere Gegenangriffe.
+Nur Spiel-Treiber; der VM-Kernel bleibt unveraendert.

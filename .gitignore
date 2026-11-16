@@ -1,0 +1,9 @@
+secrets/
+access.csv
+join-access.txt
+__pycache__/
+*.pyc
+.env
+*.log
+backups/
+.integration/

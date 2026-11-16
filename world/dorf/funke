@@ -1,0 +1,5 @@
+#!/bin/sh
+# Feuer: unbegrenzt, 30 Schaden.
+# Mitnehmen: cp funke ~/rucksack/
+# Benutzen: ~/rucksack/funke
+exec /usr/local/bin/frost use funke

@@ -1,0 +1,9 @@
+GESCHENKBAND ANSCHALTEN  /  +150 Punkte und Heilung
+
+nano maschine.conf         Aendere die Datei auf diese drei Zeilen:
+band=an
+licht=an
+ziel=weihnachten
+
+cp maschine.conf abgabe/   Abgeben; wird automatisch erkannt.
+cp schild ~/rucksack/      Schild mitnehmen. Weiter: cd ../archiv

@@ -1,0 +1,93 @@
+# A real interactive Bash: Readline, completion, pipes, jobs and all normal tools.
+[[ $- != *i* ]] && return
+export LANG=C.UTF-8
+export TERM=${TERM:-xterm-256color}
+export PATH=/usr/local/bin:/usr/bin:/bin
+HISTCONTROL=ignoredups
+HISTSIZE=2000
+shopt -s histappend checkwinsize
+bind 'set show-all-if-ambiguous off'
+bind 'set completion-ignore-case on'
+bind 'set colored-stats on'
+[[ -f /usr/share/bash-completion/bash_completion ]] && source /usr/share/bash-completion/bash_completion
+
+_frost_action() {
+    command frost "$@"
+    local rc=$?
+    if [[ $rc == 42 ]]; then
+        # A genuine while loop is terminated on victory/defeat, including from a script.
+        kill -s INT "${BASHPID}"
+        return 130
+    fi
+    return "$rc"
+}
+hilfe() { command frost help; }
+status() { command frost status; }
+karte() { command frost map; }
+inventar() { command frost inventory; }
+sammeln() { _frost_action collect "$@"; }
+heilen() { _frost_action heal "$@"; }
+abgeben() { _frost_action submit "$@"; }
+angreifen() { _frost_action attack "$@"; }
+zauber() { _frost_action cast "$@"; }
+lsmod() { command frost modules; }
+modprobe() {
+    if [[ $# == 2 && $1 == -r ]]; then _frost_action unload "$2";
+    else printf 'Spiel-Treiber entfernen: modprobe -r frost_armor | blizzard\n'; fi
+}
+fliehen() { cd "$HOME/welt/dorf"; }
+neustart() {
+    local mode=${1:-normal}
+    if [[ $# -gt 1 || ! $mode =~ ^(normal|speedrun|alles)$ ]]; then
+        printf 'neustart | neustart speedrun | neustart alles (auch eigene Rekorde)\n'; return
+    fi
+    # Restore world as the unprivileged player; never follow home symlinks as root.
+    /usr/bin/python3 -m frost.world reset || return
+    command frost reset "$mode"
+    builtin cd "$HOME/welt/dorf"
+}
+hud() {
+    [[ -n $TMUX ]] || return
+    tmux respawn-pane -k -t "$(tmux show-option -v -t frost @frost-hud)" '/usr/bin/python3 -m frost.render'
+}
+# A normal shell logout ends the UI as well; network disconnects still leave tmux running.
+trap '[[ -n $TMUX ]] && tmux kill-session -t frost 2>/dev/null' EXIT
+complete -W 'funke frost stern schild' zauber
+complete -W 'kakao beeren' heilen
+complete -W 'normal speedrun alles' neustart
+complete -W '-r frost_armor blizzard' modprobe
+complete -f sammeln abgeben
+
+# Update travel immediately, including `cd ../zitadelle; zauber funke` on one line.
+cd() {
+    local previous=$PWD rc
+    builtin cd "$@" || return
+    command frost travel
+    rc=$?
+    if [[ $rc == 43 || $rc == 44 ]]; then
+        builtin cd "$previous"
+        if [[ $rc == 43 ]]; then kill -s INT "$BASHPID"; fi
+        return 0
+    fi
+    command frost observe 0 ''
+    return 0
+}
+
+_frost_prompt() {
+    local rc=$? last
+    last=$(HISTTIMEFORMAT= builtin history 1)
+    last=${last#*[0-9]  }
+    command frost travel
+    case $? in
+        43) builtin cd "$HOME/welt/dorf" ;;
+        44) builtin cd "$HOME/welt/zitadelle" ;;
+    esac
+    command frost observe "$rc" "$last"
+    command frost finish
+    PS1='\[\e[38;5;45m\]\w\[\e[38;5;205m\] ❯ \[\e[0m\]'
+}
+PROMPT_COMMAND=_frost_prompt
+builtin cd "$HOME/welt/dorf"
+printf '\n\e[38;5;45m  F R O S T B Y T E\e[0m  /  RETTET WEIHNACHTEN\n'
+printf '  1. ls    2. cp funke ~/rucksack/    3. cd ../zitadelle\n'
+printf '  Dort benutzen: ~/rucksack/funke    |    Tab vervollstaendigt.\n\n'

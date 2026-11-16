@@ -1,0 +1,7 @@
+WALD  /  Frostzauber und Heilung
+
+ls wurzeln
+cp wurzeln/frost beeren ~/rucksack/
+~/rucksack/beeren
+
+Weiter: cd ../werkstatt

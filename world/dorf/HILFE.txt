@@ -1,0 +1,9 @@
+RETTET WEIHNACHTEN
+
+tree ~/welt                 Alle Orte anschauen
+cp funke kakao ~/rucksack/   Zauber und Heilung mitnehmen
+cd ../wald                  Weitere Funde suchen
+cd ../zitadelle             Zum Boss, dann J/N bestaetigen
+~/rucksack/funke             Nach JA angreifen (wiederholen)
+
+Nach Kampfstart kein Rueckweg. Neuer Versuch: neustart

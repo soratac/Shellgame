@@ -1,0 +1,7 @@
+PROFI: SCHLEIFEN-SIEG
+neustart speedrun
+cp funke ~/rucksack/
+cd ../zitadelle
+while true; do ~/rucksack/funke; done
+
+Sechs schnelle Funken = sofort gewonnen. Die Schleife stoppt selbst.
