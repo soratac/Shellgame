@@ -1,0 +1,13 @@
+ListenAddress 127.12.24.1
+Port 2224
+HostKey /var/lib/frost/hostkeys/ssh_host_ed25519_key
+PidFile /run/frost/boss-sshd.pid
+AllowUsers krampus
+AuthenticationMethods publickey
+AuthorizedKeysFile /run/frost/boss-key.pub
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PermitTTY no
+DisableForwarding yes
+PermitUserRC no
+ForceCommand /usr/local/bin/frost boss-arrive

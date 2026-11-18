@@ -15,11 +15,12 @@ cd ../wald
 cp wurzeln/frost ~/rucksack/
 cd ../werkstatt
 cp schild ~/rucksack/
-cd ../zitadelle
+karte                 # Folge der markierten Spur mit cd ~/welt/ORT
+ssh 127.12.24.1
 ~/rucksack/funke
 ```
 
-Beim Betreten der Zitadelle erscheint ein Hinweisfenster. **J, dann Enter** startet den Kampf; **N, dann Enter** lässt dich draußen. Nach dem Start bleibt das Tor geschlossen. Für einen normalen Sieg musst du vorher mindestens **drei Orte außerhalb der Zitadelle** besuchen. Sonst hält das Frostsiegel den Boss bei mindestens 1 HP – auch nach Entfernen seiner Treiber. Der schnelle Funken-Loop umgeht das Siegel. Den letzten Befehl wiederholen, bis Krampus besiegt ist. Beim Sieg erscheint automatisch ein eigener Bildschirm mit Punkten und Zeit. **Enter** bringt dich zur Shell zurück.
+Die Karte markiert mit ✧ den Ort der Spur. Wenn du ihn besuchst, erscheint die Boss-IP. Mit `ssh 127.12.24.1` öffnest du das Kampffenster und verbindest dich nach Bestätigung per SSH mit Krampus in deinem Spielercontainer. **J, dann Enter** startet den Kampf; **N, dann Enter** lässt dich draußen. Nach dem Start bleibt das Tor geschlossen. Für einen normalen Sieg musst du vorher mindestens **drei Orte außerhalb der Zitadelle** besuchen. Sonst hält das Frostsiegel den Boss bei mindestens 1 HP – auch nach Entfernen seiner Treiber. Der schnelle Funken-Loop umgeht das Siegel. Den letzten Befehl wiederholen, bis Krampus besiegt ist. Beim Sieg erscheint automatisch ein eigener Bildschirm mit Punkten und Zeit. **Enter** bringt dich zur Shell zurück.
 
 | Was möchtest du tun? | Linux-Befehl |
 |---|---|
@@ -59,7 +60,7 @@ Beispiel: `cp post/wunschzettel.txt abgabe/gerettet.txt` löst die Dorfaufgabe a
 
 Aufgebrauchte Gegenstände verschwinden aus dem Rucksack. Erneutes Kopieren füllt keine verbrauchten Ladungen auf. Nur ein Gegenstand im Rucksack kann über seinen Dateibefehl benutzt werden. Bereits vor dem Update erlernte Zauber erscheinen beim ersten Login als Dateien im Rucksack.
 
-Dein Charakter und Krampus stehen einander gegenüber. Zauber fliegen zum Gegner, Gegenangriffe zurück; beide Lebensleisten bewegen sich und zeigen Treffer als Zahlen. Die Animation blockiert keine Befehle oder Loops. Der Kampf läuft rundenweise. Lesen und Nachdenken kosten keine Leben. Normale Gegenangriffe kosten 7 Leben; der Panzer vermindert deinen Schaden um 8. Fehlgeschlagene Shell-Befehle im Bossraum und falsche Kampfaktionen kosten zusätzlich Leben. Vor dem Kampf fragt ein schwebendes Fenster nach deiner Zustimmung und erklärt Angreifen und Heilen. Nach **Ja** gibt es keinen Rückweg; neue Funde und Aufgaben zählen erst im nächsten Lauf. Bereits mitgebrachte Gegenstände bleiben nutzbar. Mit `neustart` kannst du jederzeit eine neue Runde beginnen.
+Dein 3D-Charakter steht links unten, der grüne Krampus rechts oben. `ping -c 4 127.12.24.1` wirkt als Echo-Zauber mit vier Treffern à 1 HP. Der Rucksack zeigt während der Erkundung und im Kampf die Dateien aus `~/rucksack`. Zauber fliegen zum Gegner, Gegenangriffe zurück; beide Lebensleisten bewegen sich und zeigen Treffer als Zahlen. Die Animation blockiert keine Befehle oder Loops. Der Kampf läuft rundenweise. Lesen und Nachdenken kosten keine Leben. Normale Gegenangriffe kosten 7 Leben; der Panzer vermindert deinen Schaden um 8. Fehlgeschlagene Shell-Befehle im Bossraum und falsche Kampfaktionen kosten zusätzlich Leben. Vor dem Kampf fragt ein schwebendes Fenster nach deiner Zustimmung und erklärt Angreifen und Heilen. Nach **Ja** gibt es keinen Rückweg; neue Funde und Aufgaben zählen erst im nächsten Lauf. Bereits mitgebrachte Gegenstände bleiben nutzbar. Mit `neustart` kannst du jederzeit eine neue Runde beginnen.
 
 Punkte gibt es einmal je Ort (40), Zauberfund (80), Aufgabe (150), Heilquelle (25), unterstützter Shell-Befehlsart (10), Angriffsart (30), entferntem Treiber (120), Schleifentrick (200) und Sieg (500).
 
@@ -78,7 +79,8 @@ Diese Befehle verändern nur das Spiel, keine Kernelmodule der VM.
 # Speedrun mit einer echten Bash-Endlosschleife
 neustart
 cp funke ~/rucksack/
-cd ../zitadelle
+karte                 # Folge der markierten Spur mit cd ~/welt/ORT
+ssh 127.12.24.1
 while true; do ~/rucksack/funke; done
 ```
 

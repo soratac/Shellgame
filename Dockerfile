@@ -18,6 +18,7 @@ RUN chmod 755 /usr/local/bin/* \
     && chmod -R a+rX /opt/frost /etc/frost \
     && chown player:player /home/player \
     && python3 -c "import site; from pathlib import Path; (Path(site.getsitepackages()[0])/'frost.pth').write_text('/opt/frost\\n')"
+RUN useradd -M -u 1002 -d /run/frost -s /bin/sh krampus
 WORKDIR /home/player
 EXPOSE 22 8080
 ENTRYPOINT ["/usr/local/bin/entrypoint"]

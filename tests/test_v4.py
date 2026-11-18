@@ -14,6 +14,19 @@ class ProgressionTests(unittest.TestCase):
         for i in range(12): act(s,'cast',['funke'],now=10+i*3)
         return s
 
+    def test_boss_requires_discovered_address_and_ping_is_four_damage(self):
+        from frost.trail import hiding_place, BOSS_IP
+        s=fresh('Raoul', now=1)
+        self.assertFalse(act(s,'connect',[BOSS_IP])['ok'])
+        act(s,'observe',cwd=hiding_place(s))
+        self.assertFalse(act(s,'ping',[BOSS_IP])['ok'])
+        self.assertFalse(act(s,'connect',['127.0.0.1'])['ok'])
+        self.assertTrue(act(s,'connect',[BOSS_IP])['ok'])
+        hp=s['hp']
+        self.assertTrue(act(s,'ping',[BOSS_IP])['ok'])
+        self.assertEqual((s['area'],s['boss_hp'],s['hp']),('zitadelle',236,hp-7))
+        self.assertEqual(s['events'][-1]['kind'],'ping')
+
     def test_two_places_cannot_win_even_without_drivers(self):
         s=self.fight(['dorf','wald'])
         self.assertEqual(s['boss_hp'],1)

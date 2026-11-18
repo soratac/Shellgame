@@ -55,20 +55,38 @@ def check_travel():
             print("Das Tor ist zu. Kein Rueckweg im Bosskampf; neu anfangen: neustart")
             return 44
         return 0
-    if location=="zitadelle":
-        sync_files()
-        from .dialogs import confirm_boss
-        if not sys.stdin.isatty() or not sys.stdout.isatty() or not confirm_boss(request()["state"]):
-            print("Noch kein Kampf. Sammle in Ruhe Zauber und Heilung.")
-            return 43
-        request("observe",cwd="zitadelle")
-        request("enter_boss")
     return 0
 
 
 def main():
     args = sys.argv[1:]
     action = args.pop(0) if args else "status"
+    if action == "boss-arrive":
+        from .trail import BOSS_IP
+        result = request("connect", [BOSS_IP])
+        print("KRAMPUS" if result["ok"] else result["message"])
+        return 0 if result["ok"] else 1
+    if action == "boss-ssh":
+        from .trail import BOSS_IP, discovered
+        from .dialogs import confirm_boss
+        import subprocess
+        state = request()["state"]
+        if state["status"] != "playing" or state["boss_started"]:
+            print("Du bist bereits im Kampf oder die Runde ist beendet.")
+            return 1
+        if not discovered(state):
+            print("Suche zuerst die Spur auf der Karte.")
+            return 1
+        if not confirm_boss(state):
+            return 1
+        sync_files()
+        handshake = subprocess.run(["/usr/bin/ssh", "-F", "/etc/frost/boss_client", BOSS_IP],
+                                   stdout=subprocess.PIPE, text=True)
+        if handshake.returncode or handshake.stdout.strip() != "KRAMPUS":
+            print("Krampus antwortet nicht.")
+            return 1
+        print("Mit Krampus verbunden. Das Tor ist zu.")
+        return 0
     if action == "travel": return check_travel()
     if action == "finish":
         from .finish import maybe_show

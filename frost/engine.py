@@ -2,6 +2,7 @@
 import re
 import time
 import hashlib
+from .trail import BOSS_IP, discovered
 from .avatar import DEFAULT, HAIR, SHIRTS
 from .records import migrate, bests as merge_bests
 
@@ -22,7 +23,8 @@ cd ~/welt/wald         Weitergehen
 ~/rucksack/funke        Angreifen
 ~/rucksack/kakao        Heilen
 
-Dorf → Wald → Werkstatt → Boss. Drei Orte oeffnen das Siegel.
+Folge der Spur auf der Karte. Am Fundort erscheint der SSH-Befehl.
+Im Kampf: ping -c 4 BOSS-IP oder ~/rucksack/funke.
 Tab hilft beim Tippen. aussehen aendert deinen Charakter.
 neustart | neustart alles (eigene Rekorde)
 """
@@ -120,12 +122,18 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
             message = f"{s['name']} | HP {s['hp']}/100 | Krampus {s['boss_hp']}/240 | {s['score']} Punkte | {s['status']}"
     elif s["status"] != "playing":
         message = "" if action in ("observe", "bag", "deliver") else "Lauf beendet. Neuer Versuch: neustart"
-        result["stop"] = action in ("cast", "attack", "unload", "use")
+        result["stop"] = action in ("cast", "attack", "unload", "use", "ping")
+    elif action == "connect":
+        if args != [BOSS_IP] or not discovered(s):
+            return {"ok": False, "message": "Suche zuerst die Spur auf der Karte.", "stop": False}
+        _act(s, "observe", cwd="zitadelle", now=now)
+        return _act(s, "enter_boss", now=now)
     elif action == "enter_boss":
         if s["area"] != "zitadelle":
             return {"ok": False, "message": "Gehe zuerst zur Zitadelle.", "stop": False}
         if not s["boss_started"]:
             s["boss_started"] = True
+            s["boss_entered_at"] = now
             s["battle_items"] = list(s["bag"])
             message = "Das Tor ist zu. Kaempfen: ~/rucksack/funke. Kein Rueckweg bis Sieg oder Niederlage."
     elif s["boss_started"] and action in ("collect", "deliver", "submit"):
@@ -220,14 +228,14 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
             if s["hp"] == 0:
                 s["status"] = "lost"
             message = "Das passt noch nicht. Ein Funken trifft dich: -5 HP. Lies AUFGABE.txt."
-    elif action in ("attack", "cast", "unload"):
+    elif action in ("attack", "cast", "unload", "ping"):
         if s["area"] != "zitadelle" or not s["boss_started"]:
             result["ok"] = False
-            message = "Gehe zur Zitadelle und bestaetige den Bosskampf zuerst."
+            message = "Entdecke die Spur und verbinde dich per ssh mit Krampus."
         else:
             spell = args[0] if args else ""
             damage = 0
-            method = "spell" if action == "cast" else "staff"
+            method = "spell" if action in ("cast", "ping") else "staff"
             if action == "unload":
                 key = {"frost_armor": "armor", "blizzard": "blizzard"}.get(spell)
                 if key and s[key]:
@@ -237,6 +245,11 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
                 else:
                     result["ok"] = False
                     message = "Unbekannter oder bereits entfernter Spiel-Treiber."
+            elif action == "ping":
+                if args != [BOSS_IP]:
+                    return {"ok": False, "message": "Ping braucht die gefundene Boss-IP.", "stop": False}
+                damage = 4
+                message = "Echo-Zauber: 4 Treffer mit je 1 Schaden."
             elif action == "attack":
                 damage = 24
                 message = "Zuckerstabschlag!"
@@ -260,7 +273,7 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
                         return result
                 message = f"{spell.upper()}!"
             if damage:
-                damage = max(1, damage - (8 if s["armor"] else 0))
+                damage = max(1, damage - (8 if s["armor"] and action != "ping" else 0))
                 # The loop bypass above remains available from the village. Ordinary
                 # spells, staff and driver tactics need three explored non-boss places.
                 floor = 0 if route_ready(s) else 1
@@ -268,7 +281,8 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
                 s["boss_hp"] = max(floor, s["boss_hp"] - damage)
                 if not route_ready(s):
                     message += " Frostsiegel: 3 Orte oder Funken-Loop."
-                reward(s, "combat:" + (spell if action == "cast" else "staff"), 30)
+                attack_name = {"cast": spell, "ping": "ping"}.get(action, "staff")
+                reward(s, "combat:" + attack_name, 30)
                 message += f" -{damage} Boss-HP."
             if s["boss_hp"] == 0:
                 win(s, "driver" if not s["armor"] or not s["blizzard"] else method, now)
@@ -284,7 +298,7 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
     if message and action not in ("help", "status", "inventory", "map", "modules"):
         s["message"] = message
     result["message"] = message
-    result["stop"] = result["stop"] or (s["status"] == "lost" and action in ("cast", "attack", "unload"))
+    result["stop"] = result["stop"] or (s["status"] == "lost" and action in ("cast", "attack", "unload", "ping"))
     return result
 
 

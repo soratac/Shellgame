@@ -48,11 +48,9 @@ def confirm_boss(state):
     return show("BOSSKAMP STARTEN?",[
         f"Du {state['hp']}/100   ·   Krampus {state['boss_hp']}/240",
         "",
-        "Angriff:  ~/rucksack/funke",
-        "Heilung:  ~/rucksack/kakao",
-        "",
-        f"Orte {min(3,count)}/3: "+("Frostsiegel offen." if count>=3 else "Nur der schnelle Loop kann schon gewinnen!"),
-        "Nach JA kein Rueckweg. Neustart: neustart",
-        "",
-        "J / N waehlen · Enter bestaetigt",
+        "Zauber   ~/rucksack/funke",
+        "Echo     ping -c 4 127.12.24.1   (4 × 1 Schaden)",
+        "Heilen   ~/rucksack/kakao",
+        f"Orte {min(3,count)}/3 · " + ("Siegel offen" if count>=3 else "Nur der Funken-Loop durchbricht das Siegel"),
+        "Nach dem Verbinden bleibt das Tor zu. J / N + Enter",
     ],choice=True)

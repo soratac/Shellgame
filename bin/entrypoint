@@ -33,6 +33,11 @@ if [[ $role == gateway ]]; then
 elif [[ $role == scoreboard ]]; then
     python3 -m frost.board &
 else
+    printf 'krampus:x:20000:0:99999:7:::\n' >> /run/frost/shadow
+    if [[ ! -f /run/frost/boss-key ]]; then ssh-keygen -q -t ed25519 -N '' -f /run/frost/boss-key; fi
+    chown player:player /run/frost/boss-key
+    { printf '[127.12.24.1]:2224 '; cat /var/lib/frost/hostkeys/ssh_host_ed25519_key.pub; } > /run/frost/boss-host
+    /usr/sbin/sshd -f /etc/frost/boss_sshd
     python3 -m frost.daemon &
 fi
 service_pid=$!

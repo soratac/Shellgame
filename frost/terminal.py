@@ -3,7 +3,7 @@ import codecs
 import contextlib
 import curses
 import fcntl
-import json
+from itertools import islice
 import os
 from pathlib import Path
 import pty
@@ -45,7 +45,7 @@ def frame(screen):
     zoom=False
     def dimensions():
         rows,cols=screen.getmaxyx()
-        top=max(10,int(rows*.60)) if rows>=26 else max(4,rows//2)
+        top=min(rows-7,max(10,round(rows*.62))) if rows>=18 else max(4,rows//2)
         return rows,cols,top,(rows if zoom else max(3,rows-top-2)),(cols if zoom else max(10,cols-4))
     rows,cols,top,sh,sw=dimensions()
     class TerminalScreen(pyte.Screen):
@@ -144,6 +144,11 @@ def frame(screen):
             if not zoom and now-fetched>.15:
                 try:
                     state=request()['state']
+                    # Read as the player: show ordinary files as well as game items.
+                    with os.scandir(Path.home()/"rucksack") as entries:
+                        names = sorted("".join(c if c.isprintable() else "?" for c in e.name)[:40]
+                                       for e in islice(entries, 65))
+                    state["bag_display"] = names[:64] + (["…"] if len(names)>64 else [])
                     destination=POSITIONS.get(state['area'],POSITIONS['dorf'])
                     if destination!=target:
                         origin,target,travel_start=position,destination,now
@@ -156,8 +161,8 @@ def frame(screen):
                 progress=min(1,(now-travel_start)/.9)
                 position=tuple(origin[i]+(target[i]-origin[i])*progress for i in (0,1))
                 paint(hud,state,now,position)
-                box(screen,top,0,rows-top,cols,2)
-                put(screen,top,3,' DEINE SHELL ',2)
+                box(screen,top,0,rows-top,cols-1,2)
+
             sy,sx=(0,0) if zoom else (top+1,2)
             for y in range(min(sh,rows-sy)):
                 line=terminal.buffer[y]

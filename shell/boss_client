@@ -1,0 +1,10 @@
+Host 127.12.24.1
+    User krampus
+    Port 2224
+    IdentityFile /run/frost/boss-key
+    IdentitiesOnly yes
+    UserKnownHostsFile /run/frost/boss-host
+    StrictHostKeyChecking yes
+    BatchMode yes
+    ConnectTimeout 3
+    RequestTTY no

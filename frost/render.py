@@ -1,13 +1,15 @@
 """Animated terminal HUD and a tiny depth-buffered 3D triangle renderer."""
 import curses
+from functools import lru_cache
 import math
 import textwrap
 import time
 import unicodedata
 
 from .client import request
+from .trail import BOSS_IP, hiding_place, discovered
 from .engine import AREAS, route_count
-from .avatar import sprite, HAIR, SHIRTS
+from .avatar import HAIR, SHIRTS
 
 POSITIONS = {"dorf": (.18, .18), "wald": (.80, .18), "werkstatt": (.18, .76),
              "archiv": (.80, .76), "zitadelle": (.49, .47)}
@@ -22,7 +24,7 @@ def static_map(s):
             f"                 [{tag('zitadelle')}]\n"
             "             /                      \\\n"
             f"  [{tag('werkstatt'):20}]----------[{tag('archiv'):20}]\n\n"
-            "  @ = du  |  cd ~/welt/ORT  |  karte  |  hilfe\n")
+            "  @ = du  |  cd ~/welt/ORT  |  " + trail_hint(s) + "\n")
 
 
 class Canvas:
@@ -45,7 +47,7 @@ class Canvas:
 
 def world_frame(w, h, s, position, tick):
     c = Canvas(w, h)
-    sprite(c, 2, max(1,h//2-2), s.get("avatar"), pose=int(tick*3)%2)
+    overlay(c, hero_frame(17, max(5,h-3), tick, s.get("avatar")), 0, 0)
     c.put(1, max(0,h-2), s["name"][:12], 5)
     left=17
     mw=max(20,w-left)
@@ -64,6 +66,7 @@ def world_frame(w, h, s, position, tick):
         if h>=15:
             for i,line in enumerate(art[name]): c.put(x-4,y-2+i,line,color)
         c.put(x-len(name)//2-1,y+1,"["+name+"]",color)
+        if name==hiding_place(s) and not discovered(s): c.put(x+len(name)//2+2,y+1,"✧",5)
         if name==s["area"]: c.put(x-1,y+2,"▼ DU",5)
     px=left+int(position[0]*(mw-13))+6
     py=2+int(position[1]*max(1,h-6))+3
@@ -82,35 +85,37 @@ def combat_frame(w,h,s,tick):
     if active:
         hp=round(event["hp_before"]+(hp-event["hp_before"])*max(0,min(1,(age-.65)/.5)))
         bhp=round(event["boss_before"]+(bhp-event["boss_before"])*max(0,min(1,(age-.15)/.5)))
-    c.put(2,0,s["name"][:18],4)
-    c.put(2,1,f"{bar(hp,100,14)} {hp}/100",6 if active and event["hurt"]>0 and age>.65 else 4)
-    right=max(w//2+3,w-29)
-    c.put(right,0,"KRAMPUS",6)
-    c.put(right,1,f"{bar(bhp,240,14)} {bhp}/240",6)
-    py=max(4,h//2-1)
-    sprite(c, max(4,w//6),py,s.get("avatar"),pose=1 if active and age<.6 else int(tick*2)%2,
-           hit=active and event["hurt"]>0 and .7<age<1.05)
-    bw=max(12,w//3)
-    boss=boss_frame(bw,max(5,h-4),tick)
-    bx=w-bw-2
-    for y,row in enumerate(boss.cells):
-        for x,(char,color) in enumerate(row):
-            if char!=" ": c.put(bx+x,y+3,char,6 if active and event["damage"]>0 and .25<age<.5 else color)
-    c.line(2,h-1,w-3,h-1,"─",3)
-    c.line(max(2,w//6-2),min(h-2,py+5),w//6+10,min(h-2,py+5),"▔",3)
+    right = w//2 + 2
+    meter = max(7,min(28,w//2-13))
+    c.put(1,0,"KRAMPUS",4)
+    c.put(1,1,f"{bar(bhp,240,meter)} {bhp}/240",6 if active and event["damage"] and age<.55 else 4)
+    c.put(right,h-2,s["name"][:18],5)
+    c.put(right,h-1,f"{bar(hp,100,meter)} {hp}/100",6 if active and event["hurt"]>0 and age>.65 else 4)
+    elapsed = max(0,time.time()-s.get("boss_entered_at",0))
+    slide = max(0,1-elapsed/.65)
+    bw,bheight = w//2-2,max(4,h-4)
+    bx = right + round(slide*bw)
+    hx = 1-round(slide*bw)
+    b_hit = active and event["damage"]>0 and .28<age<.48
+    p_hit = active and event["hurt"]>0 and .8<age<1.05
+    overlay(c, boss_frame(bw,bheight,tick),bx+int(b_hit),0,6 if b_hit else None)
+    overlay(c, hero_frame(bw,bheight,tick,s.get("avatar"),back=True),hx-int(p_hit),h-bheight,6 if p_hit else None)
+    start,end = (w//4+3,h-3),(3*w//4-2,max(2,bheight//2))
+    def shot(progress,shape,color):
+        if 0<=progress<=1:
+            x=round(start[0]+(end[0]-start[0])*progress)
+            y=round(start[1]+(end[1]-start[1])*progress)
+            c.put(x,y,shape,color)
     if active:
-        start,end=w//6+8,bx+bw//2
-        lane=max(5,h//2+1)
         if event["damage"]>0:
-            x=round(start+(end-start)*min(1,age/.4))
-            c.put(x,lane,"*»»" if age<.4 else "✦",2 if event["spell"]=="frost" else 5)
-            if age>.25: c.put(end-2,max(3,lane-3-int(age*2)),f"-{event['damage']}",5)
-        if event["hurt"]>0 and age>.6:
-            x=round(end-(end-start)*min(1,(age-.6)/.35))
-            c.put(x,lane,"«*",6)
-            if age>.85: c.put(start-5,max(3,lane-3-int((age-.6)*2)),f"-{event['hurt']}",6)
-        if event["hurt"]<0: c.put(start-5,max(3,py-2),f"+{-event['hurt']}",4)
-        if event["spell"]=="schild": c.put(start-1,py,"◖",2)
+            if event["kind"]=="ping":
+                for i in range(4): shot((age-i*.13)/.38,"◉",2)
+            else: shot(age/.4,"✦»",5)
+            if age>.25: c.put(end[0]+2,max(0,end[1]-2),f"-{event['damage']}",5)
+        if event["hurt"]>0:
+            shot(1-(age-.6)/.35,"«✹",6)
+            if age>.85: c.put(start[0]-4,max(2,start[1]-2),f"-{event['hurt']}",6)
+        if event["hurt"]<0: c.put(start[0]-3,start[1]-1,f"+{-event['hurt']}",4)
     return c
 
 
@@ -128,8 +133,8 @@ def cone(cx, cy, cz, radius, height, color):
 
 
 def boss_mesh():
-    mesh = cube(0,-.65,0,1.7,1.2,.9,6)  # red coat
-    mesh += cube(0,.25,-.05,1.2,1.1,1.0,2)  # ice face
+    mesh = cube(0,-.65,0,1.7,1.2,.9,4)  # evergreen coat
+    mesh += cube(0,.25,-.05,1.2,1.1,1.0,4)  # green face
     mesh += cube(0,-.2,-.62,.65,.35,.16,1)  # silver beard
     for x in (-.32,.32):
         mesh += cube(x,.42,-.59,.22,.13,.08,5)  # amber eyes
@@ -144,9 +149,46 @@ def boss_mesh():
 MESH = boss_mesh()
 
 
-def boss_frame(w, h, tick, won=False):
+def overlay(canvas, layer, left, top, flash=None):
+    for y,row in enumerate(layer.cells):
+        for x,(char,color) in enumerate(row):
+            if char != " ": canvas.put(left+x,top+y,char,flash or color)
+
+
+@lru_cache(maxsize=32)
+def hero_mesh(hair,shirt):
+    # Boots, mitts, backpack and a pointed winter cap give the silhouette depth.
+    mesh = cube(0,-.22,0,1.05,.93,.60,shirt)
+    mesh += cube(0,.66,-.04,.81,.78,.72,10)
+    mesh += cube(0,.98,0,.91,.27,.80,hair)
+    mesh += cube(0,.67,.32,.85,.55,.24,hair)
+    mesh += cone(-.10,1.06,.02,.54,.56,shirt)
+    mesh += cube(0,.20,-.04,1.06,.16,.73,5)
+    mesh += cube(0,-.18,.43,.62,.73,.42,7)
+    mesh += cube(0,-.04,.66,.55,.13,.07,5)
+    for side in (-1,1):
+        mesh += cube(side*.64,-.17,0,.25,.70,.40,shirt)
+        mesh += cube(side*.64,-.56,-.06,.27,.23,.38,10)
+        mesh += cube(side*.29,-.90,0,.39,.52,.44,8)
+        mesh += cube(side*.29,-1.20,-.10,.43,.22,.66,7)
+        mesh += cube(side*.21,.72,-.42,.11,.12,.07,8)
+    return mesh
+
+
+def hero_frame(w,h,tick,avatar,back=False):
+    avatar=avatar or {}
+    mesh=hero_mesh(HAIR.get(avatar.get("hair"),7), SHIRTS.get(avatar.get("shirt"),4))
+    angle=(2.5 if back else -.38)+math.sin(tick*1.6)*.15
+    return project_mesh(w,h,angle,mesh)
+
+
+def boss_frame(w,h,tick,won=False):
+    angle = .38+math.sin(tick*.8)*.38 if not won else tick*.5
+    return project_mesh(w,h,angle,MESH)
+
+
+def project_mesh(w,h,angle,mesh):
     c = Canvas(w,h)
-    angle = math.sin(tick*.8)*.5 if not won else tick*.5
     ca, sa = math.cos(angle), math.sin(angle)
     scale = max(2, min(h/3.1, w/7.2))
 
@@ -156,7 +198,7 @@ def boss_frame(w, h, tick, won=False):
         depth = z + 5
         return (w/2+x*scale*8/depth, h*.56-y*scale*4/depth, depth)
 
-    for a,b,d,color in MESH:
+    for a,b,d,color in mesh:
         p,q,r = project(a), project(b), project(d)
         denominator = (q[1]-r[1])*(p[0]-r[0])+(r[0]-q[0])*(p[1]-r[1])
         if abs(denominator) < 0.001:
@@ -177,16 +219,6 @@ def boss_frame(w, h, tick, won=False):
                     if z < c.depth[y][x]:
                         c.depth[y][x] = z
                         c.cells[y][x] = (char, color)
-    # Snow and a perspective floor surround the depth-tested rotating model.
-    for i in range(w//5):
-        x=(i*31+3)%w
-        y=(i*7+int(tick*2))%h
-        if c.cells[y][x][0] == " ": c.put(x,y,"·",3)
-    if w > 75:
-        c.put(3, max(1,h//2-2), "KRAMPUS.EXE", 6)
-        c.put(3, h//2, "FROST / DAEMON", 3)
-        c.put(w-25,max(1,h//2-2),"WEIHNACHTSSTERN",5)
-        c.put(w-25,h//2,"BEFREIT" if won else "STATUS: GEFANGEN",4 if won else 3)
     return c
 
 
@@ -231,13 +263,18 @@ def box(screen, y, x, height, width, color=3):
         put(screen,row,x+width-1,"│",color)
 
 
+def trail_hint(s):
+    if discovered(s): return f"Krampus gefunden · ssh {BOSS_IP}"
+    return f"✧ Spur: cd ~/welt/{hiding_place(s)}"
+
+
 def next_hint(s):
     if s["status"]=="won": return "Gewonnen! Noch eine Runde: neustart"
     if s["status"]=="lost": return "Neuer Versuch: neustart"
-    if not s.get("bag") and not s["spells"]: return "MITNEHMEN  cp ~/welt/dorf/funke ~/rucksack/"
-    if s["area"]=="zitadelle": return "ANGRIFF  ~/rucksack/funke    |    Heilung: ~/rucksack/kakao"
-    next_area={"dorf":"wald", "wald":"werkstatt", "werkstatt":"archiv", "archiv":"zitadelle"}.get(s["area"],"dorf")
-    return f"MITNEHMEN  cp DATEI ~/rucksack/    |    WEITER  cd ~/welt/{next_area}"
+    if s["boss_started"]: return f"~/rucksack/funke   ·   ping -c 4 {BOSS_IP}"
+    if not discovered(s) and not s.get("bag") and s["area"]=="dorf":
+        return "cp funke ~/rucksack/   ·   " + trail_hint(s)
+    return trail_hint(s)
 
 
 def bar(value, maximum, size=16):
@@ -254,8 +291,11 @@ def paint(screen,state,tick,position=None):
         put(screen,0,1,"FROSTBYTE · Terminal vergroessern",2)
         put(screen,2,1,f"Du {state['hp']}/100   Boss {state['boss_hp']}/240",4); return
     put(screen,0,2,"❄ FROSTBYTE",2,True)
-    put(screen,0,max(20,w-31),f"{state['score']} PTS  ·  {state['elapsed']:.1f}s",5)
-    scene_h=h-4
+    score=f"{state['score']} PTS"
+    timer=f"{state['elapsed']:.1f}s"
+    put(screen,0,(w-len(score))//2,score,5,True)
+    put(screen,0,w-len(timer)-2,timer,1)
+    scene_h=h-5
     if state.get("boss_started"):
         scene=combat_frame(w-4,scene_h,state,tick)
     else:
@@ -264,6 +304,14 @@ def paint(screen,state,tick,position=None):
     for y,row in enumerate(scene.cells):
         for x,(char,color) in enumerate(row):
             if char!=" ": put(screen,y+2,x+2,char,color)
+    inventory=state.get("bag_display",state.get("bag",[]))
+    items=" · ".join(inventory) or "leer"
+    room=max(10,w-15)
+    if len(items)>room:
+        loop=items+"     "
+        offset=int(tick*4)%len(loop)
+        items=(loop+loop)[offset:offset+room]
+    put(screen,h-2,2,"Rucksack  "+items,5)
     put(screen,h-1,2,next_hint(state),2)
 
 

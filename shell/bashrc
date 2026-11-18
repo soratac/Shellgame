@@ -35,6 +35,19 @@ modprobe() {
     if [[ $# == 2 && $1 == -r ]]; then _frost_action unload "$2";
     else printf 'Spiel-Treiber entfernen: modprobe -r frost_armor | blizzard\n'; fi
 }
+ssh() {
+    case "$#:$1" in
+        1:127.12.24.1|1:boss@127.12.24.1)
+            command frost boss-ssh && builtin cd "$HOME/welt/zitadelle" ;;
+        *) command ssh "$@" ;;
+    esac
+}
+ping() {
+    case "$*" in
+        '-c 4 127.12.24.1'|'127.12.24.1') _frost_action ping 127.12.24.1 ;;
+        *) printf 'Echo-Zauber: ping -c 4 BOSS-IP\n' ;;
+    esac
+}
 fliehen() { cd "$HOME/welt/dorf"; }
 neustart() {
     local mode=${1:-normal}

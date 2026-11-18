@@ -1,11 +1,8 @@
 RETTET WEIHNACHTEN
 
-ls                          Umschauen
-tree ~/welt                 Karte als Ordnerbaum
-cp funke ~/rucksack/         Mitnehmen
-cd ../wald                  Weitergehen
-~/rucksack/funke             Angreifen
+1  cp funke ~/rucksack/
+2  karte  →  folge der Spur mit cd ~/welt/ORT
+3  Verbinde dich mit der gefundenen IP: ssh IP
 
-Erkunde Dorf, Wald und Werkstatt. Dann zur Zitadelle.
-Tab vervollstaendigt. aussehen aendert deinen Charakter.
-neustart beginnt eine neue Runde.
+Im Kampf: ~/rucksack/funke oder ping -c 4 IP
+Tab vervollstaendigt. Mehr: hilfe

@@ -10,8 +10,8 @@ from .render import colors, put
 
 
 def name_dialog(screen):
-    from .avatar import HAIR, SHIRTS, DEFAULT, sprite
-    from .render import Canvas, box
+    from .avatar import HAIR, SHIRTS, DEFAULT
+    from .render import box, hero_frame
     colors()
     screen.keypad(True)
     state=request()["state"]
@@ -31,13 +31,13 @@ def name_dialog(screen):
                 "Haare  < "+avatar["hair"]+" >", "Shirt  < "+avatar["shirt"]+" >"]
         for i,label in enumerate(labels):
             put(screen,top+5+i*2,left+3,("› " if field==i else "  ")+label,2 if field==i else 1,field==i)
-        preview=Canvas(10,6); sprite(preview,1,0,avatar)
+        preview=hero_frame(19,9,0,avatar)
         for y,row in enumerate(preview.cells):
             for x,(char,color) in enumerate(row):
-                put(screen,top+5+y,left+width-15+x,char,color)
+                put(screen,top+2+y,left+width-22+x,char,color)
         put(screen,top+12,left+3,error or "Tab: Feld   Pfeile: Farbe   Enter: Spielen",6 if error else 3)
-        put(screen,top+14,left+3,"ls umsehen  ·  cp mitnehmen  ·  cd gehen",1)
-        put(screen,top+15,left+3,"3 Orte erkunden → Boss besiegen",2)
+        put(screen,top+14,left+3,"1  Funke einpacken: cp funke ~/rucksack/",1)
+        put(screen,top+15,left+3,"2  Spur auf der Karte finden → ssh zum Boss",2)
         screen.refresh()
         try: key=screen.get_wch()
         except curses.error: continue

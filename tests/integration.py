@@ -105,7 +105,7 @@ def main():
             session.expect("Winterheld?")
             assert b"DEIN WINTERHELD" in session.output
             session.send(name+"\t\x1bOC\t\x1bOC\r")
-            session.expect("DEINE SHELL")
+            session.expect("Rucksack")
             session.drain(.5)
             if args.load_only:
                 def drain(session=session):
@@ -170,16 +170,24 @@ def main():
         wait_state(lambda v:"heal:beeren" in v["rewards"] and v["hp"]==100)
         s.send("test ! -e ~/rucksack/beeren && printf 'HEAL_%s\\n' CONSUMED\r")
         s.expect("HEAL_CONSUMED")
-        s.send("cd ../zitadelle\r")
+        # Visit the marked hiding place rather than assuming a fixed arena.
+        from hashlib import sha256
+        hero=state()
+        place=("wald","werkstatt","archiv")[sha256(f"{hero['name']}:{hero['started']}".encode()).digest()[0]%3]
+        s.send(f"cd ~/welt/{place}\r")
+        wait_state(lambda v:place in v["visited"])
+        s.send("ssh 127.12.24.1\r")
         s.expect("BOSSKAMP STARTEN?")
         capture("boss-hints")
         s.send("n\r")
         s.drain(.4)
-        assert not state()["boss_started"] and state()["area"]=="wald"
-        s.send("cd ../zitadelle\r")
+        assert not state()["boss_started"] and state()["area"]==place
+        s.send("ssh 127.12.24.1\r")
         s.expect("BOSSKAMP STARTEN?")
         s.send("j\r")
         wait_state(lambda v:v["boss_started"])
+        s.send("ping -c 4 127.12.24.1\r")
+        wait_state(lambda v:v["boss_hp"]==236)
         s.send("cd ../dorf; printf 'LOCK_%s\\n' \"$PWD\"\r")
         s.expect("LOCK_/home/player/welt/zitadelle")
         s.send("builtin cd ../dorf\r")
@@ -228,7 +236,7 @@ def main():
         sessions.append(s)
         s.expect("GEMEINSAMER EINSTIEG"); s.send("r"+codes["player01"]+"\r")
         s.expect("DEIN FORTSETZEN-CODE:"); s.send("\r")
-        s.expect("DEINE SHELL")
+        s.expect("Rucksack")
         assert state()["name"]=="TestElf01" and state()["status"]=="won"
         print("PASS: reconnect code restores the same player and finished run",flush=True)
         s.send("neustart\r")

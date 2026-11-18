@@ -78,15 +78,17 @@ class Handler(socketserver.StreamRequestHandler):
             if not isinstance(data.get("content", ""), str) or not isinstance(data.get("command", ""), str):
                 return
             with LOCK:
+                peer = self.connection.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, struct.calcsize("3i"))
+                uid = struct.unpack("3i", peer)[1]
                 if action == "admin-reset":
-                    peer = self.connection.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, struct.calcsize("3i"))
-                    uid = struct.unpack("3i", peer)[1]
                     if uid != 0 or args != [STATE["name"]]:
                         result = {"ok": False, "message": "Administrator identity/name check failed.", "stop": False}
                     else:
                         STATE.clear()
                         STATE.update(fresh())
                         result = {"ok": True, "message": "Slot cleared.", "stop": False}
+                elif action == "enter_boss" or (action == "connect" and uid != 1002):
+                    result = {"ok":False, "stop":False, "message":"Nutze den SSH-Zugang auf der Karte."}
                 else:
                     result = act(STATE, action, args, cwd=data.get("cwd"), code=data.get("code", 0),
                                  command=data.get("command", "")[:500], content=data.get("content", "")[:8192])

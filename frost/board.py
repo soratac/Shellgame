@@ -13,7 +13,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from .render import colors, put, box, fit, Canvas, bar, boss_frame
+from .render import colors, put, box, fit, Canvas, bar, boss_frame, hero_frame, overlay
 from .avatar import DEFAULT, HAIR, SHIRTS, sprite
 from .records import bests as merge_bests, LEGACY_KEYS
 
@@ -166,7 +166,8 @@ def spotlight(screen,y,x,width,height,row,now):
     canvas=Canvas(width-4,7)
     event=(row.get("events") or [{}])[-1]
     impact=live and 0<=now-event.get("at",0)<1.5
-    sprite(canvas,2,1,row.get("avatar"),pose=int(now*3)%2 if live else 0,hit=impact and event.get("hurt",0)>0)
+    overlay(canvas,hero_frame(14,7,now if live else 0,row.get("avatar")),0,0,
+            6 if impact and event.get("hurt",0)>0 else None)
     if row["area"]=="zitadelle":
         boss=boss_frame(12,7,now)
         for cy,line in enumerate(boss.cells):

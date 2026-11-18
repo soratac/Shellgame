@@ -61,7 +61,7 @@ def main():
             s=Session('gateway',ports['gateway'],folder);sessions.append(s)
             s.expect('GEMEINSAMER EINSTIEG');s.send('\r');s.expect('DEIN FORTSETZEN-CODE:',timeout=60)
             codes.append(re.search(r'[A-F0-9]{4}(?:-[A-F0-9]{4}){3}',s.output.decode(errors='ignore')).group())
-            s.send('\r');s.expect('Winterheld?');s.send(f'DynamicElf{i:02}\r');s.expect('DEINE SHELL')
+            s.send('\r');s.expect('Winterheld?');s.send(f'DynamicElf{i:02}\r');s.expect('Rucksack')
             s.send("printf 'DYNAMIC_%s\\n' OK\r");s.expect('DYNAMIC_OK')
             s.close();sessions.remove(s)
             deadline=time.monotonic()+15
@@ -96,7 +96,7 @@ def main():
         subprocess.run(backup_only,check=True)
         print('PASS: abandoned joins cleaned up; unprivileged controller access denied; forced service recreation preserves players',flush=True)
         s=Session('gateway',ports['gateway'],folder);sessions.append(s)
-        s.expect('GEMEINSAMER EINSTIEG');s.send('r'+codes[0]+'\r');s.expect('DEIN FORTSETZEN-CODE:',timeout=60);s.send('\r');s.expect('DEINE SHELL')
+        s.expect('GEMEINSAMER EINSTIEG');s.send('r'+codes[0]+'\r');s.expect('DEIN FORTSETZEN-CODE:',timeout=60);s.send('\r');s.expect('Rucksack')
         assert next(r['Id'] for r in managed() if r['Labels']['frost.slot']==first)==before
         s.send("printf 'RESUMED_%s\\n' OK\r");s.expect('RESUMED_OK')
         board=Session('scoreboard',ports['gateway'],folder,user='score');sessions.append(board);board.expect('LIVE-SCOREBOARD')

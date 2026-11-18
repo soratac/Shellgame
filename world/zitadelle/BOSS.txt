@@ -1,8 +1,10 @@
 KRAMPUS
 
+Die Spur auf der Karte verrät seinen Standort.
+Adresse entdeckt? ssh IP startet das Duell.
+
 ~/rucksack/funke   Angriff
+ping -c 4 IP       Echo-Zauber
 ~/rucksack/kakao   Heilung
 
-Normaler Sieg: vorher 3 Orte erkunden.
-Profi-Abkuerzung: schneller Funken-Loop.
-Nach Kampfstart kein Rueckweg. Neustart: neustart
+Drei Orte brechen das Siegel. Der Funken-Loop ist die Abkuerzung.
