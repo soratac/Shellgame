@@ -1,7 +1,7 @@
 """Small shared character sprites for the editor, map and combat."""
 HAIR = {'braun': 7, 'blond': 5, 'schwarz': 8, 'rot': 6, 'blau': 2}
 SHIRTS = {'rot': 6, 'gruen': 4, 'blau': 2, 'lila': 9, 'weiss': 1}
-STYLES = ("kurz", "Locken", "Zopf", "Irokese")
+STYLES = ("kurz", "Locken", "Zopf", "Irokese", "Wellen", "Dutt", "Flechtkranz")
 GENDERS = ("männlich", "weiblich")
 OPTIONS = {"hair": HAIR, "shirt": SHIRTS, "gender": GENDERS, "style": STYLES}
 DEFAULT = {"hair":"braun", "shirt":"gruen", "gender":GENDERS[0], "style":STYLES[0]}

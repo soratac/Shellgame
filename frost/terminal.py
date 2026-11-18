@@ -17,6 +17,7 @@ import tty
 
 from .client import request
 from .music import indicator, mixer_action, music_link
+from .sound.terminal_notes import TerminalTune
 from .mouse import MouseInput
 from .music_http import recent_sounds
 from .render import colors, paint, put, box, POSITIONS
@@ -89,9 +90,11 @@ def frame(screen):
     state=None; fetched=0; painted=0; previous_size=None
     local_music = bool(os.environ.get("FROST_LOCAL_MUSIC") or os.environ.get("FROST_NATIVE_AUDIO"))
     local_sfx = bool(os.environ.get("FROST_LOCAL_SFX"))
+    tune = None if local_music else TerminalTune(time.monotonic())
     last_sound = time.time()
     sent_level, last_signal = None, 0
     attrs={}
+    pairs={}
     position=origin=target=POSITIONS["dorf"]
     travel_start=time.monotonic()
     def style(char):
@@ -100,15 +103,25 @@ def frame(screen):
         base={'black':0,'red':1,'green':2,'brown':3,'blue':4,'magenta':5,'cyan':6,'white':7,'default':-1}
         def color(value):
             if value in base: return base[value]
+            if value.startswith("bright") and value[6:] in base:
+                return base[value[6:]]+(8 if curses.COLORS>=16 else 0)
             try:
                 r,g,b=(int(value[i:i+2],16) for i in (0,2,4))
-                return 16+36*round(r/255*5)+6*round(g/255*5)+round(b/255*5) if curses.COLORS>=256 else 7
+                if curses.COLORS>=256:
+                    return 16+36*round(r/255*5)+6*round(g/255*5)+round(b/255*5)
+                small=((0,0,0),(170,0,0),(0,160,0),(170,120,0),(0,0,180),
+                       (160,0,150),(0,155,155),(220,220,220))
+                return min(range(8),key=lambda i: sum((a-b)**2 for a,b in zip((r,g,b),small[i])))
             except (ValueError,TypeError): return -1
-        pair=21+len(attrs)
-        if pair>=min(240,curses.COLOR_PAIRS): pair=0
-        else:
-            try: curses.init_pair(pair,color(char.fg),color(char.bg))
-            except curses.error: pair=0
+        inks=color(char.fg),color(char.bg)
+        if inks not in pairs:
+            pair=25+len(pairs)
+            if pair>=min(240,curses.COLOR_PAIRS): pair=0
+            else:
+                try: curses.init_pair(pair,*inks)
+                except curses.error: pair=0
+            pairs[inks]=pair
+        pair=pairs[inks]
         result=curses.color_pair(pair)
         if char.bold: result|=curses.A_BOLD
         if char.underscore: result|=curses.A_UNDERLINE
@@ -177,7 +190,7 @@ def frame(screen):
                 os.write(master,data)
             now=time.monotonic()
             if mouse.pending and now-mouse.since>.12: os.write(master,mouse.flush())
-            if (not zoom or local_sfx) and now-fetched>.15:
+            if (not zoom or local_sfx or tune) and now-fetched>.15:
                 try:
                     snapshot=request()
                     state=snapshot['state']
@@ -192,8 +205,15 @@ def frame(screen):
                         origin,target,travel_start=position,destination,now
                 except (OSError,ValueError): pass
                 fetched=now
+            level = 0 if music["muted"] else music["level"]
+            if tune:
+                effects = []
+                if state:
+                    for at, sounds in recent_sounds(state.get("events"), last_sound):
+                        effects.extend(sounds)
+                        last_sound = at
+                tune.play(now, level, effects[-2:])
             if local_music:
-                level = 0 if music["muted"] else music["level"]
                 if level != sent_level or now-last_signal >= 2:
                     os.write(1, f"\x1b]777;frost-volume={level:03}\x07".encode())
                     last_signal, sent_level = now, level
@@ -209,6 +229,7 @@ def frame(screen):
                 progress=min(1,(now-travel_start)/.9)
                 position=tuple(origin[i]+(target[i]-origin[i])*progress for i in (0,1))
                 paint(hud,state,now,position,walking=progress<1)
+                hud.syncup()
                 if now<notice_until:
                     put(screen,top-1,1,notice,5,True)
                 box(screen,top,0,rows-top,cols-1,2)

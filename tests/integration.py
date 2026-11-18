@@ -107,6 +107,9 @@ def main():
             session=connect("gateway",ports["gateway"],folder,music=slot=="player02" and not args.load_only)
             sessions.append(session)
             session.expect("CHARAKTER",timeout=45)
+            if slot=="player01":
+                session.drain(.3)
+                assert re.search(rb"\x1b\[[1-7];[0-9]+;[0-9]+,~",session.output), "Keine automatischen SSH-Noten im Einstieg"
             assert b"FORTSETZEN-CODE" not in session.output
             session.send(name+"\t\x1bOC\t\x1bOC\t\x1bOC\t\x1bOC\r")
             session.expect("Rucksack")

@@ -45,7 +45,9 @@ Mit `tipp` erhältst du bis zu drei Hinweise pro Runde. Jeder erscheint acht Sek
 
 ## Weihnachtsmusik
 
-Für Musik und Effekte starte Frostbyte im Terminal **auf dem Rechner mit deinen Lautsprechern**. Im aktuellen Repository genügt über den Jumphost dieser Befehl.
+Beim normalen SSH-Login startet die Melodie bereits in der Charakterauswahl. Frostbyte sendet die Noten und später auch die Treffer- und Zaubertöne über DECPS direkt ans Terminal. Die Wiedergabe setzt einen Terminalemulator mit aktivierter DECPS-Tonausgabe voraus, zum Beispiel mintty. Lautstärke und Stummschaltung im Spiel gelten auch für diese Ausgabe.
+
+Für den mehrstimmigen Soundtrack und die gemischten Effekte auf einem Rechner mit lokalen Lautsprechern kannst du über den Jumphost so starten.
 
 ```bash
 python3 scripts/spielmusik.py -J jump spiel@10.0.0.60

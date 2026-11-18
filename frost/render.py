@@ -12,6 +12,7 @@ from .engine import HINT_LIMIT
 from .avatar import HAIR, SHIRTS
 from .items import BAG_ICONS, bag_count
 
+from .snow import flakes
 from .spell_art import apparition, spell_motion
 from .scenery import POSITIONS, atlas_frame, atlas_point
 
@@ -30,6 +31,8 @@ def static_map(s):
 
 def world_frame(w,h,s,position,tick,walking=False):
     c=atlas_frame(w,h)
+    for fx,fy,glyph,tint in flakes(w,h,tick):
+        if c.cells[fy][fx][0]==" ": c.put(fx,fy,glyph,tint)
     marked=None if discovered(s) else hiding_place(s)
     x,y=atlas_point(w,h,position)
     hh=max(4,min(8,h//2))
@@ -44,7 +47,7 @@ def world_frame(w,h,s,position,tick,walking=False):
             if event.get("kind")=="bag":
                 c.put(left, max(0,top+2-int(age*2)), "+"+event.get("spell",""),5)
             else: attack_effect(c,event,age,(left+4,top+hh//2),(x,max(1,y-1)))
-    offset=max(3,min(7,h//4))//2+1 if h>=14 and w>=46 else 1
+    offset=max(3,min(8,h//4+1))//2+1 if h>=14 and w>=46 else 1
     for name,pos in POSITIONS.items():
         lx,ly=atlas_point(w,h,pos)
         label=("▸ " if name==s["area"] else "")+name+(" ✧" if name==marked else "")
@@ -58,9 +61,9 @@ def smooth_life(value,before,progress):
     return before+(value-before)*t*t*(3-2*t)
 
 
-def health_gauge(value, maximum, size, previous, age, tick):
+def health_gauge(value, maximum, size, previous, age, tick, current=None):
     """A continuous enamel face with a darker lower edge and a fading damage trail."""
-    label=f" {round(value)}/{maximum}"
+    label=f" {round(value) if current is None else current}/{maximum}"
     c=Canvas(size+len(label),2)
     amount=max(0,min(size*8,round(value/maximum*size*8)))
     healing=previous<value and 0<=age<1.45
@@ -80,12 +83,13 @@ def health_gauge(value, maximum, size, previous, age, tick):
             c.put(x,1,"▝" if x==0 else "▘" if x==size-1 else "▀",shadow)
         else:
             c.put(x,0,"▓" if x<trailing/maximum*size else "▁",15 if x<trailing/maximum*size else 8)
-    c.put(size,0,label,20)
+    c.put(size,0,label,21)
     return c
 
 
 def combat_frame(w,h,s,tick):
     c=Canvas(w,h)
+    for fx,fy,glyph,tint in flakes(w,h,tick): c.put(fx,fy,glyph,tint)
     event=(s.get("events") or [None])[-1]
     age=time.time()-event["at"] if event else 99
     active=event is not None and 0<=age<1.5
@@ -114,8 +118,8 @@ def combat_frame(w,h,s,tick):
         apparition(c,"shade",min(w//2-1,meter+10),2+.7*math.sin(tick*2),size,tick)
         apparition(c,"life",w-(meter+8)-3,h-3+.6*math.sin(tick*2.3),size,tick+.5)
     if active: attack_effect(c,event,age,start,end)
-    boss_bar=health_gauge(bhp,240,meter,event["boss_before"] if active else bhp,age,tick)
-    player_bar=health_gauge(hp,100,meter,event["hp_before"] if active else hp,age,tick)
+    boss_bar=health_gauge(bhp,240,meter,event["boss_before"] if active else bhp,age,tick,s["boss_hp"])
+    player_bar=health_gauge(hp,100,meter,event["hp_before"] if active else hp,age,tick,s["hp"])
     label=s["name"][:18]
     c.put(1,0,"♥ GRINCH",4)
     overlay(c,boss_bar,1,1)
@@ -207,7 +211,7 @@ def boss_mesh(breath, lunge, recoil):
         mesh+=cube(side*.88,-1.44,-.12,.65,.30,.83,8)
         for toe in (-.17,.07,.27):
             mesh+=beast_segment((side*.88+toe,-1.38,-.46),(side*.88+toe,-1.57,-.75),(.09,.13),(0,0),1)
-    mesh+=beast_segment((0,-.94,.15),(cx,neck,-.04),(.77,.51),(1.28,.62),16)
+    mesh+=beast_segment((0,-.94,.15),(cx,neck,-.04),(.77,.51),(1.28,.62),6)
     mesh+=beast_segment((0,-.83,.15),(0,-.64,.15),(.82,.54),(.86,.54),8)
     for side in (-1,1):
         shoulder=cx+side*1.00
@@ -235,15 +239,25 @@ def boss_mesh(breath, lunge, recoil):
         mesh+=beast_segment((hx+side*.66,hy+.22,-.15),(hx+side*1.15,hy+.63,.04),
                             (.33,.31),(0,0),4)
         mesh+=beast_segment((hx+side*.46,hy+.30,.14),(hx+side*.75,hy+.94,.26),
-                            (.20,.21),(0,0),7)
+                            (.12,.14),(0,0),4)
     # Fur-trimmed coat, brass buckle and a bent stocking cap with a pompom.
     mesh+=beast_segment((0,-.99,.15),(0,-.82,.15),(.82,.56),(.85,.56),20)
-    mesh+=cube(0,-.72,-.43,.36,.20,.13,5)
+    mesh+=cube(0,-.72,-.46,.40,.23,.14,5)
+    # White cuffs, a scarlet lapel and gold buttons across the front of the coat.
+    for side in (-1,1):
+        wrist=cx+side*(1.40+reach*.28)
+        wy=-.44+lift+(reach*.46 if side<0 else -reach*.12)
+        wz=-.47-(reach*.90 if side<0 else 0)
+        mesh+=beast_segment((wrist,wy+.10,wz),(shoulder,neck-.15,.02),(.33,.36),(.50,.49),6)
+        mesh+=cube(wrist,wy+.10,wz,.68,.25,.65,20)
+    mesh+=beast_segment((-.03,-.58,-.44),(cx,neck-.12,-.66),(.14,.08),(.24,.09),6)
+    for i in range(3):
+        mesh+=cube(-.07,-.46+i*.27,-.57-i*.06,.13,.13,.09,5)
     mesh+=beast_segment((cx,neck-.20,-.05),(cx,neck-.05,-.05),(1.07,.62),(1.15,.62),20)
     mesh+=beast_segment((hx,hy+.22,-.17),(hx,hy+.40,-.16),(.82,.62),(.78,.59),20)
-    mesh+=beast_segment((hx,hy+.39,-.16),(hx-.33,hy+.87,-.14),(.78,.59),(.32,.27),16)
-    mesh+=beast_segment((hx-.33,hy+.87,-.14),(hx-.91,hy+.54,-.26),(.32,.27),(.10,.10),16)
-    mesh+=beast_segment((hx-.91,hy+.38,-.26),(hx-.91,hy+.62,-.26),(.20,.17),(.15,.15),20)
+    mesh+=beast_segment((hx,hy+.39,-.16),(hx-.33,hy+.87,-.14),(.78,.59),(.32,.27),6)
+    mesh+=beast_segment((hx-.33,hy+.87,-.14),(hx-.91,hy+.54,-.26),(.32,.27),(.10,.10),6)
+    mesh+=beast_segment((hx-.91,hy+.38,-.26),(hx-.91,hy+.62,-.26),(.27,.24),(.22,.19),20)
     return mesh
 
 
@@ -254,14 +268,28 @@ def hero_mesh(hair,shirt,gender,style,step):
     shoulder=.95 if gender=="weiblich" else 1.12
     mesh = cube(0,-.22,0,shoulder,.93,.60,shirt)
     if gender=="weiblich":
-        mesh+=cube(0,-.61,0,1.15,.22,.70,shirt)+cube(.36,.08,-.31,.27,.56,.14,5)
+        mesh+=beast_segment((0,-.73,0),(0,-.30,0),(.69,.39),(.40,.33),shirt)
+        mesh+=cube(.31,.02,-.32,.22,.51,.14,6)
     mesh += cube(0,.66,-.04,.81,.78,.72,10)
-    mesh += cube(0,.98,0,.91,.27,.80,hair)
+    mesh += cube(0,1.00,-.055,.92,.32,.85,hair)
     mesh += cube(0,.67,.32,.85,.55,.24,hair)
-    if style=="Zopf":
-        for i in range(4):
-            mesh+=cube(.28,.84-.22*i,.44+.07*i,.36-.03*i,.34,.36,hair)
-        mesh+=cube(.28,.24,.68,.30,.12,.32,5)
+    if style=="Dutt":
+        mesh+=beast_segment((.16,1.06,.20),(.23,1.40,.20),(.31,.27),(.38,.32),hair)
+        mesh+=cube(.23,1.43,.2,.49,.16,.42,hair)
+        mesh+=cube(.16,1.11,.19,.56,.09,.50,5)
+    elif style in ("Zopf","Flechtkranz"):
+        for side in ((-1,1) if style=="Flechtkranz" else (1,)):
+            for i in range(4):
+                mesh+=cube(side*(.43+.065*(i%2)),.89-i*.21,-.11-i*.06,.28,.31,.32,hair)
+            mesh+=cube(side*.49,.18,-.30,.27,.13,.29,6)
+        if style=="Flechtkranz":
+            for i in range(5):
+                mesh+=cube((i-2)*.18,1.02+.06*(i%2),-.38,.23,.20,.19,hair)
+    elif style=="Wellen":
+        mesh+=beast_segment((-.19,.91,-.39),(.09,1.14,-.24),(.25,.14),(.43,.26),hair)
+        for side in (-1,1):
+            for i in range(4):
+                mesh+=cube(side*(.42+.07*math.sin(i*2)),.92-i*.23,.02,.29,.38,.55,hair)
     elif style=="Locken":
         for i in range(9):
             angle=i*math.tau/9
@@ -271,6 +299,11 @@ def hero_mesh(hair,shirt,gender,style,step):
         for i in range(4): mesh+=cone(0,1.06,-.33+i*.22,.23,.59-.06*i,hair)
     else:
         mesh+=cone(-.21,1.04,-.13,.34,.31,hair)+cube(.23,.90,-.37,.35,.23,.20,hair)
+    if gender=="weiblich" and style in ("kurz","Locken"):
+        for side in (-1,1):
+            mesh+=beast_segment((side*.42,.34,-.02),(side*.40,.90,.02),
+                                (.13,.21),(.22,.32),hair)
+        mesh+=cube(-.20,.91,-.39,.48,.17,.16,hair)
     mesh += cube(0,.20,-.04,1.06,.16,.73,5)
     mesh += cube(0,-.18,.43,.62,.73,.42,7)
     mesh += cube(0,-.04,.66,.55,.13,.07,5)
@@ -280,8 +313,24 @@ def hero_mesh(hair,shirt,gender,style,step):
         mesh += cube(side*.61,-.56,swing-.06,.27,.23,.38,10)
         mesh += cube(side*.29,-.90,-swing,.39,.52,.44,8)
         mesh += cube(side*.29,-1.20+max(0,swing*.4),-swing-.10,.43,.22,.66,7)
-        mesh += cube(side*.21,.72,-.42,.11,.12,.07,8)
     return mesh
+
+
+def face_details(canvas, camera, tick, profile=False):
+    eyes=[]
+    for side in (-1,1):
+        x,y,depth=camera((side*.23,.71,-.48))
+        eyes.append((round(x),round(y),depth))
+    if profile and abs(eyes[0][0]-eyes[1][0])<3:
+        eyes=[min(eyes,key=lambda eye:eye[2])]
+    elif eyes[0][:2]==eyes[1][:2]:
+        x,y,depth=eyes[0]
+        eyes[0]=(x-1,y,depth)
+    for x,y,_ in eyes:
+        canvas.put(x,y,"─" if tick%4.3>4.12 else "•",22)
+    if canvas.h>=12:
+        x,y,_=camera((0,.43,-.46))
+        canvas.put(round(x),max(round(y),max(e[1] for e in eyes)+1),"─",22)
 
 
 def hero_frame(w,h,tick,avatar,back=False,walking=False):
@@ -289,8 +338,11 @@ def hero_frame(w,h,tick,avatar,back=False,walking=False):
     mesh=hero_mesh(HAIR.get(avatar.get("hair"),7), SHIRTS.get(avatar.get("shirt"),4),
                    avatar.get("gender","männlich"),avatar.get("style","kurz"),
                    round(math.sin(tick*7)) if walking else 0)
-    angle=(2.5 if back else -.38)+math.sin(tick*1.6)*.15
-    return project_mesh(w,h,angle,mesh)
+    angle=(-.94 if back else -.30)+math.sin(tick*1.6)*.12
+    camera=projector(w,h,angle,2.85)
+    canvas=project_mesh(w,h,angle,mesh,project=camera)
+    face_details(canvas,camera,tick,profile=back)
+    return canvas
 
 
 def boss_frame(w,h,tick,won=False,event=None,age=99):
@@ -316,6 +368,9 @@ def monster_pose(w,h,breath,lunge,recoil):
         if h>=12:
             x,y,_=project((cx-1.04,neck+.94+lift,-.30))
             canvas.put(round(x),round(y),"✹",20)
+        if h>=13:
+            x,y,_=project((cx,neck-.30,-.70))
+            canvas.put(round(x),round(y),"❄",20)
         for side in (-1,1):
             x,y,_=project((cx-.13+side*.39,neck+.56+lift,-.86))
             eye_row=round(y)
@@ -328,17 +383,22 @@ def monster_pose(w,h,breath,lunge,recoil):
 
 def colors():
     curses.start_color()
+    if not curses.has_colors(): return
     curses.use_default_colors()
-    palette = [252, 86, 60, 120, 221, 204, 130, 240, 141, 223, 24, 67, 103, 37, 173, 160, 22, 237, 28, 230]
+    palette = [252, 86, 103, 120, 221, 203, 173, 245, 141, 223, 24, 67, 103, 37, 173, 160, 22, 237, 28, 230]
     for i, color in enumerate(palette, 1):
-        curses.init_pair(i, color if curses.COLORS >= 256 else [7,6,4,2,3,1,3,0,5,3,4,6,4,6,3,1,2,0,2,7][i-1], -1)
+        curses.init_pair(i, color if curses.COLORS >= 256 else [7,6,4,2,3,1,3,7,5,7,4,6,4,6,3,1,2,7,2,7][i-1], -1)
+
+    for pair,fg,bg,small_fg,small_bg in ((21,231,22,7,2),(22,16,224,0,7),
+                                        (23,231,22,7,2),(24,16,222,0,3)):
+        curses.init_pair(pair,fg if curses.COLORS>=256 else small_fg,bg if curses.COLORS>=256 else small_bg)
 
 
 def put(screen, y, x, text, color=1, bold=False):
     h,w = screen.getmaxyx()
     if 0 <= y < h and 0 <= x < w:
         try:
-            screen.addnstr(y,x,text,max(0,w-x-1),curses.color_pair(color) | (curses.A_BOLD if bold else 0))
+            screen.addnstr(y,x,text,max(0,w-x-1),curses.color_pair(color) | (curses.A_BOLD if bold or color in (21,23,24) else 0))
         except curses.error:
             pass
 
@@ -439,7 +499,7 @@ def paint(screen,state,tick,position=None,walking=False):
         event=(state.get("events") or [None])[-1]
         age=time.time()-event["at"] if event else 9
         if 0<=age<1.4: hp=smooth_life(hp,event["hp_before"],age/.78)
-        health=health_gauge(hp,100,min(15,w//7),event["hp_before"] if event else hp,age,tick)
+        health=health_gauge(hp,100,min(15,w//7),event["hp_before"] if event else hp,age,tick,state["hp"])
         put(screen,1,1,fit(hud_hint(state),w-health.w-4),5,True)
     for y,row in enumerate(scene.cells):
         for x,(char,color) in enumerate(row):

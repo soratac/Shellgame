@@ -7,6 +7,7 @@ import time
 import sys
 from pathlib import Path
 
+from .sound.terminal_notes import TerminalTune
 from .client import request
 from .render import colors, put
 
@@ -55,22 +56,22 @@ def draw_editor(screen, name, avatar, field, existing, tick, changed, error):
         if part:
             value = fit(avatar[part], max(1, right-value_x-3), center=True)
             put(screen, row, value_x, "‹", 2, True)
-            put(screen, row, value_x+2, value, tint, focus)
+            put(screen, row, value_x+2, value, 23 if focus else tint, focus)
             put(screen, row, right, "›", 2, True)
         else:
             value = name+("▏" if focus and int(tick*2)%2 == 0 else "")
             available = max(1, right-value_x+1)
             while cell_width(value) > available:
                 value = value[1:]
-            put(screen, row, value_x, value, tint, focus)
+            put(screen, row, value_x, value, 23 if focus else tint, focus)
         hits[row] = (i, x, right, value_x)
-    action = "ENTER  ▸  Übernehmen" if existing else "ENTER  ▸  Spielen"
-    target = button(screen, footer, left+max(1,(width-len(action)-4)//2), action,5)
+    action = "ENTER  Übernehmen" if existing else "ENTER  Spielen"
+    target = button(screen, footer, left+max(1,(width-len(action)-4)//2), action)
     button_rows = range(footer, footer+1)
     if height >= 18 and target:
         span = len(target)
-        put(screen, footer-1, target.start, "╭"+"━"*(span-2)+"╮", 20)
-        put(screen, footer+1, target.start, "╰"+"▀"*(span-2)+"╯", 15)
+        put(screen, footer-1, target.start, "╭"+"─"*(span-2)+"╮", 12)
+        put(screen, footer+1, target.start, "╰"+"─"*(span-2)+"╯", 3)
         button_rows = range(footer-1, footer+2)
     if error:
         put(screen, heading+1, left+2, fit(error, width-4), 6)
@@ -83,17 +84,21 @@ def name_dialog(screen):
     from .showcase import enable_buttons, mouse_press
     colors()
     enable_buttons(screen)
-    state = request()["state"]
+    snapshot = request()
+    state = snapshot["state"]
     name = state["name"]
     existing = bool(name)
     avatar = appearance(state.get("avatar", {}))
     field = 1 if existing else 0
     started = time.monotonic()
+    tune = None if any(os.environ.get(k) for k in ("FROST_NATIVE_AUDIO", "FROST_LOCAL_MUSIC", "FROST_TERMINAL")) else TerminalTune(started)
+    level = 0 if snapshot["music"]["muted"] else snapshot["music"]["level"]
     last_change = started-1
     error = ""
     screen.timeout(130)
     while True:
         now = time.monotonic()
+        if tune: tune.play(now, level)
         hits, button_rows, target = draw_editor(screen, name, avatar, field, existing,
                                             now-started, now-last_change, error)
         try:

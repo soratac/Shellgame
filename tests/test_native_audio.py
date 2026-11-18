@@ -15,6 +15,15 @@ class NativeAudioTests(unittest.TestCase):
         self.assertEqual(mix.block(441), bytes(882))
         self.assertFalse(mix.voices)
 
+    def test_plain_ssh_score_and_effects_obey_mute(self):
+        from frost.sound.terminal_notes import EFFECT, TerminalTune
+        self.assertEqual(set(EFFECT),SOUNDS)
+        tune=TerminalTune(0)
+        self.assertRegex(tune.packet(0,40),rb"^\x1b\[3;[0-9]+;[0-9]+,~$")
+        self.assertEqual(tune.packet(.01,40),b"")
+        self.assertEqual(tune.packet(.1,0,["stern"]),b"")
+        self.assertEqual(tune.packet(.11,100,["stern"]),b"\x1b[7;2;13;25,~")
+
     def test_music_wraps_mid_block(self):
         mix = Mix()
         size = 100

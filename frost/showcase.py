@@ -6,7 +6,8 @@ from itertools import groupby
 
 from .avatar import HAIR, SHIRTS
 from .geometry import Canvas, beast_segment, overlay, project_mesh
-from .render import hero_mesh, put
+from .render import hero_mesh, face_details, put
+from .snow import flakes
 from .spell_art import crystal, medal
 
 
@@ -44,13 +45,9 @@ def wordmark(screen,y,x,width,tick):
 def studio_frame(screen, top, left, height, width, tick):
     rows, cols = screen.getmaxyx()
     bottom, right = top+height-1, left+width-1
-    for i in range(rows*cols//32):
-        depth = i%3
-        drift = int(tick*(.5+depth*.3))
-        x = (i*37+drift+i//7) % cols
-        y = (i*17+i//5+int(tick*(1+depth*.65))) % rows
+    for x,y,glyph,color in flakes(cols,rows,tick,studio=True):
         if not (left <= x <= right and top <= y <= bottom):
-            put(screen, y, x, ("·","•","❄")[depth], (3,12,1)[depth])
+            put(screen,y,x,glyph,color)
     if width < 3 or height < 2:
         return
     put(screen, top, left, "╔"+"═"*(width-2)+"╗", 1, True)
@@ -92,15 +89,16 @@ def enable_buttons(screen):
     except curses.error: pass
 
 
-def button(screen,y,x,label,color=2):
-    text="▐ "+label+" ▌"
-    h,w=screen.getmaxyx()
-    if 0<=x<w-1 and 0<=y<h:
-        try:
-            screen.addnstr(y,x,text,w-x-1,curses.color_pair(color)|curses.A_REVERSE|curses.A_BOLD)
-        except curses.error:
-            pass
-    return range(x,min(w-1,x+len(text)))
+def button(screen,y,x,label):
+    # A separate warm keycap and evergreen action face remain legible on 8-color terminals.
+    key, _, action = label.partition("  ")
+    segments = ((" "+key+" ",24), (" "+action.strip()+" › ",23)) if action else ((" "+label+" ",23),)
+    _,width=screen.getmaxyx()
+    start=x
+    for text,pair in segments:
+        put(screen,y,x,text,pair,True)
+        x+=len(text)
+    return range(start,min(width-1,x))
 
 
 @lru_cache(maxsize=1)
@@ -123,11 +121,7 @@ def studio(w,h,avatar,tick,changed):
         d=5+z
         return w*.5+x*scale*8/d,h*.48-(y+.14*z)*scale*4.5/d,d
     c=project_mesh(w,h,0,pedestal()+mesh,project=camera)
-    if h>=13:
-        blink=tick%3.7>3.52
-        for side in (-1,1):
-            x,y,_=camera((side*.21,.72,-.47))
-            c.put(round(x),round(y),"─" if blink else "•",8)
+    face_details(c,camera,tick)
     for i in range(7):
         a=tick*.71+i*math.tau/7
         x=round(w*.5+math.cos(a)*w*.36)

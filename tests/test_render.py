@@ -51,6 +51,31 @@ class RenderTests(unittest.TestCase):
                     self.assertTrue(any(name in line for line in lines),(w,h,area,name))
                 self.assertTrue(any("▸ "+area in line for line in lines))
 
+    def test_portraits_show_eyes_and_distinct_hair(self):
+        from frost.avatar import appearance
+        from frost.render import hero_frame
+        frames=[]
+        for style in ("Wellen","Dutt","Flechtkranz"):
+            avatar=appearance({"gender":"weiblich","style":style,"hair":"schwarz"})
+            for w,h in ((13,7),(32,18)):
+                frame=hero_frame(w,h,.5,avatar)
+                self.assertEqual(sum(cell==("•",22) for row in frame.cells for cell in row),2)
+            frames.append(frame.cells)
+        self.assertNotEqual(frames[0],frames[1])
+        self.assertNotEqual(frames[1],frames[2])
+
+    def test_combat_shows_current_values_during_damage(self):
+        import time
+        from frost.render import combat_frame
+        state=fresh("Elf")
+        state.update(hp=89,boss_hp=207,events=[dict(at=time.time(),kind="ping",damage=33,
+                     hurt=11,hp_before=100,boss_before=240,sounds=["ping","claw"])])
+        for width,height in ((33,7),(90,20)):
+            canvas=combat_frame(width,height,state,12)
+            numbers=" ".join("".join(ch for ch,pair in row if pair==21) for row in canvas.cells)
+            self.assertIn("207/240",numbers)
+            self.assertIn("89/100",numbers)
+
     def test_world_character_all_areas(self):
         for area,position in POSITIONS.items():
             state=fresh("Elf")
