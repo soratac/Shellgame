@@ -83,7 +83,6 @@ def main():
         (folder/(label+".txt")).write_text(content)
         return content
     sessions=[]
-    codes={}
     drain_stop=threading.Event()
     drain_threads=[]
     for sock in listeners: sock.close()
@@ -97,13 +96,8 @@ def main():
             name="雪Elf" if slot=="player02" else "TestElf"+slot[-2:]
             session=Session("gateway",ports["gateway"],folder)
             sessions.append(session)
-            session.expect("GEMEINSAMER EINSTIEG")
-            session.send("\r")
-            session.expect("DEIN FORTSETZEN-CODE:")
-            codes[slot]=re.search(r"[A-F0-9]{4}(?:-[A-F0-9]{4}){3}",session.output.decode(errors="ignore")).group()
-            session.send("\r")
-            session.expect("Winterheld?")
-            assert b"DEIN WINTERHELD" in session.output
+            session.expect("GEMEINSAMER EINSTIEG",timeout=45)
+            assert b"FORTSETZEN-CODE" not in session.output
             session.send(name+"\t\x1bOC\t\x1bOC\r")
             session.expect("Rucksack")
             session.drain(.5)
@@ -141,14 +135,13 @@ def main():
         fcntl.ioctl(s.fd,termios.TIOCSWINSZ,struct.pack("HHHH",32,90,0,0)); s.drain(.6)
         s.send("printf 'RESIZE_%s\\n' OK\r"); s.expect("RESIZE_OK")
         fcntl.ioctl(s.fd,termios.TIOCSWINSZ,struct.pack("HHHH",42,120,0,0)); s.drain(.5)
-        s.send("aussehen\r"); s.expect("DEIN WINTERHELD"); s.send("\r"); s.drain(.3)
+        s.send("aussehen\r"); s.expect("CHARAKTER"); s.send("\r"); s.drain(.3)
         s.send("printf 'AVATAR_%s\\n' RETURN\r"); s.expect("AVATAR_RETURN")
         limits=run("exec","-T","player01","sh","-c","cat /sys/fs/cgroup/memory.max /sys/fs/cgroup/memory.swap.max /sys/fs/cgroup/pids.max /sys/fs/cgroup/cpu.max",capture_output=True,text=True).stdout.splitlines()
         assert limits==["268435456","0","96","50000 100000"],limits
         print("PASS: nano save/exit, terminal resize, avatar editor return, RAM/swap/PID/CPU limits",flush=True)
         extra=Session("gateway",ports["gateway"],folder)
         sessions.append(extra)
-        extra.expect("GEMEINSAMER EINSTIEG"); extra.send("\r")
         extra.expect("Alle Spielerplaetze sind vergeben")
         extra.send("\r"); extra.close(); sessions.remove(extra)
         print("PASS: common SSH entry allocates distinct containers and rejects capacity overflow",flush=True)
@@ -158,20 +151,20 @@ def main():
         s.send("restart game\r")
         s.expect("Neuer Lauf")
         s.drain(.3)
-        s.send("cp fun\t ~/rucksack/\r")
+        s.send("mv fun\t ping ~/rucksack/\r")
         wait_state(lambda v:"funke" in v["bag"])
         s.send("cd ../\t\t")
         s.expect("archiv/")
         s.send("\x03")
         s.drain(.3)
-        s.send("cp kakao ~/rucksack/; cp post/wunschzettel.txt abgabe/gerettet.txt\r")
+        s.send("mv kakao ~/rucksack/; cp post/wunschzettel.txt abgabe/gerettet.txt\r")
         wait_state(lambda v:"quest:wunschzettel" in v["rewards"])
         s.send("cd ../werkstatt; cp schild ~/rucksack/\r")
         wait_state(lambda v:v["area"]=="werkstatt")
         assert "schild" not in state()["bag"]
         s.send("mv -f schild ~/rucksack/; cd ../archiv; mv .depot/stern ~/rucksack/\r")
         wait_state(lambda v:{"schild","stern"}<=set(v["bag"]))
-        s.send("cd ../wald; cp wurzeln/frost .lichtung/beeren ~/rucksack/; ~/rucksack/beeren\r")
+        s.send("cd ../wald; mv wurzeln/frost .lichtung/beeren ~/rucksack/; ~/rucksack/beeren\r")
         wait_state(lambda v:"heal:beeren" in v["rewards"] and v["hp"]==100)
         s.send("test ! -e ~/rucksack/beeren && printf 'HEAL_%s\\n' CONSUMED\r")
         s.expect("HEAL_CONSUMED")
@@ -180,14 +173,15 @@ def main():
         hero=state()
         place=("wald","werkstatt","archiv")[sha256(f"{hero['name']}:{hero['started']}".encode()).digest()[0]%3]
         s.send(f"cd ~/welt/{place}\r")
-        wait_state(lambda v:place in v["visited"])
-        s.send("ssh 127.12.24.1\r")
+        wait_state(lambda v:v["area"]==place)
+        s.send("ping grinch\r"); wait_state(lambda v:v["grinch_found"])
+        s.send("ssh grinch\r")
         s.expect("BOSSKAMP STARTEN?")
         capture("boss-hints")
         s.send("n\r")
         s.drain(.4)
         assert not state()["boss_started"] and state()["area"]==place
-        s.send("ssh 127.12.24.1\r")
+        s.send("ssh grinch\r")
         s.expect("BOSSKAMP STARTEN?")
         s.send("j\r")
         wait_state(lambda v:v["boss_started"])
@@ -244,13 +238,11 @@ def main():
             if not next(r for r in scores() if r["slot"]=="player01")["connected"]: break
             time.sleep(.2)
         assert not next(r for r in scores() if r["slot"]=="player01")["connected"]
-        s=Session("gateway",ports["gateway"],folder)
+        s=Session("player01",ports["player01"],folder)
         sessions.append(s)
-        s.expect("GEMEINSAMER EINSTIEG"); s.send("r"+codes["player01"]+"\r")
-        s.expect("DEIN FORTSETZEN-CODE:"); s.send("\r")
         s.expect("Rucksack")
         assert state()["name"]=="TestElf01" and state()["status"]=="won"
-        print("PASS: reconnect code restores the same player and finished run",flush=True)
+        print("PASS: direct slot login restores the same player and finished run",flush=True)
         s.send("neustart\r")
         s.expect("Neuer Lauf")
         wait_state(lambda v:v["score"]==40 and v["bag"]==[] and "best" in v["bests"])
@@ -285,9 +277,7 @@ def main():
             assert json.load(archive.extractfile(member))["name"]=="TestElf01"
         new=Session("gateway",ports["gateway"],folder)
         sessions.append(new)
-        new.expect("GEMEINSAMER EINSTIEG"); new.send("\r")
-        new.expect("DEIN FORTSETZEN-CODE:"); new.send("\r")
-        new.expect("Winterheld?")
+        new.expect("GEMEINSAMER EINSTIEG")
         print("PASS: global reset backup, all names/scores/homes cleared, host keys preserved, fresh login modal",flush=True)
     finally:
         drain_stop.set()

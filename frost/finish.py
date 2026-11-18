@@ -36,7 +36,7 @@ def result_screen(screen, state):
             put(screen,top+8,left,fit(state["name"],width,center=True),1)
             put(screen,top+10,left,fit(f"{state['score']} PUNKTE     {state['elapsed']:.2f} SEKUNDEN",width,center=True),2,True)
             if won:
-                method={"loop":"SCHLEIFEN-TRICK", "driver":"TREIBER-TRICK", "spell":"ZAUBER", "staff":"ZUCKERSTAB"}.get(state["method"],"SIEG")
+                method={"loop":"SIEG", "driver":"TREIBER-TRICK", "spell":"ZAUBER", "staff":"ZUCKERSTAB"}.get(state["method"],"SIEG")
                 put(screen,top+11,left,fit(f"{method}  /  {state['hp']} LEBEN UEBRIG",width,center=True),3)
             put(screen,min(h-5,top+14),left,fit("[ ENTER - ZUR SHELL ]",width,center=True),4,True)
             put(screen,h-3,4,"Noch eine Runde? Tippe danach: neustart",3)

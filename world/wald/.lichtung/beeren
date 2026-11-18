@@ -1,5 +1,5 @@
 #!/bin/sh
 # Heilen einmal bis zu 25 Leben.
-# Mitnehmen: cp beeren ~/rucksack/
+# Mitnehmen: mv beeren ~/rucksack/
 # Benutzen: ~/rucksack/beeren
 exec /usr/local/bin/frost use beeren

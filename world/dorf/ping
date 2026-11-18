@@ -1,0 +1,5 @@
+#!/bin/sh
+# Echo: mit ping grinch nach dem Grinch rufen.
+# Mitnehmen: mv ping ~/rucksack/
+# Benutzen: ~/rucksack/ping
+exec /usr/local/bin/frost use ping

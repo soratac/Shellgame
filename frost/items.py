@@ -1,5 +1,6 @@
 """The discoverable executable files: normal cp/mv and shell execution."""
 ITEMS = {
+    "ping": ("dorf/ping", "Echo: mit ping grinch nach dem Grinch rufen."),
     "funke": ("dorf/funke", "Feuer: unbegrenzt, 30 Schaden."),
     "kakao": ("dorf/kakao", "Heilt einmal bis zu 35 Leben."),
     "frost": ("wald/wurzeln/frost", "38 Schaden + zwei Runden Ruhe. 3 Ladungen."),
@@ -14,7 +15,7 @@ MOVE_ITEMS = {"schild", "stern"}
 
 
 def pickup(item):
-    return "mv" if item in MOVE_ITEMS else "cp"
+    return "mv"
 
 
 def script(item, legacy=False):

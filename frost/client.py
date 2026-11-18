@@ -33,7 +33,7 @@ def sync_files():
         try:
             with (bag/name).open("r", encoding="utf-8") as f:
                 source = Path.home()/"welt"/ITEMS[name][0]
-                if f.read(2048) == script(name) and source.exists() == (name not in MOVE_ITEMS):
+                if f.read(2048) == script(name) and (name not in MOVE_ITEMS or not source.exists()):
                     found.append(name)
         except (OSError, UnicodeError):
             pass
@@ -90,7 +90,6 @@ def main():
         if handshake.returncode or handshake.stdout.strip() != "GRINCH":
             print("Grinch antwortet nicht.")
             return 1
-        print("Mit Grinch verbunden. Das Tor ist zu.")
         return 0
     if action == "travel": return check_travel()
     if action == "finish":
@@ -113,7 +112,7 @@ def main():
         if action == "submit":
             with path.open(encoding="utf-8", errors="replace") as source:
                 kwargs["content"] = source.read(8192)
-    if action in ("collect", "submit", "heal", "cast", "attack", "unload", "use"):
+    if action in ("scan", "collect", "submit", "heal", "cast", "attack", "unload", "use"):
         travel=check_travel()
         if travel==43:
             if action=="use":

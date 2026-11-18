@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Read-only smoke check for installed host SSH accounts, optionally from a jump host.
+"""Login smoke check for installed host SSH accounts, optionally from a jump host.
 
-Uses a temporary PTY and pinned host keys, visits only the join menu and scoreboard,
-and never allocates a player slot. Passwords travel over stdin, not shell arguments.
+Uses a temporary PTY and pinned host keys, opens the character editor and the scoreboard,
+and disconnects before naming the temporary player. Passwords travel over stdin, not shell arguments.
 """
 import argparse
 import json

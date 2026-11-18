@@ -98,6 +98,7 @@ class Board:
         selected["bag"] = [item for item in ITEMS if item in bag]
         selected["command_label"] = public_command(label[:100])
         selected["command_active"] = data.get("command_active") is True
+        selected["grinch_found"] = data.get("grinch_found") is True
         selected["boss_started"] = data.get("boss_started") is True
         selected["visited"] = [p for p in POSITIONS if p in data.get("visited",[])] if isinstance(data.get("visited",[]),list) else []
         selected["events"]=[]
@@ -110,7 +111,7 @@ class Board:
             if any(not isinstance(v,(int,float)) or isinstance(v,bool) or not math.isfinite(v) for v in values.values()):
                 raise ValueError("invalid animation")
             if not 0<=values["damage"]<=240 or not -100<=values["hurt"]<=100 or values["at"]<0: raise ValueError("invalid damage")
-            for key,allowed in [("kind",("use","cast","attack","disable","unload","heal","observe","ping")),
+            for key,allowed in [("kind",("use","cast","attack","disable","unload","heal","observe","ping","bag","scan")),
                                 ("spell",(*ITEMS,"stab","eissturm","frost_armor","blizzard"))]:
                 if event.get(key) in allowed: values[key]=event[key]
             for key,limit in [("boss_before",240),("hp_before",100)]:

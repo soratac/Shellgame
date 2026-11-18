@@ -1,11 +1,7 @@
 RETTET WEIHNACHTEN
 
-1  cp funke ~/rucksack/
+1  mv funke ping ~/rucksack/
 2  karte  →  folge der Spur mit cd ~/welt/ORT
-3  Verbinde dich mit der gefundenen IP: ssh IP
+3  ping grinch  →  ssh grinch
 
-Im Kampf: ~/rucksack/funke oder ping -c 4 IP
-Tab vervollstaendigt. Mehr: hilfe
-
-Vorlagen kopieren (cp), Einzelstücke bewegen (mv). ls -a zeigt Verstecke.
-restart startet deine Runde neu.
+ls -a zeigt Verstecke. restart beginnt eine neue Runde.

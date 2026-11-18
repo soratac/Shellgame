@@ -2,7 +2,7 @@
 import re
 import time
 import hashlib
-from .trail import BOSS_IP, discovered
+from .trail import BOSS_IP, discovered, hiding_place
 from .items import pickup, ITEMS
 from .avatar import DEFAULT, HAIR, SHIRTS
 from .records import migrate, bests as merge_bests
@@ -19,13 +19,13 @@ SPELL_FILES = {
     "schild.spell": ("werkstatt", "schild"), "stern.spell": ("archiv", "stern"),
 }
 HELP = """ls / tree ~/welt       Umschauen
-cp DATEI ~/rucksack/    Mitnehmen
+mv DATEI ~/rucksack/    Mitnehmen
 cd ~/welt/wald         Weitergehen
 ~/rucksack/funke        Angreifen
 ~/rucksack/kakao        Heilen
 
-Folge der Spur auf der Karte. Am Fundort erscheint der SSH-Befehl.
-Im Kampf: ping -c 4 BOSS-IP oder ~/rucksack/funke.
+Folge der Spur auf der Karte. Mitgenommenes Echo: ping grinch am Fundort.
+
 ls -a zeigt Verstecke. Einzigartige Funde mit mv bergen.
 systemctl status zeigt Bossdienste. restart beginnt eine neue Runde.
 Tab hilft beim Tippen. aussehen aendert deinen Charakter.
@@ -38,8 +38,8 @@ def fresh(name="", now=None, bests=None):
                 ended=None, hp=100, boss_hp=240, score=0, area="dorf", visited=[],
                 spells={}, rewards=[], status="playing", method=None, shield=0, frozen=0,
                 storm_service=True, combat_turn=0, armor=True, blizzard=True, loop_hits=[], bests=merge_bests(bests), bag=[], deliveries={},
-                boss_started=False, battle_items=[], avatar=dict(DEFAULT), avatar_set=False, events=[], event_seq=0,
-                message="Nimm den Funken mit: cp funke ~/rucksack/")
+                grinch_found=False, boss_started=False, battle_items=[], avatar=dict(DEFAULT), avatar_set=False, events=[], event_seq=0,
+                message="Nimm den Funken mit: mv funke ~/rucksack/")
 
 
 def reward(s, key, points):
@@ -61,7 +61,7 @@ def win(s, method, now):
     reward(s, "victory", 500)
     elapsed = max(0, now - s["started"])
     s["bests"]["best"] = min(elapsed, s["bests"].get("best", float("inf")))
-    s["message"] = f"WEIHNACHTEN GERETTET! {elapsed:.2f}s / {s['score']} Punkte / {method}"
+    s["message"] = f"WEIHNACHTEN GERETTET! {elapsed:.2f}s / {s['score']} Punkte"
 
 
 def counter(s, damage=7):
@@ -133,6 +133,16 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
     elif s["status"] != "playing":
         message = "" if action in ("observe", "bag", "deliver") else "Lauf beendet. Neuer Versuch: neustart"
         result["stop"] = action in ("cast", "attack", "unload", "use", "ping")
+    elif action == "scan":
+        if "ping" not in s["bag"]:
+            result["ok"]=False
+            message="Echo im Dorf mitnehmen: mv ~/welt/dorf/ping ~/rucksack/"
+        elif s["area"]==hiding_place(s) or discovered(s):
+            s["grinch_found"]=True
+            reward(s,"echo:gefunden",40)
+            message=f"Antwort von grinch ({BOSS_IP}). ssh grinch"
+        else:
+            message="Schwaches Echo aus dem Bereich "+hiding_place(s)+"."
     elif action == "connect":
         if args != [BOSS_IP] or not discovered(s):
             return {"ok": False, "message": "Suche zuerst die Spur auf der Karte.", "stop": False}
@@ -151,7 +161,7 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
             message = "Das Tor ist geschlossen. Im Kampf gibt es keine neuen Funde oder Aufgaben."
         result["ok"] = False
     elif action == "bag":
-        allowed = {"funke", "frost", "stern", "schild", "kakao", "beeren"}
+        allowed = set(ITEMS)
         if s["boss_started"]:
             allowed &= set(s["battle_items"])
         s["bag"] = sorted(set(args) & allowed)
@@ -166,6 +176,8 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
         item = args[0] if args else ""
         if item not in s["bag"]:
             return {"ok": False, "message": f"Mit {pickup(item)} mitnehmen: {ITEMS.get(item, ('DATEI',))[0]} → ~/rucksack/", "stop": False}
+        if item=="ping":
+            return _act(s,"ping",[BOSS_IP],now=now) if s["boss_started"] else _act(s,"scan",now=now)
         return _act(s, "heal" if item in ("kakao", "beeren") else "cast", [item], now=now)
     elif action == "deliver":
         place = args[0] if args else ""
@@ -266,8 +278,8 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
                     result["ok"] = False
                     message = "Unbekannter oder bereits entfernter Spiel-Treiber."
             elif action == "ping":
-                if args != [BOSS_IP]:
-                    return {"ok": False, "message": "Ping braucht die gefundene Boss-IP.", "stop": False}
+                if args != [BOSS_IP] or "ping" not in s["bag"]:
+                    return {"ok": False, "message": "Dafür brauchst du das Echo und die Boss-IP.", "stop": False}
                 damage = 4
                 message = "Echo-Zauber: 4 Treffer mit je 1 Schaden."
             elif action == "attack":
@@ -300,7 +312,7 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
                 damage = min(damage, max(0, s["boss_hp"]-floor))
                 s["boss_hp"] = max(floor, s["boss_hp"] - damage)
                 if not route_ready(s):
-                    message += " Frostsiegel: 3 Orte oder Funken-Loop."
+                    message += " Frostsiegel: Erkunde drei Orte."
                 attack_name = {"cast": spell, "ping": "ping"}.get(action, "staff")
                 reward(s, "combat:" + attack_name, 30)
                 message += f" -{damage} Boss-HP."
@@ -332,12 +344,13 @@ def route_ready(s):
 
 def act(s, action, args=(), **kwargs):
     """Record bounded combat events; rendering never delays the shell or loop."""
+    before_bag=set(s.get("bag",[]))
     before_hp, before_boss = s["hp"], s["boss_hp"]
     result = _act(s, action, args, **kwargs)
-    if action not in ("reset","name") and (before_hp!=s["hp"] or before_boss!=s["boss_hp"] or action in ("cast","attack","unload","use","disable","ping")):
+    if action not in ("reset","name") and (before_hp!=s["hp"] or before_boss!=s["boss_hp"] or action in ("cast","attack","unload","use","disable","ping","scan") or (action=="bag" and set(s["bag"])-before_bag)):
         s["event_seq"] += 1
         s["events"].append(dict(id=s["event_seq"], at=kwargs.get("now",time.time()),
-            kind=action, spell=args[0] if args else "stab", hp_before=before_hp,
+            kind=action, spell=(sorted(set(s["bag"])-before_bag)[0] if action=="bag" else args[0] if args else "stab"), hp_before=before_hp,
             boss_before=before_boss, hp=s["hp"], boss_hp=s["boss_hp"],
             damage=before_boss-s["boss_hp"], hurt=before_hp-s["hp"]))
         s["events"]=s["events"][-24:]

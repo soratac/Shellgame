@@ -1,11 +1,11 @@
 WALD  /  Frostzauber und Heilung
 
 ls wurzeln
-cp wurzeln/frost ~/rucksack/
+mv wurzeln/frost ~/rucksack/
 ls -a
-cp .lichtung/beeren ~/rucksack/
+mv .lichtung/beeren ~/rucksack/
 ~/rucksack/beeren
 
 Weiter: cd ../werkstatt
 
-Eine Lichtung versteckt sich vor ls. Nutze ls -a und kopiere ihre Beeren.
+Eine Lichtung versteckt sich vor ls. Nutze ls -a und berge ihre Beeren mit mv.

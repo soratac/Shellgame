@@ -11,4 +11,4 @@ def hiding_place(state):
 
 
 def discovered(state):
-    return state.get("boss_started") or hiding_place(state) in state["visited"]
+    return state.get("boss_started") or state.get("grinch_found", False)

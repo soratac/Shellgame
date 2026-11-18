@@ -45,35 +45,68 @@ class Canvas:
             self.put(round(x0+(x1-x0)*i/steps), round(y0+(y1-y0)*i/steps), char, color)
 
 
-def world_frame(w, h, s, position, tick):
-    c = Canvas(w, h)
-    overlay(c, hero_frame(17, max(5,h-3), tick, s.get("avatar")), 0, 0)
-    c.put(1, max(0,h-2), s["name"][:12], 5)
-    left=17
-    mw=max(20,w-left)
-    nodes={"dorf":(.18,.18), "wald":(.80,.18), "werkstatt":(.18,.76),
-           "archiv":(.80,.76), "zitadelle":(.49,.47)}
-    coords={k:(left+int(x*(mw-13))+6, 2+int(y*max(1,h-6))) for k,(x,y) in nodes.items()}
-    for k,point in coords.items():
-        if k!="zitadelle": c.line(*point,*coords["zitadelle"], char="·",color=3)
-    art={"dorf":["  /╲  /╲", " /__╲/__╲", " |▣ |▣ |"],
-         "wald":["  ▲  ▲", " ▲▲▲▲▲▲", "  │  │"],
-         "werkstatt":[" __┌┐__", "| ⚙  ⚙ |", "|__▣___|"],
-         "archiv":[" ╭────╮", " │≡ ≡ │", " ╰─▣──╯"],
-         "zitadelle":["╥  ╥  ╥", "╠══╩══╣", "╚══▣══╝"]}
+@lru_cache(maxsize=96)
+def landmark(place,w,h):
+    snow,wood,pine,window=1,7,4,5
+    if place=="wald":
+        mesh=[]
+        for x,z,height in [(-.65,0,1.4),(.55,.25,1.7),(0,-.5,1.1)]:
+            mesh+=cube(x,-.5,z,.17,1,.17,wood)
+            mesh+=cone(x,-.65,z,.60,height,pine)+cone(x,.12,z,.40,height*.62,snow)
+    elif place=="zitadelle":
+        mesh=cube(0,-.30,0,1.6,1,1.1,2)
+        for x in (-.8,.8):
+            mesh+=cube(x,0,0,.47,1.6,.65,2)+cone(x,.82,0,.44,.65,snow)
+        mesh+=cube(0,-.54,-.57,.45,.68,.13,8)
+    elif place=="archiv":
+        mesh=cube(0,-.23,.1,1.9,1.05,1.0,9)+cube(0,.4,0,2.1,.22,1.35,snow)
+        for x in (-.72,-.24,.24,.72): mesh+=cube(x,-.21,-.58,.16,1,.22,1)
+    else:
+        mesh=cube(0,-.25,0,1.65,1.0,1.15,wood)+cone(0,.24,0,1.27,.84,snow)
+        for x in (-.52,.52): mesh+=cube(x,-.24,-.60,.28,.35,.08,window)
+        if place=="werkstatt": mesh+=cube(.68,.62,.18,.34,1.36,.34,6)
+        else: mesh+=cube(0,-.46,-.62,.26,.55,.1,6)
+    return project_mesh(w,h,-.48,mesh)
+
+
+def world_frame(w,h,s,position,tick):
+    c=Canvas(w,h)
+    def point(pos):
+        return round(5+pos[0]*max(1,w-12)),round(1+pos[1]*max(1,h-5))
+    coords={name:point(pos) for name,pos in POSITIONS.items()}
+    for key,pos in coords.items():
+        if key!="zitadelle": c.line(*pos,*coords["zitadelle"],"·",3)
+    wh=max(3,min(8,h//3))
     for name,(x,y) in coords.items():
-        color=2 if name==s["area"] else 4 if name in s["visited"] else 1
-        if h>=15:
-            for i,line in enumerate(art[name]): c.put(x-4,y-2+i,line,color)
-        c.put(x-len(name)//2-1,y+1,"["+name+"]",color)
-        if name==hiding_place(s) and not discovered(s): c.put(x+len(name)//2+2,y+1,"✧",5)
-        if name==s["area"]: c.put(x-1,y+2,"▼ DU",5)
-    px=left+int(position[0]*(mw-13))+6
-    py=2+int(position[1]*max(1,h-6))+3
-    avatar=s.get("avatar",{})
-    c.put(px,py,"●",HAIR.get(avatar.get("hair"),7))
-    c.put(px-1,py+1,"╱█╲",SHIRTS.get(avatar.get("shirt"),4))
+        overlay(c,landmark(name,14,wh),x-7,y-wh//2)
+        label=name+(" ✧" if name==hiding_place(s) and not discovered(s) else "")
+        c.put(x-len(name)//2,min(h-1,y+wh//2),label,2 if name==s["area"] else 1)
+    x,y=point(position)
+    hh=max(4,min(10,h//2))
+    left=max(0,min(w-13,x-15 if x<w*.35 else x+3))
+    top=max(0,min(h-hh-1,y-hh//2))
+    overlay(c,hero_frame(13,hh,tick,s.get("avatar")),left,top)
+    c.put(left+5,top+hh,"DU",5)
+    event=(s.get("events") or [None])[-1]
+    if event:
+        age=time.time()-event["at"]
+        if 0<=age<1.5:
+            if event.get("kind")=="bag":
+                c.put(left, max(0,top+2-int(age*2)), "+"+event.get("spell",""),5)
+            else: attack_effect(c,event,age,(left+4,top+hh//2),(x,max(1,y-1)))
     return c
+
+
+def smooth_life(value,before,progress):
+    t=max(0,min(1,progress))
+    return before+(value-before)*t*t*(3-2*t)
+
+
+def life_meter(value,maximum,size):
+    fill=round(max(0,min(1,value/maximum))*size*8)
+    full,part=divmod(fill,8)
+    track="█"*full+("▏▎▍▌▋▊▉"[part-1] if part else "")
+    return "❨"+track+"░"*(size-len(track))+"❩ "+f"{round(value)}/{maximum}"
 
 
 def combat_frame(w,h,s,tick):
@@ -83,14 +116,16 @@ def combat_frame(w,h,s,tick):
     active=event is not None and 0<=age<1.5
     hp,bhp=s["hp"],s["boss_hp"]
     if active:
-        hp=round(event["hp_before"]+(hp-event["hp_before"])*max(0,min(1,(age-.65)/.5)))
-        bhp=round(event["boss_before"]+(bhp-event["boss_before"])*max(0,min(1,(age-.15)/.5)))
-    right = w//2 + 2
-    meter = max(7,min(28,w//2-13))
+        hp=smooth_life(hp,event["hp_before"],(age-(.12 if event["hurt"]<0 else .55))/.7)
+        bhp=smooth_life(bhp,event["boss_before"],(age-.13)/.72)
+    right=w//2+2
+    meter=max(3,min(28,w//2-12))
     c.put(1,0,"GRINCH",4)
-    c.put(1,1,f"{bar(bhp,240,meter)} {bhp}/240",6 if active and event["damage"] and age<.55 else 4)
-    c.put(right,h-2,s["name"][:18],5)
-    c.put(right,h-1,f"{bar(hp,100,meter)} {hp}/100",6 if active and event["hurt"]>0 and age>.65 else 4)
+    c.put(1,1,life_meter(bhp,240,meter),6 if active and event["damage"] and age<.75 else 4)
+    label=s["name"][:18]
+    player_hp=life_meter(hp,100,meter)
+    c.put(w-len(label),h-2,label,5)
+    c.put(w-len(player_hp),h-1,player_hp,2 if active and event["hurt"]<0 else 6 if active and event["hurt"]>0 and age>.55 else 4)
     elapsed = max(0,time.time()-s.get("boss_entered_at",0))
     slide = max(0,1-elapsed/.65)
     bw,bheight = w//2-2,max(4,h-4)
@@ -122,10 +157,16 @@ def attack_effect(c,event,age,start,end):
                 c.put(end[0]-2,end[1]-1,("● ON","◐","○ OFF")[min(2,int(age*6))],6)
             elif kind=="unload":
                 c.put(end[0]-3,end[1],("▣─▣","▣╱▣","·  ·")[min(2,int(age*6))],3)
-            elif event["hurt"]<0:
-                c.put(start[0],start[1]-round(phase*3),"+ ♡",4)
+            elif spell in ("kakao","beeren") and event["hurt"]<0:
+                for i in range(3):
+                    rise=round((age+i*.17)*4)
+                    c.put(start[0]-2+i*2,max(0,start[1]-rise),"≈" if spell=="kakao" else "♥",5 if spell=="kakao" else 6)
+            elif kind=="scan" or spell=="ping":
+                radius=round(phase*4)
+                c.put(start[0]-radius,start[1],"(",2)
+                c.put(start[0]+radius,start[1],")",2)
         if event["damage"]>0:
-            if kind=="ping":
+            if kind=="ping" or spell=="ping":
                 for i in range(4): shot((age-i*.13)/.38,"◉",2)
             elif spell=="frost":
                 for dy in (-1,0,1): shot(age/.47,"❄",2,round(dy*math.sin(phase*math.pi)))
@@ -159,7 +200,14 @@ def cone(cx, cy, cz, radius, height, color):
 
 
 def boss_mesh():
-    mesh = cube(0,-.65,0,1.7,1.2,.9,4)  # evergreen coat
+    mesh = cube(0,-.57,0,1.36,.95,.85,6)  # red winter coat, fur cuff and belt
+    mesh += cube(0,-.98,0,1.48,.18,.92,1)+cube(0,-.7,0,1.43,.15,.91,8)
+    mesh += cube(0,-.69,-.48,.25,.17,.1,5)
+    for side in (-1,1):
+        mesh+=cube(side*.42,-1.29,0,.33,.51,.36,4)
+        mesh+=cube(side*.44,-1.58,-.14,.43,.20,.65,7)
+        mesh+=cube(side*.82,-.46,0,.28,.67,.48,6)+cube(side*.84,-.82,0,.32,.16,.50,1)
+        mesh+=cube(side*.84,-.96,-.06,.27,.23,.36,4)
     mesh += cube(0,.25,-.05,1.2,1.1,1.0,4)  # green face
     # Upturned mouth and full cheeks make the Grinch grin in profile too.
     mesh += cube(0,.03,-.59,.55,.09,.12,8)
@@ -173,7 +221,7 @@ def boss_mesh():
     mesh += cone(0,.83,.03,.65,.85,6)  # Santa hat
     mesh += cube(0,.82,.03,1.25,.13,1.05,1)
     mesh += cube(0,1.68,.03,.18,.18,.18,1)
-    mesh += cube(0,-.7,-.5,.15,1.0,.1,5)
+    mesh += cube(0,-.32,-.45,.15,.36,.1,1)
     return mesh
 
 
@@ -193,7 +241,10 @@ def hero_mesh(hair,shirt):
     mesh += cube(0,.66,-.04,.81,.78,.72,10)
     mesh += cube(0,.98,0,.91,.27,.80,hair)
     mesh += cube(0,.67,.32,.85,.55,.24,hair)
-    mesh += cone(-.10,1.06,.02,.54,.56,shirt)
+    for x,y,z,size in [(-.33,1.10,-.04,.40),(-.12,1.24,-.12,.47),(.17,1.17,.04,.46),(.36,.96,-.17,.30)]:
+        mesh+=cone(x,y-.18,z,size*.66,size,hair)
+    mesh+=cube(-.22,.87,-.40,.41,.21,.18,hair)
+    for side in (-1,1): mesh+=cube(side*.40,.76,-.09,.17,.42,.54,hair)
     mesh += cube(0,.20,-.04,1.06,.16,.73,5)
     mesh += cube(0,-.18,.43,.62,.73,.42,7)
     mesh += cube(0,-.04,.66,.55,.13,.07,5)
@@ -215,13 +266,13 @@ def hero_frame(w,h,tick,avatar,back=False):
 
 def boss_frame(w,h,tick,won=False):
     angle = .38+math.sin(tick*.8)*.38 if not won else tick*.5
-    return project_mesh(w,h,angle,MESH)
+    return project_mesh(w,h,angle,MESH,extent=3.9)
 
 
-def project_mesh(w,h,angle,mesh):
+def project_mesh(w,h,angle,mesh,extent=3.1):
     c = Canvas(w,h)
     ca, sa = math.cos(angle), math.sin(angle)
-    scale = max(2, min(h/3.1, w/7.2))
+    scale = max(2, min(h/extent, w/7.2))
 
     def project(v):
         x,y,z = v
@@ -295,16 +346,15 @@ def box(screen, y, x, height, width, color=3):
 
 
 def trail_hint(s):
-    if discovered(s): return f"Grinch gefunden · ssh {BOSS_IP}"
-    return f"✧ Spur: cd ~/welt/{hiding_place(s)}"
+    if discovered(s): return f"grinch · {BOSS_IP} · ssh grinch"
+    if "ping" not in s["bag"]: return "Echo: mv ~/welt/dorf/ping ~/rucksack/"
+    return f"Spur: {hiding_place(s)} · ping grinch"
 
 
 def next_hint(s):
-    if s["status"]=="won": return "Gewonnen! Noch eine Runde: neustart"
-    if s["status"]=="lost": return "Neuer Versuch: neustart"
-    if s["boss_started"]: return f"~/rucksack/funke   ·   ping -c 4 {BOSS_IP}"
-    if not discovered(s) and not s.get("bag") and s["area"]=="dorf":
-        return "cp funke ~/rucksack/   ·   " + trail_hint(s)
+    if s["status"]!="playing": return "Neue Runde: restart"
+    if s["boss_started"]: return ""
+    if not s["bag"] and s["area"]=="dorf": return "mv funke ping ~/rucksack/"
     return trail_hint(s)
 
 
@@ -326,24 +376,32 @@ def paint(screen,state,tick,position=None):
     timer=f"{state['elapsed']:.1f}s"
     put(screen,0,(w-len(score))//2,score,5,True)
     put(screen,0,w-len(timer)-2,timer,1)
-    scene_h=h-5
-    if state.get("boss_started"):
-        scene=combat_frame(w-4,scene_h,state,tick)
+    fight=state.get("boss_started")
+    bag_w=min(19,max(11,w//6))
+    # Keep the right edge free for the fighter's life meter.
+    sx=bag_w+2
+    scene_w=w-sx-1
+    scene_h=h-3
+    inventory=state.get("bag_display",state.get("bag",[]))
+    put(screen,2,1,"Rucksack",5,True)
+    visible=max(1,h-4)
+    offset=int(tick//2)%len(inventory) if len(inventory)>visible else 0
+    for i,item in enumerate((inventory[offset:]+inventory[:offset])[:visible] or ["leer"]):
+        put(screen,3+i,1,fit(item,bag_w-1),1)
+    if fight:
+        scene=combat_frame(scene_w,scene_h,state,tick)
     else:
-        scene=world_frame(w-4,scene_h,state,position or POSITIONS.get(state["area"],POSITIONS["dorf"]),tick)
-        put(screen,1,2,f"{bar(state['hp'],100,12)} {state['hp']}/100   ·   Orte {min(3,route_count(state))}/3",4)
+        scene=world_frame(scene_w,scene_h,state,position or POSITIONS.get(state["area"],POSITIONS["dorf"]),tick)
+        hp=state["hp"]
+        event=(state.get("events") or [None])[-1]
+        age=time.time()-event["at"] if event else 9
+        if 0<=age<1.4: hp=smooth_life(hp,event["hp_before"],age/.78)
+        health=life_meter(hp,100,min(15,w//7))
+        put(screen,1,w-len(health)-1,health,2 if event and age<1 and event["hurt"]<0 else 4)
+        put(screen,1,1,fit(next_hint(state),w-len(health)-4),3)
     for y,row in enumerate(scene.cells):
         for x,(char,color) in enumerate(row):
-            if char!=" ": put(screen,y+2,x+2,char,color)
-    inventory=state.get("bag_display",state.get("bag",[]))
-    items=" · ".join(inventory) or "leer"
-    room=max(10,w-15)
-    if len(items)>room:
-        loop=items+"     "
-        offset=int(tick*4)%len(loop)
-        items=(loop+loop)[offset:offset+room]
-    put(screen,h-2,2,"Rucksack  "+items,5)
-    put(screen,h-1,2,next_hint(state),2)
+            if char!=" ": put(screen,y+2,x+sx,char,color)
 
 
 def hud(screen):

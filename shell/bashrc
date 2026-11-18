@@ -37,13 +37,14 @@ modprobe() {
 }
 ssh() {
     case "$#:$1" in
-        1:127.12.24.1|1:boss@127.12.24.1)
+        1:grinch|1:127.12.24.1|1:boss@127.12.24.1)
             command frost boss-ssh && builtin cd "$HOME/welt/zitadelle" ;;
         *) command ssh "$@" ;;
     esac
 }
 ping() {
     case "$*" in
+        grinch) _frost_action scan ;;
         '-c 4 127.12.24.1'|'127.12.24.1') _frost_action ping 127.12.24.1 ;;
         *) printf 'Echo-Zauber: ping -c 4 BOSS-IP\n' ;;
     esac
@@ -111,4 +112,4 @@ _frost_live_begin() {
 PS0='$(_frost_live_begin)'
 PROMPT_COMMAND=_frost_prompt
 builtin cd "$HOME/welt/dorf"
-printf '\n  ls umsehen · cp mitnehmen · cd gehen · hilfe\n\n'
+printf '\n  ls umsehen · mv mitnehmen · cd gehen · hilfe\n\n'

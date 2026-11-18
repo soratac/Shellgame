@@ -1,9 +1,0 @@
-DER SCHNELLE WEG
-
-Kein besonderer Modus. Starte bei Bedarf mit: neustart
-Nimm funke mit und bestaetige den Bosskampf.
-
-while true; do ~/rucksack/funke; done
-
-Sechs schnelle Funken brechen das Frostsiegel.
-Die Schleife endet beim Sieg automatisch.

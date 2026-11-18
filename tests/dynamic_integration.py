@@ -49,7 +49,7 @@ def main():
     (folder/'known_hosts').unlink(missing_ok=True)
     dc=['docker','compose','-f',str(path)]
     def run(*args,**kw): return subprocess.run([*dc,*args],check=True,**kw)
-    docker=Docker();sessions=[];codes=[];slot_ids=[]
+    docker=Docker();sessions=[]
     def managed(): return docker.containers(['frost.managed='+PROJECT])
     def scores():
         with urllib.request.urlopen(f'http://127.0.0.1:{ports["api"]}/api/scores') as r: return json.load(r)['players']
@@ -59,9 +59,9 @@ def main():
         assert managed()==[]
         for i in range(count):
             s=Session('gateway',ports['gateway'],folder);sessions.append(s)
-            s.expect('GEMEINSAMER EINSTIEG');s.send('\r');s.expect('DEIN FORTSETZEN-CODE:',timeout=60)
-            codes.append(re.search(r'[A-F0-9]{4}(?:-[A-F0-9]{4}){3}',s.output.decode(errors='ignore')).group())
-            s.send('\r');s.expect('Winterheld?');s.send(f'DynamicElf{i:02}\r');s.expect('Rucksack')
+            s.expect('GEMEINSAMER EINSTIEG',timeout=60)
+            assert b'FORTSETZEN-CODE' not in s.output
+            s.send(f'DynamicElf{i:02}\r');s.expect('Rucksack')
             s.send("printf 'DYNAMIC_%s\\n' OK\r");s.expect('DYNAMIC_OK')
             s.close();sessions.remove(s)
             deadline=time.monotonic()+15
@@ -84,7 +84,7 @@ def main():
         assert len({next(iter(r['NetworkSettings']['Networks'])) for r in rows})==count
         # An abandoned name prompt must leave neither a slot nor a container.
         abandoned=Session('gateway',ports['gateway'],folder);sessions.append(abandoned)
-        abandoned.expect('GEMEINSAMER EINSTIEG');abandoned.send('\r');abandoned.expect('DEIN FORTSETZEN-CODE:',timeout=60)
+        abandoned.expect('GEMEINSAMER EINSTIEG',timeout=60)
         abandoned.close();sessions.remove(abandoned)
         deadline=time.monotonic()+12
         while time.monotonic()<deadline and len(managed())!=count: time.sleep(.2)
@@ -96,12 +96,12 @@ def main():
         subprocess.run(backup_only,check=True)
         print('PASS: abandoned joins cleaned up; unprivileged controller access denied; forced service recreation preserves players',flush=True)
         s=Session('gateway',ports['gateway'],folder);sessions.append(s)
-        s.expect('GEMEINSAMER EINSTIEG');s.send('r'+codes[0]+'\r');s.expect('DEIN FORTSETZEN-CODE:',timeout=60);s.send('\r');s.expect('Rucksack')
-        assert next(r['Id'] for r in managed() if r['Labels']['frost.slot']==first)==before
-        s.send("printf 'RESUMED_%s\\n' OK\r");s.expect('RESUMED_OK')
+        s.expect('GEMEINSAMER EINSTIEG',timeout=60)
+        assert len(managed())==count+1
+        assert any(r['Id']==before and r['State']=='exited' for r in managed())
         board=Session('scoreboard',ports['gateway'],folder,user='score');sessions.append(board);board.expect('LIVE-SCOREBOARD')
         assert len(scores())==count
-        print(f'PASS: {count} unique containers, isolated networks, resource limits, shared board and same-container resume after service restart',flush=True)
+        print(f'PASS: {count} unique containers, isolated networks, resource limits, shared board and fresh anonymous entry after service restart',flush=True)
         for s in sessions:s.close()
         sessions=[];time.sleep(1)
         reset=['python3',str(ROOT/'scripts/reset_event.py'),'--compose-file',str(path),'--backup-dir',str(folder/'backups')]

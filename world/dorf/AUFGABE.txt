@@ -3,4 +3,4 @@ WUNSCHZETTEL RETTEN  /  +150 Punkte und Heilung
 cp post/wunschzettel.txt abgabe/gerettet.txt
 
 Fertig! Die Abgabe wird automatisch erkannt.
-Kakao mitnehmen: cp kakao ~/rucksack/
+Kakao mitnehmen: mv kakao ~/rucksack/

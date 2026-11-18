@@ -4,7 +4,7 @@ from .trail import BOSS_IP
 
 COMMANDS = frozenset("ls pwd cd tree cp mv cat grep find sort head tail wc nano vim sleep ssh ping systemctl modprobe lsmod inventar karte hilfe restart neustart aussehen angreifen zauber heilen while".split())
 PUBLIC_ARGS = set(ITEMS) | {"-a","-la","-al","-c","4","disable","status","list-unit-files",
-    "eissturm.service",BOSS_IP,"~/rucksack/","~/rucksack","-r","frost_armor","blizzard",
+    "grinch","eissturm.service",BOSS_IP,"~/rucksack/","~/rucksack","-r","frost_armor","blizzard",
     "wurzeln/frost",".lichtung/beeren",".depot/stern","game"} | {
     prefix+place for prefix in ("../","~/welt/") for place in ("dorf","wald","archiv","werkstatt","zitadelle")}
 

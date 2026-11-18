@@ -1,5 +1,5 @@
 #!/bin/sh
 # 38 Schaden + zwei Runden Ruhe. 3 Ladungen.
-# Mitnehmen: cp frost ~/rucksack/
+# Mitnehmen: mv frost ~/rucksack/
 # Benutzen: ~/rucksack/frost
 exec /usr/local/bin/frost use frost

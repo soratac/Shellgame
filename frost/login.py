@@ -23,22 +23,23 @@ def name_dialog(screen):
     while True:
         screen.erase()
         h,w=screen.getmaxyx()
-        width=min(68,w-2); left=max(0,(w-width)//2); top=max(0,(h-18)//2)
-        box(screen,top,left,18,width,2)
-        put(screen,top+1,left+3,"DEIN WINTERHELD",5,True)
-        put(screen,top+3,left+3,"Wie heisst du, Winterheld?",1)
-        put(screen,top+2,left+3,"Der Grinch hat den Stern gestohlen. Hol ihn zurück!",3)
+        width=min(66,w-2); left=max(0,(w-width)//2); top=max(0,(h-17)//2)
+        box(screen,top,left,17,width,2)
+        logo=("█▀▀ █▀█ █▀█ █▀▀ ▀█▀ █▀▄ █ █ ▀█▀ █▀▀",
+              "█▀  █▀▄ █ █ ▀▀█  █  █▀▄ ▀█▀  █  █▀ ",
+              "▀   ▀ ▀ ▀▀▀ ▀▀▀  ▀  ▀▀   ▀   ▀  ▀▀▀")
+        for row,line in enumerate(logo):
+            put(screen,top+1+row,left+max(1,(width-len(line))//2),line if width>=40 else ("FROSTBYTE" if row==1 else ""),[1,2,3][row],True)
+        put(screen,top+5,left+3,"❄ GEMEINSAMER EINSTIEG · CHARAKTER",2,True)
         labels=["Name   "+(name or "_")+ ("_" if field==0 and name else ""),
                 "Haare  < "+avatar["hair"]+" >", "Shirt  < "+avatar["shirt"]+" >"]
         for i,label in enumerate(labels):
-            put(screen,top+5+i*2,left+3,("› " if field==i else "  ")+label,2 if field==i else 1,field==i)
-        preview=hero_frame(19,9,0,avatar)
+            put(screen,top+7+i*2,left+3,("› " if field==i else "  ")+label,2 if field==i else 1,field==i)
+        preview=hero_frame(20,8,0,avatar)
         for y,row in enumerate(preview.cells):
             for x,(char,color) in enumerate(row):
-                if char!=" ": put(screen,top+3+y,left+width-22+x,char,color)
-        put(screen,top+12,left+3,error or "Tab: Feld   Pfeile: Farbe   Enter: Spielen",6 if error else 3)
-        put(screen,top+14,left+3,"1  Funke einpacken: cp funke ~/rucksack/",1)
-        put(screen,top+15,left+3,"2  Spur auf der Karte finden → ssh zum Boss",2)
+                if char!=" ": put(screen,top+6+y,left+width-22+x,char,color)
+        put(screen,top+15,left+3,error or "Tab  Feld    ← →  Farbe    Enter  Spielen",6 if error else 3)
         screen.refresh()
         try: key=screen.get_wch()
         except curses.error: continue

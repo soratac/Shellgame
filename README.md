@@ -4,29 +4,30 @@ Ein Weihnachtsabenteuer in einer echten Linux-Shell: automatisch erzeugte, getre
 
 ## Spielen
 
-Am Anfang Name, Haarfarbe und Shirtfarbe wählen. **Tab** wechselt das Feld, **Pfeile** ändern die Farbe, **Enter** startet. Mit `aussehen` kannst du die Farben später ändern. Sie bleiben bei `neustart` erhalten.
+Der gemeinsame Einstieg öffnet direkt den Frostbyte-Charaktereditor. Hier Name, Haarfarbe und Shirtfarbe wählen. **Tab** wechselt das Feld, **Pfeile** ändern die Farbe, **Enter** startet. Mit `aussehen` kannst du die Farben später ändern. Sie bleiben bei `neustart` erhalten.
 
 Im Dorf starten:
 
 ```bash
 ls
-cp funke kakao ~/rucksack/
+mv funke ping kakao ~/rucksack/
 cd ../wald
-cp wurzeln/frost ~/rucksack/
+mv wurzeln/frost ~/rucksack/
 cd ../werkstatt
 mv schild ~/rucksack/
 karte                 # Folge der markierten Spur mit cd ~/welt/ORT
-ssh 127.12.24.1
+ping grinch
+ssh grinch
 ~/rucksack/funke
 ```
 
-Die Karte markiert mit ✧ den Ort der Spur. Wenn du ihn besuchst, erscheint die Boss-IP. Mit `ssh 127.12.24.1` öffnest du das Kampffenster und verbindest dich nach Bestätigung per SSH mit dem Grinch in deinem Spielercontainer. **J, dann Enter** startet den Kampf; **N, dann Enter** lässt dich draußen. Nach dem Start bleibt das Tor geschlossen. Für einen normalen Sieg musst du vorher mindestens **drei Orte außerhalb der Zitadelle** besuchen. Sonst hält das Frostsiegel den Boss bei mindestens 1 HP – auch nach Entfernen seiner Treiber. Der schnelle Funken-Loop umgeht das Siegel. Den letzten Befehl wiederholen, bis der Grinch besiegt ist. Beim Sieg erscheint automatisch ein eigener Bildschirm mit Punkten und Zeit. **Enter** bringt dich zur Shell zurück.
+Die Karte markiert mit ✧ den Ort der Spur. Nimm im Dorf das Echo mit `mv ping ~/rucksack/` mit. Am markierten Ort liefert `ping grinch` die Boss-IP. Mit `ssh grinch` öffnest du das Kampffenster und verbindest dich nach Bestätigung per SSH mit dem Grinch in deinem Spielercontainer. **J, dann Enter** startet den Kampf; **N, dann Enter** lässt dich draußen. Nach dem Start bleibt das Tor geschlossen. Für einen normalen Sieg musst du vorher mindestens **drei Orte außerhalb der Zitadelle** besuchen. Sonst hält das Frostsiegel den Boss bei mindestens 1 HP – auch nach Entfernen seiner Treiber. Den letzten Befehl wiederholen, bis der Grinch besiegt ist. Beim Sieg erscheint automatisch ein eigener Bildschirm mit Punkten und Zeit. **Enter** bringt dich zur Shell zurück.
 
 | Was möchtest du tun? | Linux-Befehl |
 |---|---|
 | Hier umsehen | `ls` |
 | Alle Orte als Baum ansehen | `tree ~/welt` |
-| Einen Gegenstand mitnehmen | `cp DATEI ~/rucksack/` oder `mv DATEI ~/rucksack/` |
+| Einen Gegenstand mitnehmen | `mv DATEI ~/rucksack/` |
 | Rucksack ansehen | `ls ~/rucksack/` |
 | Gegenstand benutzen | `~/rucksack/funke` (Name entsprechend ersetzen) |
 | Kurze Erklärung lesen | `cat DATEI` |
@@ -60,9 +61,9 @@ Beispiel: `cp post/wunschzettel.txt abgabe/gerettet.txt` löst die Dorfaufgabe a
 
 Aufgebrauchte Gegenstände verschwinden aus dem Rucksack. Erneutes Kopieren füllt keine verbrauchten Ladungen auf. Nur ein Gegenstand im Rucksack kann über seinen Dateibefehl benutzt werden. Bereits vor dem Update erlernte Zauber erscheinen beim ersten Login als Dateien im Rucksack.
 
-Dein 3D-Charakter steht links unten, der grüne Grinch rechts oben. `ping -c 4 127.12.24.1` wirkt als Echo-Zauber mit vier Treffern à 1 HP. Der Rucksack zeigt während der Erkundung und im Kampf die Dateien aus `~/rucksack`. Zauber fliegen zum Gegner, Gegenangriffe zurück; beide Lebensleisten bewegen sich und zeigen Treffer als Zahlen. Die Animation blockiert keine Befehle oder Loops. Der Kampf läuft rundenweise. Lesen und Nachdenken kosten keine Leben. Normale Gegenangriffe kosten 7 Leben; der Panzer vermindert deinen Schaden um 8. Fehlgeschlagene Shell-Befehle im Bossraum und falsche Kampfaktionen kosten zusätzlich Leben. Vor dem Kampf fragt ein schwebendes Fenster nach deiner Zustimmung und erklärt Angreifen und Heilen. Nach **Ja** gibt es keinen Rückweg; neue Funde und Aufgaben zählen erst im nächsten Lauf. Bereits mitgebrachte Gegenstände bleiben nutzbar. Mit `neustart` kannst du jederzeit eine neue Runde beginnen.
+Dein 3D-Charakter steht links unten, der grüne Grinch rechts oben. `ping -c 4 127.12.24.1` wirkt als Echo-Zauber mit vier Treffern à 1 HP. Der Rucksack zeigt während der Erkundung und im Kampf die Dateien aus `~/rucksack`. Zauber fliegen zum Gegner, Gegenangriffe zurück; beide Lebensleisten bewegen sich und zeigen Treffer als Zahlen. Der Kampf läuft rundenweise. Lesen und Nachdenken kosten keine Leben. Normale Gegenangriffe kosten 7 Leben; der Panzer vermindert deinen Schaden um 8. Fehlgeschlagene Shell-Befehle im Bossraum und falsche Kampfaktionen kosten zusätzlich Leben. Vor dem Kampf fragt ein schwebendes Fenster nach deiner Zustimmung und erklärt Angreifen und Heilen. Nach **Ja** gibt es keinen Rückweg; neue Funde und Aufgaben zählen erst im nächsten Lauf. Bereits mitgebrachte Gegenstände bleiben nutzbar. Mit `neustart` kannst du jederzeit eine neue Runde beginnen.
 
-Punkte gibt es einmal je Ort (40), Zauberfund (80), Aufgabe (150), Heilquelle (25), unterstützter Shell-Befehlsart (10), Angriffsart (30), entferntem Treiber (120), Schleifentrick (200) und Sieg (500).
+Punkte gibt es einmal je Ort (40), Zauberfund (80), Aufgabe (150), Heilquelle (25), unterstützter Shell-Befehlsart (10), Angriffsart (30), entferntem Treiber (120) und Sieg (500).
 
 ### Profi-Wege
 
@@ -73,20 +74,9 @@ modprobe -r frost_armor
 modprobe -r blizzard
 ```
 
-Der Grinch setzt bei jedem dritten ungeschützten Zug eine stärkere Sturmböe ein. `systemctl status` zeigt den Spieldienst. Mit `systemctl disable eissturm.service` schaltest du ihn für die Runde ab (+100 Punkte). Funke, Kakao, Beeren und Frost werden kopiert. Schild und Stern müssen verschoben werden.
+Der Grinch setzt bei jedem dritten ungeschützten Zug eine stärkere Sturmböe ein. `systemctl status` zeigt den Spieldienst. Mit `systemctl disable eissturm.service` schaltest du ihn für die Runde ab (+100 Punkte). Alle Funde lassen sich mit `mv` mitnehmen. Schild und Stern müssen verschoben werden.
 
 Diese Befehle verändern nur das Spiel, keine Kernelmodule der VM.
-
-```bash
-# Speedrun mit einer echten Bash-Endlosschleife
-neustart
-cp funke ~/rucksack/
-karte                 # Folge der markierten Spur mit cd ~/welt/ORT
-ssh 127.12.24.1
-while true; do ~/rucksack/funke; done
-```
-
-Es gibt nur ein Spiel, keinen separaten Speedrun-Modus. Sechs schnelle Funken innerhalb von zwei Sekunden bringen den Sofortsieg. Jeder Sieg zählt zur gemeinsamen persönlichen Bestzeit; schnelle Läufe benötigen keine besondere Auswahl. Die Schleife wird dabei automatisch beendet; danach erscheint der Gewinnbildschirm.
 
 ## Neustarten oder alles zurücksetzen
 
@@ -128,16 +118,7 @@ ssh score@DEIN-SERVER  # Separater Zuschauerzugang zum Live-Scoreboard
 
 Es ist keine Portangabe nötig. Alle SSH-Spielpasswörter sind genau **12 Zeichen** lang. Die gemeinsamen Passwörter stehen in `/opt/shell-game/.env` als `PLAYER_PASSWORD` und `DASHBOARD_PASSWORD`; zusätzlich gibt es `join-access.txt`. Alle Spieler verwenden denselben Einstieg und dasselbe Einstiegspasswort; jeder neue Spieler erhält beim Beitritt einen frisch erzeugten eigenen Container. Es gibt keine fest eingestellte maximale Spielerzahl; verfügbare VM-Ressourcen und der Netzwerkadressraum begrenzen die tatsächliche Kapazität. Die SSH-Einstellungen für eure bisherigen Admin-Benutzer bleiben erhalten.
 
-Im Einstiegsfenster **Enter** für einen neuen Spielerplatz drücken. Den angezeigten persönlichen **Fortsetzen-Code** speichern. Bei einem Verbindungsabbruch bleibt der Platz reserviert: erneut verbinden, **R** wählen und den Code eingeben. So kommt niemand versehentlich in einen fremden Spielstand. Der Code ist ein privater Zugang zum eigenen Platz. Eine zweite gleichzeitige Sitzung desselben Platzes wird abgewiesen. Verbindungsabbruch pausiert die Laufzeit nicht.
-
-Bestehende benannte Spielerplätze werden übernommen. Als Veranstalter kannst du ihre Codes nachsehen oder einen verlorenen Code wiederfinden:
-
-```bash
-cd /opt/shell-game
-docker compose exec gateway python3 -m frost.gateway --list
-```
-
-Der Gesamtreset gibt alle Plätze frei und erneuert die Codes; `reset_slot.py` gibt einen einzelnen Platz frei. `neustart` im Spiel behält die Zuordnung.
+Der gemeinsame SSH-Einstieg öffnet direkt die Charaktererstellung. Jeder neue Login erhält einen eigenen Platz. Der Name wird dort einmal eingegeben. Benannte Spielstände bleiben für das Scoreboard und die Administration gespeichert.
 
 Die bisherigen direkten Zugänge bleiben als Alternative vorhanden: auf developer `ssh -t -p 2201 player@127.0.0.1` (Spieler 1) bzw. `ssh -t -p 2200 player@127.0.0.1` (Scoreboard). Ihre individuellen Passwörter stehen in `access.csv`. Spielerports: 2201–2223. Vom Jumphost war dieser Portbereich nicht erreichbar; der neue Einstieg verwendet den dort erreichbaren Host-Port 22.
 
@@ -167,11 +148,11 @@ python3 scripts/check_entry.py  # Beide Standard-SSH-Zugaenge pruefen
 
 Der Gateway-Container lauscht standardmäßig nur auf `127.0.0.1:2299`; der Host-Einstieg leitet dorthin weiter. `GATEWAY_BIND` und `GATEWAY_PORT` sind in `.env.example` dokumentiert. Bei einer Änderung des internen Ports das Installationsskript erneut ausführen. Der öffentliche Host-Port 22 bleibt gleich.
 
-Wiederholtes Provisionieren erhält Zugangsdaten. `provision.py --rotate-passwords --players 23 --host DEINE-VM-IP` bereitet neue 12-Zeichen-Passwörter vor und sichert die alten privat unter `backups/credentials-…`. Anschließend synchronisiert `python3 scripts/update_entry_passwords.py` die beiden Host-Konten über deren bestehende Passwörter und die normale PAM-Anmeldung; danach die Container neu erstellen. Bei einem Fehler nennt das Skript das betroffene Konto, bereits synchronisierte Konten werden bei Wiederholung übersprungen. Tokens, SSH-Schlüssel und persönliche Fortsetzen-Codes ändern sich dabei nicht. Bei einer frischen Installation werden nur Einstieg, Scoreboard und Verwaltungsdienst gestartet. Die bestehenden alten Spielercontainer werden bei einem Update für ihre bisherigen Codes und direkten Ports beibehalten. Neue Beitritte verwenden immer neue Container. Quellen und Konfiguration liegen im Projekt; persistente Laufzeitdaten liegen in benannten Docker-Volumes. `docker compose down` erhält diese. `docker compose down -v` löscht sie ohne Sicherung und erneuert beim nächsten Start auch die SSH-Hostschlüssel. Für ein neues Event deshalb `reset-all.sh` verwenden.
+Wiederholtes Provisionieren erhält Zugangsdaten. `provision.py --rotate-passwords --players 23 --host DEINE-VM-IP` bereitet neue 12-Zeichen-Passwörter vor und sichert die alten privat unter `backups/credentials-…`. Anschließend synchronisiert `python3 scripts/update_entry_passwords.py` die beiden Host-Konten über deren bestehende Passwörter und die normale PAM-Anmeldung; danach die Container neu erstellen. Bei einem Fehler nennt das Skript das betroffene Konto, bereits synchronisierte Konten werden bei Wiederholung übersprungen. Tokens und SSH-Schlüssel ändern sich dabei nicht. Bei einer frischen Installation werden nur Einstieg, Scoreboard und Verwaltungsdienst gestartet. Die bestehenden alten Spielercontainer werden bei einem Update für ihre direkten Ports beibehalten. Neue Beitritte verwenden immer neue Container. Quellen und Konfiguration liegen im Projekt; persistente Laufzeitdaten liegen in benannten Docker-Volumes. `docker compose down` erhält diese. `docker compose down -v` löscht sie ohne Sicherung und erneuert beim nächsten Start auch die SSH-Hostschlüssel. Für ein neues Event deshalb `reset-all.sh` verwenden.
 
 Jeder neue Spieler hat einen eigenen Container und ein eigenes Bridge-Netz aus `PLAYER_NETWORK_POOL` (Standard `10.240.0.0/16`, /29 je Spieler). Neue Netzwerke erhalten eine niedrigere Gateway-Priorität, damit bestehende SSH-Verbindungen stabil bleiben. Das Root-Dateisystem ist nur lesbar, Ressourcen sind begrenzt, Spieler und Einstieg haben keinen Zugriff auf den Docker-Socket oder Host-Kernelmodule. Nur der getrennte `spawner`-Verwaltungscontainer bekommt den Docker-Socket; seine Schnittstelle ist ausschließlich für root innerhalb der Infrastruktur erreichbar und bietet feste Spielcontainer-Aktionen an. Das ist ein Workshop-Spiel, kein manipulationssicheres CTF: fortgeschrittene Teilnehmer können mit einer echten Shell das lokale Spielprotokoll direkt ansprechen. Ausgehender Netzwerkverkehr ist nicht gesperrt. Persistente Festplattenquoten werden mit dem folgenden Host-Schritt aktiviert.
 
-Pro Spieler gelten 256 MiB RAM und 0,5 CPU, fürs Board 256 MiB und 1 CPU, fürs Gateway 512 MiB und 2 CPU. Zusätzlicher Swap ist deaktiviert. Prozesslimits: 96 pro Spieler, 128 fürs Board, 384 fürs Gateway; maximal 2048 offene Dateien pro Prozess. Temporäre Dateisysteme sind auf 32 MiB (`/tmp`) und 16 MiB (`/run`) begrenzt, Logs auf zweimal 5 MiB. Das Gateway nutzt Debian-Pakete für Paramiko und prüft die Hostschlüssel der Zielcontainer. Limits stehen in `scripts/provision.py`. Spielstände und Hostschlüssel überleben Container-Neustarts. Beim Abmelden wird dein automatisch erzeugter Container angehalten. Mit deinem Code startet wieder derselbe Container mit einer neuen Shell und dem gespeicherten Spielstand. Der feste Rahmen verwendet einen PTY-Renderer, tmux ist nicht installiert. Eine echte Bash erlaubt weiterhin normale Unterprozesse und Skripte innerhalb der Containerlimits. Beim Update werden unveränderte alte Hilfedateien ersetzt; bearbeitete Questdateien und gespeicherte Ergebnisse bleiben erhalten.
+Pro Spieler gelten 256 MiB RAM und 0,5 CPU, fürs Board 256 MiB und 1 CPU, fürs Gateway 512 MiB und 2 CPU. Zusätzlicher Swap ist deaktiviert. Prozesslimits: 96 pro Spieler, 128 fürs Board, 384 fürs Gateway; maximal 2048 offene Dateien pro Prozess. Temporäre Dateisysteme sind auf 32 MiB (`/tmp`) und 16 MiB (`/run`) begrenzt, Logs auf zweimal 5 MiB. Das Gateway nutzt Debian-Pakete für Paramiko und prüft die Hostschlüssel der Zielcontainer. Limits stehen in `scripts/provision.py`. Spielstände und Hostschlüssel überleben Container-Neustarts. Beim Abmelden wird dein automatisch erzeugter Container angehalten. Beim nächsten gemeinsamen Login öffnet sich eine neue Charaktererstellung. Der feste Rahmen verwendet einen PTY-Renderer, tmux ist nicht installiert. Eine echte Bash erlaubt weiterhin normale Unterprozesse und Skripte innerhalb der Containerlimits. Beim Update werden unveränderte alte Hilfedateien ersetzt; bearbeitete Questdateien und gespeicherte Ergebnisse bleiben erhalten.
 
 ## Passwörter und automatisches Erzeugen
 
@@ -191,7 +172,7 @@ cd /opt/shell-game
 python3 scripts/apply_env.py
 ```
 
-Dabei werden die Konfiguration erzeugt, geänderte Host-Passwörter über die bisherigen Zugangsdaten synchronisiert und die Dienste aktualisiert. Namen und Fortsetzen-Codes bleiben erhalten. `.env` hat Modus 0600 und ist von Git und Docker-Builds ausgeschlossen. Passwörter landen nicht als Umgebungsvariablen in den Spielercontainern; diese erhalten eigene interne SSH-Zugangsdaten und Score-Tokens.
+Dabei werden die Konfiguration erzeugt, geänderte Host-Passwörter über die bisherigen Zugangsdaten synchronisiert und die Dienste aktualisiert. Namen und Spielstände bleiben erhalten. `.env` hat Modus 0600 und ist von Git und Docker-Builds ausgeschlossen. Passwörter landen nicht als Umgebungsvariablen in den Spielercontainern; diese erhalten eigene interne SSH-Zugangsdaten und Score-Tokens.
 
 Automatisch erzeugte Container heißen `shell-game-elf-…` und sind zusätzlich mit `frost.managed=shell-game` markiert. Sie werden vom Compose-Verwaltungsdienst betreut; `docker compose ps` allein listet sie nicht auf:
 
@@ -226,6 +207,6 @@ python3 tests/integration.py --players 23 --load-only
 python3 tests/dynamic_integration.py
 ```
 
-Der Integrationstest erstellt das **separate Projekt `frostbyte-check`** mit freien lokalen Ports, eigenen Volumes und zwei Spielercontainern. Dort prüft er automatische Platzvergabe, private Wiederverbindung, volle Belegung, echte SSH-Logins, Tab-Vervollständigung, `tree`, `cp`, Aufgabenabgabe, Boss-Abfrage und Rückwegsperre, ausführbare Gegenstände, Schleifensieg, Gewinnbildschirm, separaten Scoreboard-Zugang und den vollständigen Reset samt Sicherung. Der zusätzliche Lasttest hält 23 Spielersitzungen und einen Zuschauer über das Gateway gleichzeitig offen. Nur im Test teilen sich die Container ein Bridge-Netz, um neben den produktiven Netzen nicht den Docker-Adresspool zu erschöpfen. Anschließend entfernt er nur dieses Testprojekt. Bestehende Spielerplätze werden nicht verwendet.
+Der Integrationstest erstellt das **separate Projekt `frostbyte-check`** mit freien lokalen Ports, eigenen Volumes und zwei Spielercontainern. Dort prüft er automatische Platzvergabe, direkten Charaktereinstieg, volle Belegung, echte SSH-Logins, Tab-Vervollständigung, `tree`, `cp`, Aufgabenabgabe, Boss-Abfrage und Rückwegsperre, ausführbare Gegenstände, Bosskampf, Gewinnbildschirm, separaten Scoreboard-Zugang und den vollständigen Reset samt Sicherung. Der zusätzliche Lasttest hält 23 Spielersitzungen und einen Zuschauer über das Gateway gleichzeitig offen. Nur im Test teilen sich die Container ein Bridge-Netz, um neben den produktiven Netzen nicht den Docker-Adresspool zu erschöpfen. Anschließend entfernt er nur dieses Testprojekt. Bestehende Spielerplätze werden nicht verwendet.
 
-Der dynamische Test verwendet ausschließlich `frost-dynamic-check`: 25 neue Spieler ohne vorab angelegte Plätze, getrennte Netze, Anhalten nach Abmeldung, Fortsetzen nach Dienstneustart und kompletter Reset mit Sicherung.
+Der dynamische Test verwendet ausschließlich `frost-dynamic-check`: 25 neue Spieler ohne vorab angelegte Plätze, getrennte Netze, Anhalten nach Abmeldung, neuer Einstieg nach Dienstneustart und kompletter Reset mit Sicherung.

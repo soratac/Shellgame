@@ -48,17 +48,20 @@ class Allocator:
         try: return json.loads((self.state_root/slot/"state.json").read_text())["name"]
         except (OSError,ValueError,KeyError): return None
 
-    def _insert(self,slot):
+    def _insert(self,slot,issue_code=True):
+        if not issue_code:
+            self.db.execute("INSERT INTO joins(slot,code,digest) VALUES (?,'',?)",(slot,slot))
+            return ""
         raw=secrets.token_hex(8).upper()
         code="-".join(raw[i:i+4] for i in range(0,16,4))
         self.db.execute("INSERT INTO joins(slot,code,digest) VALUES (?,?,?)",(slot,code,hashlib.sha256(raw.encode()).hexdigest()))
         return code
 
-    def reserve(self,code=None):
+    def reserve(self,code=None,*,issue_code=True):
         if not code and self.provider:
             slot=self.provider.create()
             with self.lock:
-                code=self._insert(slot)
+                code=self._insert(slot,issue_code)
                 lease=secrets.token_hex(16)
                 self.db.execute("UPDATE joins SET active=1,lease=? WHERE slot=?",(lease,slot)); self.db.commit()
                 return slot,code,lease
@@ -73,8 +76,8 @@ class Allocator:
             else:
                 occupied={r[0] for r in self.db.execute("SELECT slot FROM joins")}
                 slot=next((s for s in self.slots if s not in occupied and self.player_name(s)==""),None)
-                if slot is None: raise ValueError("Alle Spielerplaetze sind vergeben. Nutze deinen Code zum Fortsetzen.")
-                code=self._insert(slot)
+                if slot is None: raise ValueError("Alle Spielerplaetze sind vergeben.")
+                code=self._insert(slot,issue_code)
             lease=secrets.token_hex(16)
             self.db.execute("UPDATE joins SET active=1,lease=? WHERE slot=?",(lease,slot))
             self.db.commit()
@@ -121,11 +124,10 @@ def make_handler(config, allocator):
                     metadata={"role":"score"}
                 else:
                     action=data.get("action")
-                    if action not in ("new","resume"): raise ValueError("Waehle Neu oder Fortsetzen.")
-                    if action=="resume" and not data.get("code"): raise ValueError("Bitte deinen Fortsetzen-Code eingeben.")
-                    slot,code,lease=allocator.reserve(data.get("code") if action=="resume" else None)
+                    if action!="new": raise ValueError("Bitte neu verbinden.")
+                    slot,_,lease=allocator.reserve(issue_code=False)
                     target=slot
-                    metadata={"role":"player","slot":slot,"code":code,"resumed":action=="resume"}
+                    metadata={"role":"player","slot":slot}
                 # The only destinations and credentials come from the root-owned file.
                 import paramiko
                 if allocator.provider and target.startswith("elf-"):
@@ -197,7 +199,7 @@ def main():
                 except (OSError,ValueError,KeyError):
                     from .dynamic import Client
                     name=Client().player_name(slot) if slot.startswith("elf-") and os.environ.get("FROST_DYNAMIC")=="1" else ""
-                print(f"{slot:10} {name:20} {code} {'verbunden' if active else 'frei zum Fortsetzen'}")
+                print(f"{slot:10} {(name or ''):20} {'verbunden' if active else 'offline'}")
         db.close()
         return
     config=json.loads(Path("/run/bootstrap/router.json").read_text())
