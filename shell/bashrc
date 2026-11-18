@@ -23,6 +23,7 @@ _frost_action() {
     fi
     return "$rc"
 }
+musik() { command frost music "$@"; }
 hilfe() { command frost help; }
 status() { command frost status; }
 karte() { command frost map; }

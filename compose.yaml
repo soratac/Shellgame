@@ -28,7 +28,8 @@
       },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2200:22",
-        "${SCORE_BIND:-127.0.0.1}:8080:8080"
+        "${SCORE_BIND:-127.0.0.1}:8080:8080",
+        "${MUSIC_BIND:-0.0.0.0}:${MUSIC_PORT:-8094}:8094"
       ],
       "tmpfs": [
         "/run:rw,nosuid,nodev,size=16m",
@@ -88,6 +89,9 @@
         "interval": "10s",
         "timeout": "3s",
         "retries": 3
+      },
+      "environment": {
+        "MUSIC_URL": "${MUSIC_URL:-http://${GAME_HOST:-localhost}:${MUSIC_PORT:-8094}}"
       }
     },
     "player01": {

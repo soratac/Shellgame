@@ -36,6 +36,14 @@ Die Karte markiert mit ✧ den Ort der Spur. Nimm im Dorf das Echo mit `mv ping 
 
 **Tab** vervollständigt, **Tab Tab** zeigt die Auswahl, **Strg+C** bricht ab. Die unteren Eingabezeilen bleiben automatisch aktiv. Normale Befehle, Editoren, Pipes, Umleitungen und Schleifen funktionieren weiterhin. Spielgegenstände sind echte ausführbare Shell-Dateien; `cp` und `mv` werden nicht umdefiniert.
 
+## Weihnachtsmusik
+
+Gib in der Spiel-Shell `musik` ein, öffne den persönlichen Link auf deinem Gerät und drücke **▶ Musik starten**. Der Browser spielt „Schneefunken“, einen eigens für Frostbyte komponierten Glockenspiel-Chiptune. Lass den Tab beim Spielen offen.
+
+Im Musikregler unten rechts ändern **← / →** die Lautstärke in Zehnerschritten, **M** schaltet stumm und wieder laut. **Enter** bringt dich zurück zur Eingabe. Direkt an der Bash funktionieren auch `musik 30` und `musik mute`. Beim Trennen der Spielsitzung endet die Wiedergabe.
+
+Der Browser muss den Musikport des Spielservers erreichen (Standard **8094/tcp**). Der Link verwendet `GAME_HOST` und `MUSIC_PORT` aus der Compose-Umgebung. Für eine abweichende, vom Browser erreichbare Adresse setze `MUSIC_URL` in `.env`. Bei Zugriff ausschließlich über den Jumphost kannst du auf deinem Rechner `ssh -N -L 8094:10.0.0.60:8094 jump` laufen lassen und im Musiklink den Host durch `localhost` ersetzen.
+
 ## Fünf Orte
 
 | Verzeichnis | Fund / Aufgabe |

@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm /etc/shadow && ln -s /run/frost/shadow /etc/shadow
 ENV PYTHONPATH=/opt/frost LANG=C.UTF-8 PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 COPY frost /opt/frost/frost
+RUN python3 /opt/frost/frost/sound/compose.py /opt/frost/frost/sound/winter.wav
 COPY world /opt/frost/world
 COPY shell /etc/frost
 COPY bin /usr/local/bin

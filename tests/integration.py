@@ -40,7 +40,7 @@ def main():
     (folder/"router.json").write_text(json.dumps({k:v for k,v in router.items() if k in ["scoreboard",*slots]}))
     listeners=[]
     ports={}
-    for name in ["scoreboard",*slots,"api","gateway"]:
+    for name in ["scoreboard",*slots,"api","music","gateway"]:
         sock=socket.socket()
         sock.bind(("127.0.0.1",0))
         listeners.append(sock)
@@ -62,6 +62,8 @@ def main():
         if name=="scoreboard":
             service["networks"]=["test"]
             service["ports"].append(f"127.0.0.1:{ports['api']}:8080")
+            service["ports"].append(f"127.0.0.1:{ports['music']}:8094")
+            service["environment"]["MUSIC_URL"]=f"http://127.0.0.1:{ports['music']}"
     path=folder/"compose.yaml"
     path.write_text(json.dumps(config,indent=2))
     dc=["docker","compose","-f",str(path)]
@@ -123,6 +125,29 @@ def main():
             print(f"PASS: {args.players} concurrent interactive gateway players plus a separate live scoreboard viewer",flush=True)
             return
         s=sessions[0]
+        s.send("musik\r")
+        s.expect("Enter zurück")
+        link = re.search(rb"http://127\.0\.0\.1:\d+/#([\w-]{16})", s.output)
+        assert link, "Missing personal music link"
+        audio_url = f"http://127.0.0.1:{ports['music']}"
+        stream_url = audio_url + "/stream/" + link[1].decode()
+        def volume_event(stream):
+            while line := stream.readline():
+                if line.startswith(b"data: "):
+                    return json.loads(line[6:])
+            raise AssertionError("Music stream ended")
+        with urllib.request.urlopen(stream_url, timeout=6) as stream:
+            assert volume_event(stream)==40
+            s.send("\x1b[C")
+            assert volume_event(stream)==50
+            s.send("m")
+            assert volume_event(stream)==0
+            s.send("m")
+            assert volume_event(stream)==50
+            s.send("\r")
+        with urllib.request.urlopen(audio_url+"/winter.wav") as track:
+            assert track.read(4)==b"RIFF" and int(track.headers["Content-Length"])>100000
+        print("PASS: personal audio link, real mixer arrows, mute/unmute and loop audio", flush=True)
         # Native terminal behavior remains usable inside the fixed compositor.
         s.send("nano /tmp/editor-check\r")
         s.expect("GNU nano")
@@ -247,6 +272,8 @@ def main():
             if not next(r for r in scores() if r["slot"]=="player01")["connected"]: break
             time.sleep(.2)
         assert not next(r for r in scores() if r["slot"]=="player01")["connected"]
+        with urllib.request.urlopen(stream_url, timeout=4) as stream:
+            assert volume_event(stream) is None
         s=Session("player01",ports["player01"],folder)
         sessions.append(s)
         s.expect("Rucksack")

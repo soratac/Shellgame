@@ -16,6 +16,7 @@ import time
 import tty
 
 from .client import request
+from .music import indicator
 from .render import colors, paint, put, box, POSITIONS
 
 CONTROL='/tmp/frost-terminal.sock'
@@ -81,6 +82,7 @@ def frame(screen):
     listener=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM)
     Path(CONTROL).unlink(missing_ok=True)
     listener.bind(CONTROL); os.chmod(CONTROL,0o600); listener.listen(4)
+    music={"level":40,"muted":False}
     state=None; fetched=0; painted=0; previous_size=None
     attrs={}
     position=origin=target=POSITIONS["dorf"]
@@ -143,7 +145,9 @@ def frame(screen):
             now=time.monotonic()
             if not zoom and now-fetched>.15:
                 try:
-                    state=request()['state']
+                    snapshot=request()
+                    state=snapshot['state']
+                    music=snapshot['music']
                     # Read as the player: show ordinary files as well as game items.
                     with os.scandir(Path.home()/"rucksack") as entries:
                         names = sorted("".join(c if c.isprintable() else "?" for c in e.name)[:40]
@@ -162,6 +166,9 @@ def frame(screen):
                 position=tuple(origin[i]+(target[i]-origin[i])*progress for i in (0,1))
                 paint(hud,state,now,position)
                 box(screen,top,0,rows-top,cols-1,2)
+                label=indicator(music)
+                if cols>=len(label)+4:
+                    put(screen,rows-1,cols-3-len(label),label,2)
 
             sy,sx=(0,0) if zoom else (top+1,2)
             for y in range(min(sh,rows-sy)):
@@ -177,6 +184,8 @@ def frame(screen):
             except curses.error: pass
             screen.refresh(); painted=now
     finally:
+        with contextlib.suppress(OSError, ValueError):
+            request("music", ["close"])
         listener.close(); Path(CONTROL).unlink(missing_ok=True); os.close(master)
         try: os.killpg(child,signal.SIGHUP)
         except ProcessLookupError: pass

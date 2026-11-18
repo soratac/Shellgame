@@ -62,6 +62,9 @@ def check_travel():
 def main():
     args = sys.argv[1:]
     action = args.pop(0) if args else "status"
+    if action == "music":
+        from .music import controls
+        return controls(args)
     if action == "activity":
         from .activity import bounded_command, MAX_COMMAND
         request("activity", [bounded_command(sys.stdin.read(MAX_COMMAND+1))])

@@ -16,6 +16,7 @@ from pathlib import Path
 
 from .render import colors, put, box, fit, Canvas, bar, boss_frame, hero_frame, overlay
 from .activity import HISTORY_SIZE, MAX_PAYLOAD, bounded_command, screen_command
+from . import music_http
 from .items import ITEMS
 from .render import combat_frame, world_frame, POSITIONS, attack_effect
 from .avatar import DEFAULT, HAIR, SHIRTS, sprite
@@ -61,6 +62,7 @@ class Board:
         self.lock=threading.Lock()
         self.tokens=tokens
         self.activity={}
+        self.music=music_http.Sessions()
 
     def authenticate(self, token):
         tokens=dict(self.tokens)
@@ -125,6 +127,7 @@ class Board:
         selected["area"]=data.get("area") if data.get("area") in {"dorf","wald","werkstatt","archiv","zitadelle"} else "unterwegs"
         selected["method"]=selected["method"] if selected["method"] in {"loop","staff","spell","driver"} else None
         with self.lock:
+            self.music.update(slot, data.get("music") if selected["connected"] else None)
             if selected["connected"]: self.activity[slot]=activity
             else: self.activity.pop(slot,None)
             self.db.execute("INSERT INTO scores VALUES (?,?,?) ON CONFLICT(slot) DO UPDATE SET payload=excluded.payload, updated=excluded.updated",
@@ -171,6 +174,12 @@ def handler_for(board):
 
         def do_GET(self):
             if self.path=="/health": self.reply(200,{"ok":True})
+            elif self.path=="/api/music-url":
+                body=os.environ.get("MUSIC_URL","http://localhost:8094").rstrip("/").encode()
+                self.send_response(200)
+                self.send_header("Content-Length",str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
             elif self.path=="/api/live":
                 if not ipaddress.ip_address(self.client_address[0]).is_loopback:
                     return self.reply(403, {"error":"spectator access only"})
@@ -421,6 +430,8 @@ def main():
     tokens=json.loads(Path("/run/bootstrap/score_tokens").read_text())
     board=Board(db,tokens)
     server=ThreadingHTTPServer(("0.0.0.0",8080),handler_for(board))
+    audio=ThreadingHTTPServer(("0.0.0.0",8094),music_http.handler_for(board))
+    threading.Thread(target=audio.serve_forever,daemon=True).start()
     server.serve_forever()
 
 

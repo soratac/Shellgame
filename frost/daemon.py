@@ -14,6 +14,7 @@ from pathlib import Path
 from .activity import Activity, MAX_COMMAND
 from .engine import act, fresh, public
 from .records import migrate
+from .music import Mixer
 
 STATE_DIR = Path(os.environ.get("FROST_STATE", "/var/lib/frost"))
 SOCKET = os.environ.get("FROST_SOCKET", "/run/frost/game.sock")
@@ -21,6 +22,7 @@ LOCK = threading.RLock()
 DIRTY = threading.Event()
 STATE = None
 ACTIVITY = Activity()
+MIXER = Mixer()
 
 
 def save():
@@ -50,7 +52,10 @@ def publish_forever():
         with LOCK:
             snapshot = public(STATE)
             snapshot["connected"] = connected()
-            if not snapshot["connected"]: ACTIVITY.clear()
+            if not snapshot["connected"]:
+                ACTIVITY.clear()
+                MIXER.adjust("close")
+            snapshot["music"] = MIXER.broadcast()
             snapshot.update(ACTIVITY.snapshot())
         if not token or not snapshot["name"]:
             continue
@@ -84,6 +89,16 @@ class Handler(socketserver.StreamRequestHandler):
             with LOCK:
                 peer = self.connection.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, struct.calcsize("3i"))
                 uid = struct.unpack("3i", peer)[1]
+                if action == "music":
+                    try:
+                        if len(args) != 1:
+                            raise ValueError("musik [mute | + | - | 0–100]")
+                        result = {"ok": True, "music": MIXER.adjust(args[0]), "key": MIXER.key}
+                        DIRTY.set()
+                    except ValueError as exc:
+                        result = {"ok": False, "message": str(exc)}
+                    self.wfile.write(json.dumps(result).encode() + b"\n")
+                    return
                 if action == "activity":
                     if args: ACTIVITY.begin(args[0])
                     DIRTY.set()
@@ -106,6 +121,8 @@ class Handler(socketserver.StreamRequestHandler):
                 if action not in ("status", "map", "inventory", "help", "modules"):
                     save()
                     DIRTY.set()
+                if action == "status":
+                    result["music"] = MIXER.display()
                 result["state"] = public(STATE)
             self.wfile.write(json.dumps(result, ensure_ascii=False).encode() + b"\n")
         except (OSError, ValueError, TypeError, KeyError):

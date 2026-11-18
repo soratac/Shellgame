@@ -120,6 +120,8 @@ def main():
     services["scoreboard"]["cpus"]="1.0"
     services["scoreboard"]["pids_limit"]=128
     services["scoreboard"]["ports"].append("${SCORE_BIND:-127.0.0.1}:8080:8080")
+    services["scoreboard"]["environment"]={"MUSIC_URL":"${MUSIC_URL:-http://${GAME_HOST:-localhost}:${MUSIC_PORT:-8094}}"}
+    services["scoreboard"]["ports"].append("${MUSIC_BIND:-0.0.0.0}:${MUSIC_PORT:-8094}:8094")
     services["scoreboard"]["volumes"].append("./secrets/scoreboard/tokens.json:/run/bootstrap/score_tokens:ro")
     services["scoreboard"]["healthcheck"]={"test":["CMD","python3","-c","import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health',timeout=2)"],"interval":"10s","timeout":"3s","retries":3}
     write_private(secret_dir/"scoreboard"/"tokens.json",json.dumps(tokens))
