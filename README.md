@@ -45,13 +45,17 @@ Mit `tipp` erhältst du bis zu drei Hinweise pro Runde. Jeder erscheint acht Sek
 
 ## Weihnachtsmusik
 
-Beim SSH-Login erscheint dein persönlicher Ton-Link. Öffne ihn auf deinem Gerät und drücke **▶ Musik starten**, falls dein Browser auf einen Klick wartet. Mit `musik link` zeigst du ihn erneut an. Der Browser spielt „Schneefunken“, einen eigens für Frostbyte komponierten Glockenspiel-Chiptune. Lass den Tab beim Spielen offen. Über denselben Lautstärkeregler hörst du auch Treffer, Zauber und die Angriffe des Grinch. Das Echo sendet vier kurze Töne, Frost klingt wie splitterndes Eis, und die schwere Sturmböe kündigt sich mit einem tiefen Grollen an.
+Für Musik und Effekte starte Frostbyte im Terminal **auf dem Rechner mit deinen Lautsprechern**. Im aktuellen Repository genügt über den Jumphost dieser Befehl.
 
-Unten rechts kannst du **♪ Musik** für den Browserlink, **[−] / [+]** für die Lautstärke und die **Prozentanzeige** zum Stummschalten anklicken. In Terminals mit Mausunterstützung lässt sich Text meist mit Umschalt und Ziehen markieren. Im geöffneten Musikregler ändern **← / →** die Lautstärke in Zehnerschritten, **M** schaltet stumm und wieder laut. **Enter** bringt dich zurück zur Eingabe. Direkt an der Bash funktionieren auch `musik 30` und `musik mute`. Beim Trennen der Spielsitzung endet die Wiedergabe.
+```bash
+python3 scripts/spielmusik.py -J jump spiel@10.0.0.60
+```
 
-**Über den Jumphost:** Starte auf deinem eigenen Rechner im geklonten Repository `python3 scripts/spielmusik.py -J jump spiel@10.0.0.60`. Der lokale Musik-Tab ist schon bei der Charakterwahl bereit. Lautstärke und Kampfeffekte laufen über dieselbe SSH-Verbindung. Dafür werden Python 3.9+, OpenSSH und ein lokaler Browser benötigt. `jump` steht für deinen SSH-Alias. Das gilt auch bei gesperrten zusätzlichen Ports.
+Bei direkter Verbindung entfällt `-J jump`. Der Starter spielt „Schneefunken“ automatisch ab und mischt Treffer, Zauber, Heilung und Bossangriffe dazu. Mit dem Schließen der SSH-Sitzung endet auch die Wiedergabe. Du brauchst lokal Python 3.9+, OpenSSH und eines der Programme `aplay` (unter Debian/Ubuntu im Paket `alsa-utils`), `paplay`, SoX (`play`) oder `ffplay`. Der Starter verwendet die lokale Standard-Tonausgabe. Die Spielereignisse laufen über dieselbe SSH-Verbindung.
 
-Beim gewöhnlichen SSH-Einstieg muss der Browser den Musikport des Spielservers erreichen (Standard **8094/tcp**). Der Link verwendet `GAME_HOST` und `MUSIC_PORT` aus der Compose-Umgebung. Für eine andere vom Browser erreichbare Adresse setze `MUSIC_URL` in `.env`.
+Unten rechts ändern **[−]** und **[+]** die Lautstärke. Ein Klick auf die Prozentzahl schaltet stumm und wieder laut. An der Shell funktionieren `musik 30` und `musik mute`. Im Regler `musik` ändern **← / →** die Lautstärke, **M** schaltet stumm und **Enter** schließt ihn.
+
+Bei einem gewöhnlichen `ssh spiel@HOST` bleibt der persönliche Browserlink über `musik link` verfügbar. Dafür muss das Gerät den Musikport erreichen (Standard **8094/tcp**). Die Adresse wird über `GAME_HOST`, `MUSIC_PORT` oder `MUSIC_URL` in `.env` festgelegt.
 
 ## Fünf Orte
 

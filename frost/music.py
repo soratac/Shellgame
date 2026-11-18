@@ -69,6 +69,10 @@ def music_link():
 
 def controls(args):
     from .client import request
+    native = bool(os.environ.get("FROST_NATIVE_AUDIO"))
+    if args == ["link"] and native:
+        print("Terminalton aktiv · musik mute / musik 0–100")
+        return 0
     if args == ["link"]:
         print("Ton im Browser starten: "+music_link(),flush=True)
         return 0
@@ -76,8 +80,10 @@ def controls(args):
         result = request("music", args)
         print(indicator(result["music"]) if result["ok"] else result["message"])
         return 0 if result["ok"] else 1
-    url = music_link()
-    print(f"Im Browser öffnen und ▶ drücken:\n{url}", flush=True)
+    if native:
+        print("Terminalton aktiv", flush=True)
+    else:
+        print(f"Im Browser öffnen und ▶ drücken:\n{music_link()}", flush=True)
     if not sys.stdin.isatty():
         return 0
     print("← → Lautstärke   M stumm   Enter zurück", flush=True)

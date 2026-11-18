@@ -20,7 +20,7 @@ def main():
         data={"action":"new"} if os.getuid()==1000 else {"action":"score"}
         size=shutil.get_terminal_size((100,38))
         data.update(term=os.environ.get("TERM","xterm-256color"),width=size.columns,height=size.lines)
-        if data["term"].startswith(("frost-music-","frost-music2-")):
+        if data["term"]=="frost-audio" or data["term"].startswith(("frost-music-","frost-music2-")):
             os.environ["TERM"]="xterm-256color"  # Local dialogs on gateway errors.
         with socket.socket(socket.AF_UNIX,socket.SOCK_STREAM) as sock:
             sock.settimeout(300)

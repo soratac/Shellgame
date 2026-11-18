@@ -87,7 +87,7 @@ def frame(screen):
     listener.bind(CONTROL); os.chmod(CONTROL,0o600); listener.listen(4)
     music={"level":40,"muted":False}
     state=None; fetched=0; painted=0; previous_size=None
-    local_music = bool(os.environ.get("FROST_LOCAL_MUSIC"))
+    local_music = bool(os.environ.get("FROST_LOCAL_MUSIC") or os.environ.get("FROST_NATIVE_AUDIO"))
     local_sfx = bool(os.environ.get("FROST_LOCAL_SFX"))
     last_sound = time.time()
     sent_level, last_signal = None, 0
@@ -126,7 +126,7 @@ def frame(screen):
         if not action: return
         try:
             if action=="open":
-                notice=music_link()
+                notice="Terminalton · Lautstärke mit [−] und [+]" if os.environ.get("FROST_NATIVE_AUDIO") else music_link()
                 notice_until=time.monotonic()+18
             else:
                 music=request("music",[action])["music"]

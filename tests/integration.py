@@ -146,17 +146,35 @@ def main():
                 if line.startswith(b"data: "):
                     return json.loads(line[6:])
             raise AssertionError("Music stream ended")
-        local_link=re.search(rb"Musik im Browser: (http://127\.0\.0\.1:\d+)/#([\w-]{16})", sessions[1].output)
-        assert local_link, "Missing local music companion"
-        local_stream=(local_link[1]+b"/stream/"+local_link[2]).decode()
-        with urllib.request.urlopen(local_stream, timeout=6) as stream:
-            assert volume_event(stream)==40
-            sessions[1].send("musik 70\r")
-            assert volume_event(stream)==70
-            sessions[1].send("cd ../wald; mv .lichtung/beeren ~/rucksack/; ~/rucksack/beeren\r")
-            assert volume_event(stream)==["beeren"]
-            assert b"frost-volume=" not in sessions[1].output
-        print("PASS: local browser receives volume through SSH gateway alone", flush=True)
+        from array import array
+        from frost.sound.compose import soundtrack
+        track_samples=soundtrack()
+        native=sessions[1]
+        recording=folder/"terminal.pcm"
+        assert b"Terminalton aktiv" in native.output and b"Musik im Browser:" not in native.output
+        native.send("musik 0\r")
+        deadline=time.monotonic()+6
+        while time.monotonic()<deadline:
+            data=recording.read_bytes()
+            if len(data)>4410 and not any(data[-4410:]): break
+            native.drain(.1)
+        else: raise AssertionError("Native mixer did not go silent")
+        native.send("musik 70\r")
+        native.send("cd ../wald; mv .lichtung/beeren ~/rucksack/\r")
+        wait_state(lambda v:"beeren" in v["bag"],slot="player02")
+        native.drain(.4)
+        start=recording.stat().st_size//2
+        native.send("~/rucksack/beeren\r")
+        wait_state(lambda v:"heal:beeren" in v["rewards"],slot="player02")
+        native.drain(.8)
+        samples=array("h",recording.read_bytes())
+        if sys.byteorder!="little": samples.byteswap()
+        # Ordinary music matches the score exactly. The berry tone changes its samples.
+        differences=sum(samples[i]!=round(track_samples[i%len(track_samples)]*.43*.70)
+                        for i in range(start,len(samples)))
+        assert 1000<differences<len(samples)-start-1000,differences
+        assert b"frost-volume=" not in native.output and b"frost-sound=" not in native.output
+        print("PASS: native SSH soundtrack, mute, volume and audible berry PCM mixed locally",flush=True)
         with urllib.request.urlopen(stream_url, timeout=6) as stream:
             assert volume_event(stream)==40
             s.send("\x1b[C")

@@ -121,4 +121,8 @@ PS0='$(_frost_live_begin)'
 PROMPT_COMMAND=_frost_prompt
 builtin cd "$HOME/welt/dorf"
 printf '\n  Dorfaufgabe: cat AUFGABE.txt · Deine Befehle sind im Live-Scoreboard sichtbar.\n'
-command frost music link
+if [[ -n ${FROST_NATIVE_AUDIO:-} || -n ${FROST_LOCAL_MUSIC:-} ]]; then
+    command frost music link
+else
+    printf '  Terminalton: Auf deinem Rechner mit scripts/spielmusik.py verbinden.\n'
+fi

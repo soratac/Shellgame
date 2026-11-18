@@ -54,7 +54,7 @@ def note(voice, pitch, steps):
     return samples
 
 
-def render(path):
+def soundtrack():
     mix = array.array("f", [0]) * round(len(SCORE) * 6 * STEP * RATE)
 
     def place(at, voice, pitch, duration, gain=1):
@@ -81,7 +81,11 @@ def render(path):
             place(beat+i, "bell", int(token), duration * .93)
             place(beat+i+.75, "bell", int(token), 1.4, .13)
     scale = 28000 / max(map(abs, mix))
-    pcm = array.array("h", (round(v * scale) for v in mix))
+    return array.array("h", (round(v * scale) for v in mix))
+
+
+def render(path):
+    pcm = soundtrack()
     if sys.byteorder != "little":
         pcm.byteswap()
     with wave.open(str(path), "wb") as out:

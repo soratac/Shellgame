@@ -1,22 +1,14 @@
 #!/usr/bin/env python3
-"""Play Frostbyte with local browser audio over a single OpenSSH connection."""
+"""Play Frostbyte with local terminal audio over one OpenSSH connection."""
 import os
-import time
-from collections import deque
-import secrets
 import signal
 import subprocess
 import sys
-import tempfile
-import threading
-import webbrowser
-from http.server import ThreadingHTTPServer
 from pathlib import Path
-from types import SimpleNamespace
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from frost import music_http
-from frost.sound.compose import render
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+from frost.music_http import SOUNDS
+from frost.sound.native import Output
 
 PREFIX = b"\x1b]777;frost-"
 
@@ -46,7 +38,7 @@ def relay(stream, output, change, play):
                 change(int(value))
             elif end >= 0 and field == b"sound":
                 names = value.decode("ascii","replace").split(",")
-                if 1<=len(names)<=2 and all(name in music_http.SOUNDS for name in names):
+                if 1<=len(names)<=2 and all(name in SOUNDS for name in names):
                     play(names)
                 else:
                     output.write(pending[:end+1])
@@ -67,56 +59,22 @@ def main():
     def terminate(signum, frame):
         raise SystemExit(128 + signum)
     signal.signal(signal.SIGTERM, terminate)
-    key = secrets.token_urlsafe(12)
-    board = SimpleNamespace(lock=threading.Lock(), music=music_http.Sessions())
-    with tempfile.TemporaryDirectory() as temp:
-        track = Path(temp)/"winter.wav"
-        render(track)
-        with ThreadingHTTPServer(("127.0.0.1",0), music_http.handler_for(board, track)) as server:
-            threading.Thread(target=server.serve_forever,daemon=True).start()
-            turns = deque(maxlen=24)
-            level = 40
-            closed = threading.Event()
-            def refresh():
-                board.music.update("local", {"key":key, "volume":level}, list(turns))
-            def change(volume):
-                nonlocal level
-                with board.lock:
-                    level = volume
-                    refresh()
-            def play(names):
-                with board.lock:
-                    turns.append({"at":time.time(),"sounds":names})
-                    refresh()
-            def keep_alive():
-                # Login and the character editor can last longer than a music session heartbeat.
-                while not closed.wait(2):
-                    with board.lock:
-                        refresh()
-            url = f"http://127.0.0.1:{server.server_port}/#{key}"
-            change(level)
-            print("Musik im Browser: " + url, flush=True)
-            print("▶ Musik starten schaltet Musik und Spieleffekte ein.", flush=True)
-            threading.Thread(target=keep_alive,daemon=True).start()
-            threading.Thread(target=webbrowser.open,args=(url,),daemon=True).start()
-            env = {**os.environ, "TERM":f"frost-music2-{server.server_port}-{key}"}
-            try:
-                with subprocess.Popen(["ssh","-tt",*sys.argv[1:]],env=env,stdout=subprocess.PIPE) as ssh:
-                    try:
-                        relay(ssh.stdout, sys.stdout.buffer, change, play)
-                    except BaseException:
-                        ssh.terminate()
-                        try:
-                            ssh.wait(timeout=2)
-                        except subprocess.TimeoutExpired:
-                            ssh.kill()
-                        raise
+    try:
+        with Output() as mixer:
+            env = {**os.environ, "TERM":"frost-audio"}
+            print("Frostbyte · Terminalton aktiv",flush=True)
+            with subprocess.Popen(["ssh","-tt",*sys.argv[1:]],env=env,stdout=subprocess.PIPE) as ssh:
+                try:
+                    relay(ssh.stdout,sys.stdout.buffer,mixer.change,mixer.play)
                     return ssh.wait()
-            finally:
-                closed.set()
-                with board.lock:
-                    board.music.update("local",None)
-                server.shutdown()
+                except BaseException:
+                    ssh.terminate()
+                    try: ssh.wait(timeout=2)
+                    except subprocess.TimeoutExpired: ssh.kill()
+                    raise
+    except OSError as exc:
+        print(str(exc),file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":

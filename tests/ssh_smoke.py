@@ -27,7 +27,14 @@ class Session:
              "SSH_ASKPASS":str(folder/"askpass"),"FROST_PASSWORD_FILE":str(secret_root/slot/"password")}
         authentication=["-o","PreferredAuthentications=password","-o","PubkeyAuthentication=no"] if key is None else ["-i",str(key),"-o","BatchMode=yes","-o","IdentitiesOnly=yes"]
         launcher=[sys.executable,str(ROOT/"scripts/spielmusik.py")] if music else ["ssh","-tt"]
-        if music: env["BROWSER"]="/bin/true"
+        if music:
+            # Capture the local player input on headless test hosts.
+            audio_bin=folder/"audio-bin"
+            audio_bin.mkdir(exist_ok=True)
+            sink=audio_bin/"aplay"
+            sink.write_text('#!/bin/sh\nexec cat > "$FROST_TEST_PCM"\n')
+            sink.chmod(0o700)
+            env.update(PATH=str(audio_bin)+os.pathsep+env["PATH"],FROST_TEST_PCM=str(folder/"terminal.pcm"))
         self.proc=subprocess.Popen([*launcher,*(["-p",str(port)] if port!=22 else []),*authentication,"-o","StrictHostKeyChecking=accept-new",
                                     "-o",f"UserKnownHostsFile={folder/'known_hosts'}","-o","ConnectTimeout=5",
                                     f"{user}@{host}"],stdin=slave,stdout=slave,stderr=slave,env=env,start_new_session=True)

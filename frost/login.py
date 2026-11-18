@@ -160,7 +160,9 @@ def main():
         from .gateway_client import main as join
         return join()
     audio = re.fullmatch(r"frost-music(2?)-(\d{1,5})-([A-Za-z0-9_-]{16})", os.environ.get("TERM",""))
-    if audio and 0 < int(audio[2]) <= 65535:
+    if os.environ.get("TERM") == "frost-audio":
+        os.environ.update(TERM="xterm-256color", FROST_NATIVE_AUDIO="1", FROST_LOCAL_SFX="1")
+    elif audio and 0 < int(audio[2]) <= 65535:
         os.environ["TERM"] = "xterm-256color"
         if audio[1]: os.environ["FROST_LOCAL_SFX"] = "1"
         os.environ["FROST_LOCAL_MUSIC"] = f"http://127.0.0.1:{audio[2]}/#{audio[3]}"
