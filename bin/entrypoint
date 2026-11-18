@@ -1,8 +1,21 @@
 #!/bin/bash
 set -euo pipefail
 role=${1:-player}
+if [[ $role == spawner ]]; then
+    exec python3 -m frost.spawner
+fi
+if [[ ${FROST_BOUNDED_STORAGE:-0} == 1 ]]; then
+    python3 - <<'CHECK'
+import os
+for path in ('/home/player','/var/lib/frost'):
+    fs=os.statvfs(path)
+    if fs.f_blocks*fs.f_frsize > 65*1024**2:
+        raise SystemExit('Begrenztes Dateisystem fehlt: '+path)
+CHECK
+fi
 install -d -m 755 /run/sshd /run/frost
-install -d -m 700 /run/bootstrap
+if [[ ! -d /run/bootstrap ]]; then install -d -m 700 /run/bootstrap;
+elif [[ -w /run/bootstrap ]]; then chmod 700 /run/bootstrap; fi
 install -m 600 /run/bootstrap/shadow /run/frost/shadow
 install -m 644 /run/bootstrap/authorized_keys /run/frost/authorized_keys
 install -d -m 700 /var/lib/frost/hostkeys

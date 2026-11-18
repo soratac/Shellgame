@@ -1,7 +1,5 @@
 """Small, keyboard-friendly floating hints; no function keys needed."""
 import curses
-import os
-import subprocess
 from .render import colors, put, box
 
 
@@ -38,34 +36,23 @@ def floating(screen, title, lines, choice=False):
 
 
 def show(title,lines,choice=False):
-    pane=os.environ.get("TMUX_PANE")
-    zoomed=False
-    if pane:
-        flag=subprocess.run(["tmux","display-message","-p","-t",pane,"#{window_zoomed_flag}"],capture_output=True,text=True)
-        if flag.stdout.strip()=="0":
-            zoomed=subprocess.run(["tmux","resize-pane","-Z","-t",pane],stderr=subprocess.DEVNULL).returncode==0
-    try:
-        return curses.wrapper(floating,title,lines,choice)
-    except KeyboardInterrupt:
-        return False
-    finally:
-        if zoomed: subprocess.run(["tmux","resize-pane","-Z","-t",pane],stderr=subprocess.DEVNULL)
+    from .terminal import fullscreen
+    with fullscreen():
+        try: return curses.wrapper(floating,title,lines,choice)
+        except KeyboardInterrupt: return False
 
 
 def confirm_boss(state):
-    bag=", ".join(state.get("bag",[])) or "LEER — sammle besser zuerst einen Zauber!"
+    from .engine import route_count
+    count=route_count(state)
     return show("BOSSKAMP STARTEN?",[
-        f"Du: {state['hp']}/100 Leben  |  Krampus: {state['boss_hp']}/240",
-        "Rucksack: "+bag,
+        f"Du {state['hp']}/100   ·   Krampus {state['boss_hp']}/240",
         "",
-        "ANGREIFEN  ~/rucksack/funke     (mehrmals ausfuehren)",
-        "HEILEN     ~/rucksack/kakao     (vorher einsammeln)",
-        "Weitere Zauber: ~/rucksack/frost, stern oder schild.",
+        "Angriff:  ~/rucksack/funke",
+        "Heilung:  ~/rucksack/kakao",
         "",
-        "Nach JA schliesst das Tor. Du kannst NICHT zurueck!",
-        "Keine neuen Funde oder Aufgaben waehrend des Kampfes.",
-        "Lesen kostet keine Leben. Falsche Befehle schon.",
-        "Neu anfangen geht jederzeit mit: neustart",
+        f"Orte {min(3,count)}/3: "+("Frostsiegel offen." if count>=3 else "Nur der schnelle Loop kann schon gewinnen!"),
+        "Nach JA kein Rueckweg. Neustart: neustart",
         "",
-        "J oder N waehlen, dann Enter. Standard: Nein.",
+        "J / N waehlen · Enter bestaetigt",
     ],choice=True)

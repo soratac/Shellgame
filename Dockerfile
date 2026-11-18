@@ -1,6 +1,6 @@
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    openssh-server python3 tmux bash-completion ca-certificates \
+    openssh-server python3 python3-pyte bash-completion ca-certificates \
     less nano vim-tiny procps findutils gawk coreutils grep sed tree python3-paramiko \
     && rm -rf /var/lib/apt/lists/* \
     && useradd -m -u 1000 -s /bin/bash player \

@@ -60,7 +60,7 @@ class LinuxPlayTests(unittest.TestCase):
         s["bests"]={"normal:classic":72}
         act(s,"bag",["funke"])
         self.assertEqual(s["name"],"Existing Elf")
-        self.assertEqual(s["bests"]["normal:classic"],72)
+        self.assertEqual(s["bests"]["best"],72)
 
 
 class RankingTests(unittest.TestCase):
@@ -69,11 +69,9 @@ class RankingTests(unittest.TestCase):
                 dict(fresh("Elf B"),slot="player02",score=700,elapsed=20,bests={"normal:classic":15}),
                 dict(fresh("Elf C"),slot="player03",score=900,elapsed=5,bests={"speedrun:loop":5})]
 
-    def test_points_and_record_categories_sort_independently(self):
+    def test_points_and_unified_best_time_sort_independently(self):
         self.assertEqual([r["slot"] for r in ranking(self.rows())],["player03","player02","player01"])
-        self.assertEqual([r["slot"] for r in ranking(self.rows(),1)],["player02","player01"])
-        self.assertEqual([r["slot"] for r in ranking(self.rows(),4)],["player03"])
-        self.assertEqual(ranking(self.rows(),2),[])
+        self.assertEqual([r["slot"] for r in ranking(self.rows(),1)],["player03","player02","player01"])
 
     def test_columns_align_with_wide_names_and_long_values(self):
         for width in (50,74,110):

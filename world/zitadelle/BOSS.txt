@@ -1,11 +1,8 @@
-KRAMPUS / VORHER ENTSCHEIDEN
+KRAMPUS
 
-Im Fenster: J + Enter kaempft, N + Enter geht zurueck.
-Nach JA ist das Tor zu: kein Rueckweg und keine neuen Funde!
+~/rucksack/funke   Angriff
+~/rucksack/kakao   Heilung
 
-~/rucksack/funke    Angreifen. Wiederholen.
-~/rucksack/kakao    Heilen, falls vorher mitgenommen.
-~/rucksack/frost    Einfrieren, falls vorher mitgenommen.
-
-Lesen kostet keine Leben. Falsche Befehle schon.
-Neu anfangen: neustart
+Normaler Sieg: vorher 3 Orte erkunden.
+Profi-Abkuerzung: schneller Funken-Loop.
+Nach Kampfstart kein Rueckweg. Neustart: neustart

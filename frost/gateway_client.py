@@ -27,11 +27,11 @@ def lobby(screen):
         y=max(0,(h-16)//2)
         box(screen,y,x,16,width,2)
         put(screen,y+2,x+3,"FROSTBYTE / GEMEINSAMER EINSTIEG",5,True)
-        put(screen,y+4,x+3,"Jeder Spieler bekommt automatisch einen eigenen Platz.",1)
+        put(screen,y+4,x+3,"Dein eigener Platz wird automatisch vergeben.",1)
         put(screen,y+6,x+3,"N = NEU SPIELEN     R = MIT CODE FORTSETZEN",2,True)
         put(screen,y+8,x+3,"Fortsetzen-Code: "+code if resume else "NEUES SPIEL — ein freier Platz wird gesucht.",1)
         put(screen,y+11,x+3,"ENTER - VERBINDEN",4,True)
-        put(screen,y+13,x+3,"Dein Platz und Fortschritt bleiben fuer dich reserviert.",3)
+        put(screen,y+13,x+3,"Code merken. Spaeter mit R fortsetzen.",3)
         screen.refresh()
         try: key=screen.get_wch()
         except curses.error: continue
@@ -52,8 +52,9 @@ def main():
         size=shutil.get_terminal_size((100,38))
         data.update(term=os.environ.get("TERM","xterm-256color"),width=size.columns,height=size.lines)
         with socket.socket(socket.AF_UNIX,socket.SOCK_STREAM) as sock:
-            sock.settimeout(20)
+            sock.settimeout(300)
             sock.connect("/run/frost/gateway.sock")
+            print("Dein Container wird vorbereitet …",flush=True)
             send(sock,b"J",data)
             kind,payload=receive(sock)
             metadata=json.loads(payload)
@@ -63,13 +64,10 @@ def main():
             if kind!=b"M": return 1
             if metadata["role"]=="player":
                 show("DEIN SPIELERPLATZ",[
-                    "Du wirst automatisch verbunden. Keine Portwahl noetig.",
-                    "",
                     "DEIN FORTSETZEN-CODE: "+metadata["code"],
                     "",
                     "Kopiere oder notiere diesen Code.",
-                    "Beim naechsten Login: R waehlen und den Code eingeben.",
-                    "Damit kommst du wieder in deinen eigenen Spielstand.",
+                    "Spaeter: R waehlen und Code eingeben.",
                 ])
             original=termios.tcgetattr(sys.stdin.fileno())
             pending=True

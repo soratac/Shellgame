@@ -1,7 +1,5 @@
 """A real full-screen result view, shown once per completed run."""
 import curses
-import os
-import subprocess
 import sys
 import time
 from pathlib import Path
@@ -55,19 +53,13 @@ def maybe_show():
     marker=Path("/tmp/frost-finish-seen")
     if marker.exists() and marker.read_text()==key: return
     marker.write_text(key)
-    pane=os.environ.get("TMUX_PANE")
-    zoomed=False
-    if pane:
-        flag=subprocess.run(["tmux","display-message","-p","-t",pane,"#{window_zoomed_flag}"],capture_output=True,text=True)
-        if flag.stdout.strip()=="0":
-            zoomed=subprocess.run(["tmux","resize-pane","-Z","-t",pane],stderr=subprocess.DEVNULL).returncode==0
-    try:
-        curses.wrapper(result_screen,state)
-    except KeyboardInterrupt:
-        pass
-    finally:
-        if zoomed:
-            subprocess.run(["tmux","resize-pane","-Z","-t",pane],stderr=subprocess.DEVNULL)
+    # Let the final hit and falling health bars finish before the win window.
+    event=(state.get("events") or [{}])[-1]
+    time.sleep(max(0,min(1.4,event.get("at",0)+1.4-time.time())))
+    from .terminal import fullscreen
+    with fullscreen():
+        try: curses.wrapper(result_screen,state)
+        except KeyboardInterrupt: pass
 
 
 if __name__=="__main__": maybe_show()

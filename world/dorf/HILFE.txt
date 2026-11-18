@@ -1,9 +1,11 @@
 RETTET WEIHNACHTEN
 
-tree ~/welt                 Alle Orte anschauen
-cp funke kakao ~/rucksack/   Zauber und Heilung mitnehmen
-cd ../wald                  Weitere Funde suchen
-cd ../zitadelle             Zum Boss, dann J/N bestaetigen
-~/rucksack/funke             Nach JA angreifen (wiederholen)
+ls                          Umschauen
+tree ~/welt                 Karte als Ordnerbaum
+cp funke ~/rucksack/         Mitnehmen
+cd ../wald                  Weitergehen
+~/rucksack/funke             Angreifen
 
-Nach Kampfstart kein Rueckweg. Neuer Versuch: neustart
+Erkunde Dorf, Wald und Werkstatt. Dann zur Zitadelle.
+Tab vervollstaendigt. aussehen aendert deinen Charakter.
+neustart beginnt eine neue Runde.

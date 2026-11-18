@@ -34,6 +34,7 @@ def main():
     # A single test-only bridge avoids exhausting Docker's address pools while
     # the live project keeps its separate per-player bridges.
     config["networks"]={"test":{}}
+    config["volumes"]={key:{} for key in config["volumes"]}
     config["volumes"]={k:v for k,v in config["volumes"].items() if k.startswith(tuple(f"{s}-" for s in config["services"]))}
     router=json.loads((ROOT/"secrets/gateway/router.json").read_text())
     (folder/"router.json").write_text(json.dumps({k:v for k,v in router.items() if k in ["scoreboard",*slots]}))
@@ -46,6 +47,9 @@ def main():
         ports[name]=sock.getsockname()[1]
     for name,service in config["services"].items():
         service.pop("build",None)
+        service.get("environment",{}).pop("FROST_BOUNDED_STORAGE",None)
+        service.get("environment",{}).pop("FROST_DYNAMIC",None)
+        service["volumes"]=[v for v in service["volumes"] if ":/run/controller" not in v]
         service["networks"]=["test"]
         service["healthcheck"]["interval"]="2s"
         service["ports"]=[f"127.0.0.1:{ports[name]}:22"]
@@ -75,8 +79,7 @@ def main():
     def scores():
         with urllib.request.urlopen(f"http://127.0.0.1:{ports['api']}/api/scores",timeout=3) as r: return json.load(r)["players"]
     def capture(label):
-        pane=run("exec","-T","--user","player","player01","tmux","show-option","-v","-t","frost","@frost-shell",capture_output=True,text=True).stdout.strip()
-        content=run("exec","-T","--user","player","player01","tmux","capture-pane","-p","-t",pane,capture_output=True,text=True).stdout
+        content=s.output.decode(errors="replace")
         (folder/(label+".txt")).write_text(content)
         return content
     sessions=[]
@@ -100,8 +103,8 @@ def main():
             codes[slot]=re.search(r"[A-F0-9]{4}(?:-[A-F0-9]{4}){3}",session.output.decode(errors="ignore")).group()
             session.send("\r")
             session.expect("Winterheld?")
-            assert b"SO SPIELST DU" in session.output
-            session.send(name+"\r")
+            assert b"DEIN WINTERHELD" in session.output
+            session.send(name+"\t\x1bOC\t\x1bOC\r")
             session.expect("DEINE SHELL")
             session.drain(.5)
             if args.load_only:
@@ -126,6 +129,23 @@ def main():
             print(f"PASS: {args.players} concurrent interactive gateway players plus a separate live scoreboard viewer",flush=True)
             return
         s=sessions[0]
+        # Native terminal behavior remains usable inside the fixed compositor.
+        s.send("nano /tmp/editor-check\r")
+        s.expect("GNU nano")
+        s.send("winter-test\x0f"); s.drain(.3); s.send("\r"); s.drain(.3); s.send("\x18")
+        s.drain(.4); s.send("cat /tmp/editor-check; printf 'EDITOR_%s\\n' OK\r")
+        s.expect("EDITOR_OK")
+        content=run("exec","-T","player01","cat","/tmp/editor-check",capture_output=True,text=True).stdout
+        assert content.strip()=="winter-test",content
+        import fcntl,termios,struct
+        fcntl.ioctl(s.fd,termios.TIOCSWINSZ,struct.pack("HHHH",32,90,0,0)); s.drain(.6)
+        s.send("printf 'RESIZE_%s\\n' OK\r"); s.expect("RESIZE_OK")
+        fcntl.ioctl(s.fd,termios.TIOCSWINSZ,struct.pack("HHHH",42,120,0,0)); s.drain(.5)
+        s.send("aussehen\r"); s.expect("DEIN WINTERHELD"); s.send("\r"); s.drain(.3)
+        s.send("printf 'AVATAR_%s\\n' RETURN\r"); s.expect("AVATAR_RETURN")
+        limits=run("exec","-T","player01","sh","-c","cat /sys/fs/cgroup/memory.max /sys/fs/cgroup/memory.swap.max /sys/fs/cgroup/pids.max /sys/fs/cgroup/cpu.max",capture_output=True,text=True).stdout.splitlines()
+        assert limits==["268435456","0","96","50000 100000"],limits
+        print("PASS: nano save/exit, terminal resize, avatar editor return, RAM/swap/PID/CPU limits",flush=True)
         extra=Session("gateway",ports["gateway"],folder)
         sessions.append(extra)
         extra.expect("GEMEINSAMER EINSTIEG"); extra.send("\r")
@@ -135,7 +155,7 @@ def main():
         s.send("tree -L 2 ~/welt\r")
         s.expect("wurzeln")
         wait_state(lambda v:"shell:tree" in v["rewards"])
-        s.send("neustart speedrun\r")
+        s.send("neustart\r")
         s.expect("Neuer Lauf")
         s.drain(.3)
         s.send("cp fun\t ~/rucksack/\r")
@@ -167,6 +187,7 @@ def main():
         s.drain(.3)
         s.send("printf 'BUILTIN_%s\\n' \"$PWD\"\r")
         s.expect("BUILTIN_/home/player/welt/zitadelle")
+        capture("combat-arena")
         s.send("cp ../archiv/stern ~/rucksack/\r")
         s.drain(.5)
         assert "stern" not in state()["bag"]
@@ -181,19 +202,28 @@ def main():
         s.send("printf 'LOOP_%s\\n' FINISHED\r")
         s.expect("LOOP_FINISHED")
         print("PASS: real cp, Tab/Tab-Tab, automatic quest, carried heal, executable loop, full-screen victory, usable Bash",flush=True)
-        keys=run("exec","-T","--user","player","player01","tmux","list-keys","-T","root",capture_output=True,text=True).stdout
-        assert not any(f" {key} " in keys for key in ("F2","F3","F4"))
-        assert run("exec","-T","--user","player","player01","tmux","list-panes",capture_output=True,text=True).stdout.count("\n")==4
+        run("exec","-T","player01","sh","-c","! command -v tmux && test ! -e /usr/bin/tmux")
+        assert state()["avatar"]=={"hair":"blond","shirt":"blau"},state()["avatar"]
+        print("PASS: avatar customization persists; tmux is absent",flush=True)
         board=Session("scoreboard",ports["gateway"],folder,user="score")
         sessions.append(board)
         board.expect("LIVE-SCOREBOARD")
-        board.send("5")
-        board.expect("SPEEDRUN / LOOP")
+        board.send("2")
+        board.expect("BESTZEIT")
         board.send("1")
-        board.expect("Punkte absteigend")
+        board.expect("PUNKTE")
+        payload=scores()
+        hero=next(r for r in payload if r["slot"]=="player01")
+        assert hero["avatar"]=={"hair":"blond","shirt":"blau"},hero
+        assert hero["connected"] and "mode" not in hero and "best" in hero["bests"],hero
+        print("PASS: live scoreboard contains chosen avatar, real presence and one shared best time",flush=True)
         print("PASS: tree, boss hints/confirmation, no retreat, framed shell and separate live score login",flush=True)
         s.close(); sessions.remove(s)
-        time.sleep(.8)
+        deadline=time.monotonic()+7
+        while time.monotonic()<deadline:
+            if not next(r for r in scores() if r["slot"]=="player01")["connected"]: break
+            time.sleep(.2)
+        assert not next(r for r in scores() if r["slot"]=="player01")["connected"]
         s=Session("gateway",ports["gateway"],folder)
         sessions.append(s)
         s.expect("GEMEINSAMER EINSTIEG"); s.send("r"+codes["player01"]+"\r")
@@ -203,7 +233,7 @@ def main():
         print("PASS: reconnect code restores the same player and finished run",flush=True)
         s.send("neustart\r")
         s.expect("Neuer Lauf")
-        wait_state(lambda v:v["score"]==40 and v["bag"]==[] and "speedrun:loop" in v["bests"])
+        wait_state(lambda v:v["score"]==40 and v["bag"]==[] and "best" in v["bests"])
         s.send("neustart alles\r")
         s.expect("Neuer Lauf")
         wait_state(lambda v:not v["bests"])

@@ -6,10 +6,11 @@ import time
 import unicodedata
 
 from .client import request
-from .engine import AREAS
+from .engine import AREAS, route_count
+from .avatar import sprite, HAIR, SHIRTS
 
-POSITIONS = {"dorf": (.18, .22), "wald": (.78, .22), "werkstatt": (.18, .76),
-             "archiv": (.78, .76), "zitadelle": (.48, .48)}
+POSITIONS = {"dorf": (.18, .18), "wald": (.80, .18), "werkstatt": (.18, .76),
+             "archiv": (.80, .76), "zitadelle": (.49, .47)}
 
 
 def static_map(s):
@@ -44,21 +45,72 @@ class Canvas:
 
 def world_frame(w, h, s, position, tick):
     c = Canvas(w, h)
-    for i in range(max(1, w*h//90)):
-        c.put((i*29+7) % w, (i*13+int(tick/4)) % h, "·", 3)
-    nodes = {k: (int(x*(w-18))+8, int(y*(h-3))+1) for k, (x, y) in POSITIONS.items()}
-    center = nodes["zitadelle"]
-    for name, node in nodes.items():
-        if name != "zitadelle":
-            c.line(*node, *center, "·", 3)
-    for name, (x, y) in nodes.items():
-        color = 2 if name == s["area"] else 4 if name in s["visited"] else 1
-        label = name + "/"
-        c.put(x-len(label)//2-2, y, "[ " + label + " ]", color)
-        if h >= 13:
-            c.put(x-2, y-1, {"dorf": " /\\ ", "wald": "/▲\\", "werkstatt": "[⚙]", "archiv": "[≡]", "zitadelle": "♜ ♜"}[name], color)
-    px, py = position
-    c.put(round(px*(w-18))+8, int(py*(h-3)), "@", 5)
+    sprite(c, 2, max(1,h//2-2), s.get("avatar"), pose=int(tick*3)%2)
+    c.put(1, max(0,h-2), s["name"][:12], 5)
+    left=17
+    mw=max(20,w-left)
+    nodes={"dorf":(.18,.18), "wald":(.80,.18), "werkstatt":(.18,.76),
+           "archiv":(.80,.76), "zitadelle":(.49,.47)}
+    coords={k:(left+int(x*(mw-13))+6, 2+int(y*max(1,h-6))) for k,(x,y) in nodes.items()}
+    for k,point in coords.items():
+        if k!="zitadelle": c.line(*point,*coords["zitadelle"], char="·",color=3)
+    art={"dorf":["  /╲  /╲", " /__╲/__╲", " |▣ |▣ |"],
+         "wald":["  ▲  ▲", " ▲▲▲▲▲▲", "  │  │"],
+         "werkstatt":[" __┌┐__", "| ⚙  ⚙ |", "|__▣___|"],
+         "archiv":[" ╭────╮", " │≡ ≡ │", " ╰─▣──╯"],
+         "zitadelle":["╥  ╥  ╥", "╠══╩══╣", "╚══▣══╝"]}
+    for name,(x,y) in coords.items():
+        color=2 if name==s["area"] else 4 if name in s["visited"] else 1
+        if h>=15:
+            for i,line in enumerate(art[name]): c.put(x-4,y-2+i,line,color)
+        c.put(x-len(name)//2-1,y+1,"["+name+"]",color)
+        if name==s["area"]: c.put(x-1,y+2,"▼ DU",5)
+    px=left+int(position[0]*(mw-13))+6
+    py=2+int(position[1]*max(1,h-6))+3
+    avatar=s.get("avatar",{})
+    c.put(px,py,"●",HAIR.get(avatar.get("hair"),7))
+    c.put(px-1,py+1,"╱█╲",SHIRTS.get(avatar.get("shirt"),4))
+    return c
+
+
+def combat_frame(w,h,s,tick):
+    c=Canvas(w,h)
+    event=(s.get("events") or [None])[-1]
+    age=time.time()-event["at"] if event else 99
+    active=event is not None and 0<=age<1.5
+    hp,bhp=s["hp"],s["boss_hp"]
+    if active:
+        hp=round(event["hp_before"]+(hp-event["hp_before"])*max(0,min(1,(age-.65)/.5)))
+        bhp=round(event["boss_before"]+(bhp-event["boss_before"])*max(0,min(1,(age-.15)/.5)))
+    c.put(2,0,s["name"][:18],4)
+    c.put(2,1,f"{bar(hp,100,14)} {hp}/100",6 if active and event["hurt"]>0 and age>.65 else 4)
+    right=max(w//2+3,w-29)
+    c.put(right,0,"KRAMPUS",6)
+    c.put(right,1,f"{bar(bhp,240,14)} {bhp}/240",6)
+    py=max(4,h//2-1)
+    sprite(c, max(4,w//6),py,s.get("avatar"),pose=1 if active and age<.6 else int(tick*2)%2,
+           hit=active and event["hurt"]>0 and .7<age<1.05)
+    bw=max(12,w//3)
+    boss=boss_frame(bw,max(5,h-4),tick)
+    bx=w-bw-2
+    for y,row in enumerate(boss.cells):
+        for x,(char,color) in enumerate(row):
+            if char!=" ": c.put(bx+x,y+3,char,6 if active and event["damage"]>0 and .25<age<.5 else color)
+    c.line(2,h-1,w-3,h-1,"─",3)
+    c.line(max(2,w//6-2),min(h-2,py+5),w//6+10,min(h-2,py+5),"▔",3)
+    if active:
+        start,end=w//6+8,bx+bw//2
+        lane=max(5,h//2+1)
+        if event["damage"]>0:
+            x=round(start+(end-start)*min(1,age/.4))
+            c.put(x,lane,"*»»" if age<.4 else "✦",2 if event["spell"]=="frost" else 5)
+            if age>.25: c.put(end-2,max(3,lane-3-int(age*2)),f"-{event['damage']}",5)
+        if event["hurt"]>0 and age>.6:
+            x=round(end-(end-start)*min(1,(age-.6)/.35))
+            c.put(x,lane,"«*",6)
+            if age>.85: c.put(start-5,max(3,lane-3-int((age-.6)*2)),f"-{event['hurt']}",6)
+        if event["hurt"]<0: c.put(start-5,max(3,py-2),f"+{-event['hurt']}",4)
+        if event["spell"]=="schild": c.put(start-1,py,"◖",2)
     return c
 
 
@@ -141,9 +193,9 @@ def boss_frame(w, h, tick, won=False):
 def colors():
     curses.start_color()
     curses.use_default_colors()
-    palette = [252, 86, 60, 120, 221, 204]
+    palette = [252, 86, 60, 120, 221, 204, 130, 240, 141, 223]
     for i, color in enumerate(palette, 1):
-        curses.init_pair(i, color if curses.COLORS >= 256 else [7,6,4,2,3,1][i-1], -1)
+        curses.init_pair(i, color if curses.COLORS >= 256 else [7,6,4,2,3,1,3,0,5,3][i-1], -1)
 
 
 def put(screen, y, x, text, color=1, bold=False):
@@ -193,68 +245,36 @@ def bar(value, maximum, size=16):
     return "━"*n + "·"*(size-n)
 
 
+def paint(screen,state,tick,position=None):
+    h,w=screen.getmaxyx()
+    screen.erase()
+    if not state:
+        put(screen,1,2,"Verbinde …",2); return
+    if h<10 or w<50:
+        put(screen,0,1,"FROSTBYTE · Terminal vergroessern",2)
+        put(screen,2,1,f"Du {state['hp']}/100   Boss {state['boss_hp']}/240",4); return
+    put(screen,0,2,"❄ FROSTBYTE",2,True)
+    put(screen,0,max(20,w-31),f"{state['score']} PTS  ·  {state['elapsed']:.1f}s",5)
+    scene_h=h-4
+    if state.get("boss_started"):
+        scene=combat_frame(w-4,scene_h,state,tick)
+    else:
+        scene=world_frame(w-4,scene_h,state,position or POSITIONS.get(state["area"],POSITIONS["dorf"]),tick)
+        put(screen,1,2,f"{bar(state['hp'],100,12)} {state['hp']}/100   ·   Orte {min(3,route_count(state))}/3",4)
+    for y,row in enumerate(scene.cells):
+        for x,(char,color) in enumerate(row):
+            if char!=" ": put(screen,y+2,x+2,char,color)
+    put(screen,h-1,2,next_hint(state),2)
+
+
 def hud(screen):
     colors()
-    try: curses.curs_set(0)
-    except curses.error: pass
     screen.nodelay(True)
-    position = POSITIONS["dorf"]
-    origin = position
-    target = position
-    travel_start = time.monotonic()
-    last_fetch=0
-    state=None
     while True:
-        now = time.monotonic()
-        key = screen.getch()
-        if key in (ord("q"), 27): return
-        if now-last_fetch > .35:
-            try:
-                state=request()["state"]
-                new_target=POSITIONS.get(state["area"],POSITIONS["dorf"])
-                if new_target != target:
-                    origin, target, travel_start=position,new_target,now
-            except (OSError,ValueError): pass
-            last_fetch=now
-        screen.erase()
-        h,w=screen.getmaxyx()
-        if not state:
-            put(screen,1,2,"Verbinde mit dem Nordpol …",2)
-        elif h < 10 or w < 50:
-            put(screen,0,0,"FROSTBYTE · Terminal vergroessern (ideal 100×38)",2)
-            put(screen,1,0,f"HP {state['hp']} | Boss {state['boss_hp']} | {state['score']} Punkte",5)
-        else:
-            elapsed=state["elapsed"]
-            put(screen,0,2,"❄  F R O S T B Y T E",2,True)
-            put(screen,0,max(27,w-44),f"{state['name'][:20]}  /  {state['mode'].upper()}",1)
-            put(screen,1,2,f"DU     {bar(state['hp'],100)} {state['hp']:3}/100",4)
-            put(screen,1,max(44,w-36),f"{state['score']:4} PTS  ·  {elapsed:07.2f}s",5)
-            if state["area"]=="zitadelle":
-                put(screen,2,2,f"BOSS   {bar(state['boss_hp'],240)} {state['boss_hp']:3}/240",6)
-            else:
-                put(screen,2,2,fit("RUCKSACK  "+(", ".join(state.get("bag",[])) or "leer"),max(25,w-44)),2)
-            label={"playing":"SPIELT", "won":"GEWONNEN", "lost":"VERLOREN"}[state["status"]]
-            put(screen,2,max(44,w-36),f"{len(state['visited'])}/5 ORTE  ·  {label}",3)
-            progress=min(1,(now-travel_start)/1.25)
-            position=tuple(origin[i]+(target[i]-origin[i])*progress for i in (0,1))
-            scene_h=max(3,h-7)
-            if state["status"] == "won":
-                scene = Canvas(w-4,scene_h)
-                scene.put(max(0,(w-28)//2), max(0,scene_h//2-1),"★ WEIHNACHTEN GERETTET ★",5)
-                scene.put(max(0,(w-36)//2), max(1,scene_h//2+1),f"{state['score']} Punkte  /  {state['elapsed']:.2f}s  /  SIEG",4)
-            elif state["area"] == "zitadelle":
-                scene=boss_frame(w-4,scene_h,now,state["status"]=="won")
-            else:
-                scene=world_frame(w-4,scene_h,state,position,now)
-            for y,row in enumerate(scene.cells):
-                for x,(char,color) in enumerate(row):
-                    if char != " ": put(screen,y+3,x+2,char,color)
-            message=state["message"]
-            lines=textwrap.wrap(message,max(20,w-6))[:2]
-            for i,line in enumerate(lines): put(screen,h-3+i,2,line,5 if state["status"]=="won" else 1)
-            put(screen,h-1,2,next_hint(state),2)
+        paint(screen,request()["state"],time.monotonic())
         screen.refresh()
-        time.sleep(.08)
+        if screen.getch() in (ord("q"),27): return
+        time.sleep(.1)
 
 
 if __name__ == "__main__":

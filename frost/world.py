@@ -25,7 +25,7 @@ def main():
     target.mkdir(exist_ok=True)
     bag.mkdir(exist_ok=True)
     previous_version=marker.read_text().strip() if marker.exists() else ""
-    migrating = previous_version != "3"
+    migrating = previous_version != "5"
     if migrating or reset:
         source = Path("/opt/frost/world")
         legacy = json.loads(Path(__file__).with_name("legacy_world.json").read_text())
@@ -39,14 +39,14 @@ def main():
             elif not destination.exists():
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(path, destination)
-        if migrating and previous_version not in ("2","3") and not reset:
+        if migrating and previous_version not in ("2","3","4","5") and not reset:
             from .client import request
             state = request()["state"]
             for name in state["spells"]:
                 if name in ITEMS and not (bag/name).exists():
                     (bag/name).write_text(script(name))
                     (bag/name).chmod(0o755)
-        marker.write_text("3\n")
+        marker.write_text("5\n")
 
 
 if __name__=="__main__": main()

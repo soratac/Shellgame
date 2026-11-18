@@ -17,7 +17,8 @@ class RenderTests(unittest.TestCase):
             state=fresh("Elf")
             state["area"]=area
             canvas=world_frame(96,14,state,position,0)
-            self.assertEqual(sum(char=="@" for row in canvas.cells for char,_ in row),1)
+            self.assertTrue(any(char=="█" for row in canvas.cells for char,_ in row))
+            self.assertIn("DU", "".join(char for row in canvas.cells for char,_ in row))
 
 
 if __name__=="__main__": unittest.main()

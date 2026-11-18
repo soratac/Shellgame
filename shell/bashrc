@@ -38,23 +38,18 @@ modprobe() {
 fliehen() { cd "$HOME/welt/dorf"; }
 neustart() {
     local mode=${1:-normal}
-    if [[ $# -gt 1 || ! $mode =~ ^(normal|speedrun|alles)$ ]]; then
-        printf 'neustart | neustart speedrun | neustart alles (auch eigene Rekorde)\n'; return
+    if [[ $# -gt 1 || ! $mode =~ ^(normal|alles)$ ]]; then
+        printf 'neustart | neustart alles (auch eigene Rekorde)\n'; return
     fi
     # Restore world as the unprivileged player; never follow home symlinks as root.
     /usr/bin/python3 -m frost.world reset || return
     command frost reset "$mode"
     builtin cd "$HOME/welt/dorf"
 }
-hud() {
-    [[ -n $TMUX ]] || return
-    tmux respawn-pane -k -t "$(tmux show-option -v -t frost @frost-hud)" '/usr/bin/python3 -m frost.render'
-}
-# A normal shell logout ends the UI as well; network disconnects still leave tmux running.
-trap '[[ -n $TMUX ]] && tmux kill-session -t frost 2>/dev/null' EXIT
+aussehen() { /usr/bin/python3 -c 'from frost.login import edit_avatar; edit_avatar()'; }
 complete -W 'funke frost stern schild' zauber
 complete -W 'kakao beeren' heilen
-complete -W 'normal speedrun alles' neustart
+complete -W 'alles' neustart
 complete -W '-r frost_armor blizzard' modprobe
 complete -f sammeln abgeben
 
@@ -88,6 +83,4 @@ _frost_prompt() {
 }
 PROMPT_COMMAND=_frost_prompt
 builtin cd "$HOME/welt/dorf"
-printf '\n\e[38;5;45m  F R O S T B Y T E\e[0m  /  RETTET WEIHNACHTEN\n'
-printf '  1. ls    2. cp funke ~/rucksack/    3. cd ../zitadelle\n'
-printf '  Dort benutzen: ~/rucksack/funke    |    Tab vervollstaendigt.\n\n'
+printf '\n  ls umsehen · cp mitnehmen · cd gehen · hilfe\n\n'

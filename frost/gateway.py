@@ -23,7 +23,8 @@ def normalize(code): return re.sub(r"[-\s]","",code).upper()
 
 
 class Allocator:
-    def __init__(self, path, slots, state_root=Path("/slots")):
+    def __init__(self, path, slots, state_root=Path("/slots"), provider=None):
+        self.provider=provider
         self.slots=list(slots)
         self.state_root=Path(state_root)
         self.lock=threading.RLock()
@@ -34,10 +35,16 @@ class Allocator:
         for slot in self.slots:
             if self.player_name(slot) and not self.db.execute("SELECT 1 FROM joins WHERE slot=?",(slot,)).fetchone():
                 self._insert(slot)
+        if self.provider:
+            for slot in self.provider.call("list"):
+                if not self.db.execute("SELECT 1 FROM joins WHERE slot=?",(slot,)).fetchone():
+                    if self.provider.player_name(slot): self._insert(slot)
+                    else: self.provider.idle(slot)
         self.db.commit()
         Path(path).chmod(0o600)
 
     def player_name(self,slot):
+        if self.provider and slot.startswith("elf-"): return self.provider.player_name(slot)
         try: return json.loads((self.state_root/slot/"state.json").read_text())["name"]
         except (OSError,ValueError,KeyError): return None
 
@@ -48,6 +55,13 @@ class Allocator:
         return code
 
     def reserve(self,code=None):
+        if not code and self.provider:
+            slot=self.provider.create()
+            with self.lock:
+                code=self._insert(slot)
+                lease=secrets.token_hex(16)
+                self.db.execute("UPDATE joins SET active=1,lease=? WHERE slot=?",(lease,slot)); self.db.commit()
+                return slot,code,lease
         with self.lock:
             if code:
                 if not isinstance(code,str) or not re.fullmatch(r"[A-F0-9]{16}",normalize(code)):
@@ -68,8 +82,14 @@ class Allocator:
 
     def release(self,slot,lease):
         with self.lock:
+            if not self.db.execute("SELECT 1 FROM joins WHERE slot=? AND lease=?",(slot,lease)).fetchone(): return
+            try: name=self.player_name(slot)
+            except (OSError,ValueError): name=None
+            if self.provider and slot.startswith("elf-"):
+                try: self.provider.idle(slot)
+                except (OSError,ValueError): print("Container idle pending:",slot,flush=True)
             # A dropped connection before naming must not consume a slot forever.
-            if self.player_name(slot)=="":
+            if name=="":
                 self.db.execute("DELETE FROM joins WHERE slot=? AND lease=?",(slot,lease))
             else:
                 self.db.execute("UPDATE joins SET active=0,lease=NULL WHERE slot=? AND lease=?",(slot,lease))
@@ -108,13 +128,17 @@ def make_handler(config, allocator):
                     metadata={"role":"player","slot":slot,"code":code,"resumed":action=="resume"}
                 # The only destinations and credentials come from the root-owned file.
                 import paramiko
-                destination=config[target]
+                if allocator.provider and target.startswith("elf-"):
+                    destination=allocator.provider.destination(target)
+                    host=destination["host"]; pub=destination["hostkey"].split()
+                else:
+                    destination=config[target]; host=target
+                    pub=(Path("/slots")/target/"hostkeys/ssh_host_ed25519_key.pub").read_text().split()
                 client=paramiko.SSHClient()
-                pub=(Path("/slots")/target/"hostkeys/ssh_host_ed25519_key.pub").read_text().split()
                 key=paramiko.Ed25519Key(data=base64.b64decode(pub[1]))
-                client.get_host_keys().add(target,key.get_name(),key)
+                client.get_host_keys().add(host,key.get_name(),key)
                 client.set_missing_host_key_policy(paramiko.RejectPolicy())
-                client.connect(target,username="player",password=destination["password"],allow_agent=False,
+                client.connect(host,username="player",password=destination["password"],allow_agent=False,
                                look_for_keys=False,timeout=5,auth_timeout=5,banner_timeout=5)
                 client.get_transport().set_keepalive(15)
                 channel=client.get_transport().open_session(timeout=5)
@@ -170,13 +194,17 @@ def main():
         else:
             for slot,code,active in db.execute("SELECT slot,code,active FROM joins ORDER BY slot"):
                 try: name=json.loads((Path('/slots')/slot/'state.json').read_text())["name"]
-                except (OSError,ValueError,KeyError): name=""
+                except (OSError,ValueError,KeyError):
+                    from .dynamic import Client
+                    name=Client().player_name(slot) if slot.startswith("elf-") and os.environ.get("FROST_DYNAMIC")=="1" else ""
                 print(f"{slot:10} {name:20} {code} {'verbunden' if active else 'frei zum Fortsetzen'}")
         db.close()
         return
     config=json.loads(Path("/run/bootstrap/router.json").read_text())
     slots=sorted(s for s in config if s.startswith("player"))
-    allocator=Allocator(database,slots)
+    from .dynamic import Client
+    provider=Client() if os.environ.get("FROST_DYNAMIC")=="1" else None
+    allocator=Allocator(database,slots,provider=provider)
     Path(SOCKET).unlink(missing_ok=True)
     class Server(socketserver.ThreadingUnixStreamServer):
         daemon_threads=True

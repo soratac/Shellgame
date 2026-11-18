@@ -17,12 +17,13 @@ class GameTests(unittest.TestCase):
 
     def test_basic_spell_route_is_winnable(self):
         self.action("collect",["funke.spell"])
+        for area in ("dorf","wald","werkstatt"): self.visit(area)
         self.visit("zitadelle")
         for i in range(11): self.action("cast",["funke"],now=115+i*3)
         self.assertEqual(self.s["status"],"won")
         self.assertGreater(self.s["hp"],0)
         self.assertEqual(self.s["method"],"spell")
-        self.assertIn("normal:classic",self.s["bests"])
+        self.assertIn("best",self.s["bests"])
 
     def test_loop_wins_and_stops(self):
         self.action("collect",["funke.spell"])
@@ -31,9 +32,10 @@ class GameTests(unittest.TestCase):
         self.assertEqual(self.s["method"],"loop")
         self.assertTrue(result["stop"])
         self.assertEqual(self.s["boss_hp"],0)
-        self.assertIn("normal:loop",self.s["bests"])
+        self.assertIn("best",self.s["bests"])
 
     def test_driver_route(self):
+        for area in ("dorf","wald","werkstatt"): self.visit(area)
         self.visit("zitadelle")
         self.action("unload",["frost_armor"])
         self.action("unload",["blizzard"])
@@ -89,12 +91,12 @@ class GameTests(unittest.TestCase):
     def test_reset_keeps_records_not_inventory(self):
         self.test_loop_wins_and_stops()
         bests=self.s["bests"].copy()
-        self.action("reset",["speedrun"],now=200)
+        self.action("reset",[],now=200)
         self.assertEqual(self.s["bests"],bests)
         self.assertEqual(self.s["score"],0)
         self.assertEqual(self.s["hp"],100)
         self.assertEqual(self.s["spells"],{})
-        self.assertEqual(self.s["mode"],"speedrun")
+        self.assertNotIn("mode",self.s)
 
     def test_victory_message_survives_prompt(self):
         self.test_loop_wins_and_stops()

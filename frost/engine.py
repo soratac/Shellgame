@@ -2,6 +2,8 @@
 import re
 import time
 import hashlib
+from .avatar import DEFAULT, HAIR, SHIRTS
+from .records import migrate, bests as merge_bests
 
 AREAS = {
     "dorf": ("Sternendorf", "Warme Fenster, Zimtduft und ein gestohlener Weihnachtsstern."),
@@ -14,27 +16,24 @@ SPELL_FILES = {
     "funke.spell": ("dorf", "funke"), "frost.spell": ("wald", "frost"),
     "schild.spell": ("werkstatt", "schild"), "stern.spell": ("archiv", "stern"),
 }
-HELP = """DEINE NAECHSTEN SCHRITTE
-  ls                         Hier umsehen
-  cp funke ~/rucksack/        Einen Fund mitnehmen
-  ls ~/rucksack              Deine Gegenstaende ansehen
-  cd ~/welt/zitadelle         Zum Boss gehen
-  ~/rucksack/funke            Den Fund benutzen
+HELP = """ls / tree ~/welt       Umschauen
+cp DATEI ~/rucksack/    Mitnehmen
+cd ~/welt/wald         Weitergehen
+~/rucksack/funke        Angreifen
+~/rucksack/kakao        Heilen
 
-Aufgaben: cat AUFGABE.txt; fertige Datei nach abgabe/ kopieren.
-Heilung: Kakao oder Beeren mitnehmen und wie einen Zauber starten.
-Neuer Lauf: neustart | neustart speedrun
-Eigene Rekorde auch loeschen: neustart alles
-Tab ergaenzt Namen. Tab Tab zeigt die Auswahl. Strg-C bricht ab.
+Dorf → Wald → Werkstatt → Boss. Drei Orte oeffnen das Siegel.
+Tab hilft beim Tippen. aussehen aendert deinen Charakter.
+neustart | neustart alles (eigene Rekorde)
 """
 
 
-def fresh(name="", mode="normal", now=None, bests=None):
-    return dict(version=3, name=name, mode=mode, started=now if now is not None else time.time(),
+def fresh(name="", now=None, bests=None):
+    return dict(version=5, name=name, started=now if now is not None else time.time(),
                 ended=None, hp=100, boss_hp=240, score=0, area="dorf", visited=[],
                 spells={}, rewards=[], status="playing", method=None, shield=0, frozen=0,
-                armor=True, blizzard=True, loop_hits=[], bests=bests or {}, bag=[], deliveries={},
-                boss_started=False, battle_items=[],
+                armor=True, blizzard=True, loop_hits=[], bests=merge_bests(bests), bag=[], deliveries={},
+                boss_started=False, battle_items=[], avatar=dict(DEFAULT), avatar_set=False, events=[], event_seq=0,
                 message="Nimm den Funken mit: cp funke ~/rucksack/")
 
 
@@ -56,8 +55,7 @@ def win(s, method, now):
     s.update(boss_hp=0, status="won", ended=now, method=method)
     reward(s, "victory", 500)
     elapsed = max(0, now - s["started"])
-    category = s["mode"] + ":" + ("loop" if method == "loop" else "classic")
-    s["bests"][category] = min(elapsed, s["bests"].get(category, float("inf")))
+    s["bests"]["best"] = min(elapsed, s["bests"].get("best", float("inf")))
     s["message"] = f"WEIHNACHTEN GERETTET! {elapsed:.2f}s / {s['score']} Punkte / {method}"
 
 
@@ -72,17 +70,22 @@ def counter(s, damage=7):
     s["hp"] = max(0, s["hp"] - damage)
     if s["hp"] == 0:
         s["status"] = "lost"
-        return " DEIN LICHT ERLISCHT. Starte mit neustart normal erneut."
+        return " DEIN LICHT ERLISCHT. Starte mit neustart erneut."
     return f" Eissturm: -{damage} HP."
 
 
-def act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=""):
+def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=""):
     now = time.time() if now is None else now
+    migrate(s)
     args = list(args)
     s.setdefault("bag", [])
     s.setdefault("deliveries", {})
     s.setdefault("boss_started", False)
     s.setdefault("battle_items", [])
+    s.setdefault("avatar", dict(DEFAULT))
+    s.setdefault("avatar_set", False)
+    s.setdefault("events", [])
+    s.setdefault("event_seq", 0)
     result = {"ok": True, "message": "", "stop": False}
     message = ""
     if action == "name":
@@ -93,11 +96,17 @@ def act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content="
             return {"ok": False, "message": "Name bereits gesetzt. Dein Lauf wird fortgesetzt.", "stop": False}
         s.update(fresh(name, now=now))
         message = f"Willkommen, {name}! Weihnachten braucht dich."
+    elif action == "avatar":
+        if len(args)!=2 or args[0] not in HAIR or args[1] not in SHIRTS:
+            return {"ok":False,"message":"Waehle Haar- und Shirtfarbe.","stop":False}
+        s.update(avatar={"hair":args[0],"shirt":args[1]}, avatar_set=True)
+        message="Dein Winterheld ist bereit."
     elif action == "reset":
-        if args not in (["normal"], ["speedrun"], ["alles"]):
-            return {"ok": False, "message": "neustart | neustart speedrun | neustart alles", "stop": False}
-        s.update(fresh(s["name"], "normal" if args[0] == "alles" else args[0], now,
-                       {} if args[0] == "alles" else s["bests"]))
+        if args not in ([], ["normal"], ["alles"]):
+            return {"ok": False, "message": "neustart | neustart alles", "stop": False}
+        avatar, avatar_set = s["avatar"], s["avatar_set"]
+        s.update(fresh(s["name"], now=now, bests={} if args == ["alles"] else s["bests"]))
+        s.update(avatar=avatar, avatar_set=avatar_set)
         message = "Neuer Lauf. Auf ins Dorf!"
     elif action in ("status", "map", "inventory", "help", "modules"):
         if action == "help":
@@ -139,7 +148,7 @@ def act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content="
         item = args[0] if args else ""
         if item not in s["bag"]:
             return {"ok": False, "message": f"Zuerst mitnehmen: cp {item or 'DATEI'} ~/rucksack/", "stop": False}
-        return act(s, "heal" if item in ("kakao", "beeren") else "cast", [item], now=now)
+        return _act(s, "heal" if item in ("kakao", "beeren") else "cast", [item], now=now)
     elif action == "deliver":
         place = args[0] if args else ""
         if place not in ("dorf", "werkstatt", "archiv"):
@@ -149,7 +158,7 @@ def act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content="
             return result
         s["deliveries"][place] = digest
         # A Linux copy into another location's inbox also counts there.
-        return act(s, "submit", now=now, cwd=place, content=content)
+        return _act(s, "submit", now=now, cwd=place, content=content)
     elif action == "observe":
         if s["boss_started"]:
             cwd = "zitadelle"
@@ -252,7 +261,13 @@ def act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content="
                 message = f"{spell.upper()}!"
             if damage:
                 damage = max(1, damage - (8 if s["armor"] else 0))
-                s["boss_hp"] = max(0, s["boss_hp"] - damage)
+                # The loop bypass above remains available from the village. Ordinary
+                # spells, staff and driver tactics need three explored non-boss places.
+                floor = 0 if route_ready(s) else 1
+                damage = min(damage, max(0, s["boss_hp"]-floor))
+                s["boss_hp"] = max(floor, s["boss_hp"] - damage)
+                if not route_ready(s):
+                    message += " Frostsiegel: 3 Orte oder Funken-Loop."
                 reward(s, "combat:" + (spell if action == "cast" else "staff"), 30)
                 message += f" -{damage} Boss-HP."
             if s["boss_hp"] == 0:
@@ -265,9 +280,31 @@ def act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content="
         message = "Unbekannte Spielaktion. Nutze hilfe."
     if s["status"] == "lost" and s["ended"] is None:
         s["ended"] = now
-        message += " VERLOREN. Mit neustart normal beginnt ein neuer Lauf."
+        message += " VERLOREN. Mit neustart beginnt ein neuer Lauf."
     if message and action not in ("help", "status", "inventory", "map", "modules"):
         s["message"] = message
     result["message"] = message
     result["stop"] = result["stop"] or (s["status"] == "lost" and action in ("cast", "attack", "unload"))
+    return result
+
+
+def route_count(s):
+    return len(set(s.get("visited",[])) & {"dorf","wald","werkstatt","archiv"})
+
+
+def route_ready(s):
+    return route_count(s)>=3
+
+
+def act(s, action, args=(), **kwargs):
+    """Record bounded combat events; rendering never delays the shell or loop."""
+    before_hp, before_boss = s["hp"], s["boss_hp"]
+    result = _act(s, action, args, **kwargs)
+    if action not in ("reset","name") and (before_hp!=s["hp"] or before_boss!=s["boss_hp"] or action in ("cast","attack","unload","use")):
+        s["event_seq"] += 1
+        s["events"].append(dict(id=s["event_seq"], at=kwargs.get("now",time.time()),
+            kind=action, spell=args[0] if args else "stab", hp_before=before_hp,
+            boss_before=before_boss, hp=s["hp"], boss_hp=s["boss_hp"],
+            damage=before_boss-s["boss_hp"], hurt=before_hp-s["hp"]))
+        s["events"]=s["events"][-24:]
     return result

@@ -1,4 +1,5 @@
 """One authoritative state owner per player container; socket for the shell UI."""
+import fcntl
 import json
 import os
 import signal
@@ -11,6 +12,7 @@ import urllib.request
 from pathlib import Path
 
 from .engine import act, fresh, public
+from .records import migrate
 
 STATE_DIR = Path(os.environ.get("FROST_STATE", "/var/lib/frost"))
 SOCKET = os.environ.get("FROST_SOCKET", "/run/frost/game.sock")
@@ -27,15 +29,25 @@ def save():
     tmp.replace(path)
 
 
+def connected():
+    try:
+        with open("/tmp/frost-login.lock","r") as lock:
+            try: fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+            except BlockingIOError: return True
+    except OSError: pass
+    return False
+
+
 def publish_forever():
     token_file = Path("/run/bootstrap/score_token")
     token = token_file.read_text().strip() if token_file.exists() else ""
     url = os.environ.get("SCORE_URL", "http://scoreboard:8080") + "/api/score"
     while True:
-        DIRTY.wait(5)
+        DIRTY.wait(2)
         DIRTY.clear()
         with LOCK:
             snapshot = public(STATE)
+            snapshot["connected"] = connected()
         if not token or not snapshot["name"]:
             continue
         try:
@@ -97,6 +109,7 @@ def main():
     STATE_DIR.mkdir(parents=True, exist_ok=True)
     path = STATE_DIR / "state.json"
     STATE = json.loads(path.read_text()) if path.exists() else fresh()
+    migrate(STATE)
     save()
     Path(SOCKET).parent.mkdir(parents=True, exist_ok=True)
     Path(SOCKET).unlink(missing_ok=True)

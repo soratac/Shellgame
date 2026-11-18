@@ -17,7 +17,15 @@
       ],
       "pids_limit": 128,
       "mem_limit": "256m",
+      "memswap_limit": "256m",
       "cpus": "1.0",
+      "ulimits": {
+        "nofile": {
+          "soft": 1024,
+          "hard": 2048
+        },
+        "core": 0
+      },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2200:22",
         "${SCORE_BIND:-127.0.0.1}:8080:8080"
@@ -31,9 +39,11 @@
         "scoreboard-home:/home/player",
         "./secrets/scoreboard/shadow:/run/bootstrap/shadow:ro",
         "./secrets/scoreboard/authorized_keys:/run/bootstrap/authorized_keys:ro",
-        "./secrets/scoreboard/tokens.json:/run/bootstrap/score_tokens:ro"
+        "./secrets/scoreboard/tokens.json:/run/bootstrap/score_tokens:ro",
+        "controller-socket:/run/controller:ro"
       ],
       "networks": [
+        "control",
         "lane01",
         "lane02",
         "lane03",
@@ -96,7 +106,15 @@
       ],
       "pids_limit": 96,
       "mem_limit": "256m",
+      "memswap_limit": "256m",
       "cpus": "0.50",
+      "ulimits": {
+        "nofile": {
+          "soft": 1024,
+          "hard": 2048
+        },
+        "core": 0
+      },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2201:22"
       ],
@@ -158,7 +176,15 @@
       ],
       "pids_limit": 96,
       "mem_limit": "256m",
+      "memswap_limit": "256m",
       "cpus": "0.50",
+      "ulimits": {
+        "nofile": {
+          "soft": 1024,
+          "hard": 2048
+        },
+        "core": 0
+      },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2202:22"
       ],
@@ -220,7 +246,15 @@
       ],
       "pids_limit": 96,
       "mem_limit": "256m",
+      "memswap_limit": "256m",
       "cpus": "0.50",
+      "ulimits": {
+        "nofile": {
+          "soft": 1024,
+          "hard": 2048
+        },
+        "core": 0
+      },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2203:22"
       ],
@@ -282,7 +316,15 @@
       ],
       "pids_limit": 96,
       "mem_limit": "256m",
+      "memswap_limit": "256m",
       "cpus": "0.50",
+      "ulimits": {
+        "nofile": {
+          "soft": 1024,
+          "hard": 2048
+        },
+        "core": 0
+      },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2204:22"
       ],
@@ -344,7 +386,15 @@
       ],
       "pids_limit": 96,
       "mem_limit": "256m",
+      "memswap_limit": "256m",
       "cpus": "0.50",
+      "ulimits": {
+        "nofile": {
+          "soft": 1024,
+          "hard": 2048
+        },
+        "core": 0
+      },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2205:22"
       ],
@@ -406,7 +456,15 @@
       ],
       "pids_limit": 96,
       "mem_limit": "256m",
+      "memswap_limit": "256m",
       "cpus": "0.50",
+      "ulimits": {
+        "nofile": {
+          "soft": 1024,
+          "hard": 2048
+        },
+        "core": 0
+      },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2206:22"
       ],
@@ -468,7 +526,15 @@
       ],
       "pids_limit": 96,
       "mem_limit": "256m",
+      "memswap_limit": "256m",
       "cpus": "0.50",
+      "ulimits": {
+        "nofile": {
+          "soft": 1024,
+          "hard": 2048
+        },
+        "core": 0
+      },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2207:22"
       ],
@@ -530,7 +596,15 @@
       ],
       "pids_limit": 96,
       "mem_limit": "256m",
+      "memswap_limit": "256m",
       "cpus": "0.50",
+      "ulimits": {
+        "nofile": {
+          "soft": 1024,
+          "hard": 2048
+        },
+        "core": 0
+      },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2208:22"
       ],
@@ -592,7 +666,15 @@
       ],
       "pids_limit": 96,
       "mem_limit": "256m",
+      "memswap_limit": "256m",
       "cpus": "0.50",
+      "ulimits": {
+        "nofile": {
+          "soft": 1024,
+          "hard": 2048
+        },
+        "core": 0
+      },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2209:22"
       ],
@@ -654,7 +736,15 @@
       ],
       "pids_limit": 96,
       "mem_limit": "256m",
+      "memswap_limit": "256m",
       "cpus": "0.50",
+      "ulimits": {
+        "nofile": {
+          "soft": 1024,
+          "hard": 2048
+        },
+        "core": 0
+      },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2210:22"
       ],
@@ -716,7 +806,15 @@
       ],
       "pids_limit": 96,
       "mem_limit": "256m",
+      "memswap_limit": "256m",
       "cpus": "0.50",
+      "ulimits": {
+        "nofile": {
+          "soft": 1024,
+          "hard": 2048
+        },
+        "core": 0
+      },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2211:22"
       ],
@@ -778,7 +876,15 @@
       ],
       "pids_limit": 96,
       "mem_limit": "256m",
+      "memswap_limit": "256m",
       "cpus": "0.50",
+      "ulimits": {
+        "nofile": {
+          "soft": 1024,
+          "hard": 2048
+        },
+        "core": 0
+      },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2212:22"
       ],
@@ -840,7 +946,15 @@
       ],
       "pids_limit": 96,
       "mem_limit": "256m",
+      "memswap_limit": "256m",
       "cpus": "0.50",
+      "ulimits": {
+        "nofile": {
+          "soft": 1024,
+          "hard": 2048
+        },
+        "core": 0
+      },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2213:22"
       ],
@@ -902,7 +1016,15 @@
       ],
       "pids_limit": 96,
       "mem_limit": "256m",
+      "memswap_limit": "256m",
       "cpus": "0.50",
+      "ulimits": {
+        "nofile": {
+          "soft": 1024,
+          "hard": 2048
+        },
+        "core": 0
+      },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2214:22"
       ],
@@ -964,7 +1086,15 @@
       ],
       "pids_limit": 96,
       "mem_limit": "256m",
+      "memswap_limit": "256m",
       "cpus": "0.50",
+      "ulimits": {
+        "nofile": {
+          "soft": 1024,
+          "hard": 2048
+        },
+        "core": 0
+      },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2215:22"
       ],
@@ -1026,7 +1156,15 @@
       ],
       "pids_limit": 96,
       "mem_limit": "256m",
+      "memswap_limit": "256m",
       "cpus": "0.50",
+      "ulimits": {
+        "nofile": {
+          "soft": 1024,
+          "hard": 2048
+        },
+        "core": 0
+      },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2216:22"
       ],
@@ -1088,7 +1226,15 @@
       ],
       "pids_limit": 96,
       "mem_limit": "256m",
+      "memswap_limit": "256m",
       "cpus": "0.50",
+      "ulimits": {
+        "nofile": {
+          "soft": 1024,
+          "hard": 2048
+        },
+        "core": 0
+      },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2217:22"
       ],
@@ -1150,7 +1296,15 @@
       ],
       "pids_limit": 96,
       "mem_limit": "256m",
+      "memswap_limit": "256m",
       "cpus": "0.50",
+      "ulimits": {
+        "nofile": {
+          "soft": 1024,
+          "hard": 2048
+        },
+        "core": 0
+      },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2218:22"
       ],
@@ -1212,7 +1366,15 @@
       ],
       "pids_limit": 96,
       "mem_limit": "256m",
+      "memswap_limit": "256m",
       "cpus": "0.50",
+      "ulimits": {
+        "nofile": {
+          "soft": 1024,
+          "hard": 2048
+        },
+        "core": 0
+      },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2219:22"
       ],
@@ -1274,7 +1436,15 @@
       ],
       "pids_limit": 96,
       "mem_limit": "256m",
+      "memswap_limit": "256m",
       "cpus": "0.50",
+      "ulimits": {
+        "nofile": {
+          "soft": 1024,
+          "hard": 2048
+        },
+        "core": 0
+      },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2220:22"
       ],
@@ -1336,7 +1506,15 @@
       ],
       "pids_limit": 96,
       "mem_limit": "256m",
+      "memswap_limit": "256m",
       "cpus": "0.50",
+      "ulimits": {
+        "nofile": {
+          "soft": 1024,
+          "hard": 2048
+        },
+        "core": 0
+      },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2221:22"
       ],
@@ -1398,7 +1576,15 @@
       ],
       "pids_limit": 96,
       "mem_limit": "256m",
+      "memswap_limit": "256m",
       "cpus": "0.50",
+      "ulimits": {
+        "nofile": {
+          "soft": 1024,
+          "hard": 2048
+        },
+        "core": 0
+      },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2222:22"
       ],
@@ -1460,7 +1646,15 @@
       ],
       "pids_limit": 96,
       "mem_limit": "256m",
+      "memswap_limit": "256m",
       "cpus": "0.50",
+      "ulimits": {
+        "nofile": {
+          "soft": 1024,
+          "hard": 2048
+        },
+        "core": 0
+      },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2223:22"
       ],
@@ -1506,6 +1700,64 @@
         "start_period": "10s"
       }
     },
+    "spawner": {
+      "image": "frostbyte:local",
+      "command": [
+        "spawner"
+      ],
+      "init": true,
+      "restart": "unless-stopped",
+      "read_only": true,
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "cap_drop": [
+        "NET_RAW"
+      ],
+      "pids_limit": 128,
+      "mem_limit": "512m",
+      "memswap_limit": "512m",
+      "cpus": "1.0",
+      "ulimits": {
+        "nofile": {
+          "soft": 1024,
+          "hard": 2048
+        },
+        "core": 0
+      },
+      "tmpfs": [
+        "/run:rw,nosuid,nodev,size=16m",
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+      ],
+      "volumes": [
+        "spawner-state:/var/lib/frost",
+        "spawner-home:/home/player",
+        "./secrets/spawner/shadow:/run/bootstrap/shadow:ro",
+        "./secrets/spawner/authorized_keys:/run/bootstrap/authorized_keys:ro",
+        "/var/run/docker.sock:/var/run/docker.sock",
+        "controller-socket:/run/controller",
+        "./secrets/spawner/spawn-config.json:/run/bootstrap/spawn-config.json:ro"
+      ],
+      "logging": {
+        "driver": "json-file",
+        "options": {
+          "max-size": "5m",
+          "max-file": "2"
+        }
+      },
+      "network_mode": "none",
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "python3",
+          "-c",
+          "from frost.dynamic import Client; assert Client().call('ping')"
+        ],
+        "interval": "10s",
+        "timeout": "4s",
+        "retries": 3
+      }
+    },
     "gateway": {
       "image": "frostbyte:local",
       "command": [
@@ -1522,7 +1774,15 @@
       ],
       "pids_limit": 384,
       "mem_limit": "512m",
+      "memswap_limit": "512m",
       "cpus": "2.0",
+      "ulimits": {
+        "nofile": {
+          "soft": 1024,
+          "hard": 2048
+        },
+        "core": 0
+      },
       "ports": [
         "${GATEWAY_BIND:-127.0.0.1}:${GATEWAY_PORT:-2299}:22"
       ],
@@ -1561,9 +1821,11 @@
         "player21-state:/slots/player21:ro",
         "player22-state:/slots/player22:ro",
         "player23-state:/slots/player23:ro",
-        "scoreboard-state:/slots/scoreboard:ro"
+        "scoreboard-state:/slots/scoreboard:ro",
+        "controller-socket:/run/controller"
       ],
       "networks": [
+        "control",
         "lane01",
         "lane02",
         "lane03",
@@ -1667,6 +1929,9 @@
         },
         "scoreboard": {
           "condition": "service_healthy"
+        },
+        "spawner": {
+          "condition": "service_healthy"
         }
       },
       "healthcheck": {
@@ -1680,6 +1945,9 @@
         "timeout": "4s",
         "retries": 3,
         "start_period": "15s"
+      },
+      "environment": {
+        "FROST_DYNAMIC": "1"
       }
     }
   },
@@ -1733,9 +2001,13 @@
     "scoreboard-state": {},
     "scoreboard-home": {},
     "gateway-state": {},
-    "gateway-home": {}
+    "gateway-home": {},
+    "controller-socket": {},
+    "spawner-state": {},
+    "spawner-home": {}
   },
   "networks": {
+    "control": {},
     "lane01": {},
     "lane02": {},
     "lane03": {},
