@@ -126,8 +126,30 @@ def spell_motion(c,event,age,start,end):
                 if spell in ("frost","staff","funke"):
                     c.line(round(ex+dx*.59),round(ey+dy*.59),tx,ty,"╲" if dx*dy>0 else "╱",color)
                 c.put(tx,ty,mark,color)
-    if kind in ("disable","unload") and age<.78:
-        symbol="⚙" if kind=="disable" else "◇"
+    if kind=="unload" and spell in event.get("sounds",[]) and age<1.38:
+        t=age/1.38
+        if spell=="frost_armor":
+            # Two front plates split apart, sending facets tumbling out of the seam.
+            spread=min(1,t*1.8)
+            for side in (-1,1):
+                x=ex+side*(2+height*spread)
+                y=ey+height*t*t*.32
+                apparition(c,"frost",x,y,height*(.92-.48*t),age+side*.2)
+                for i in range(4):
+                    c.put(round(x+side*(i+1)*spread),round(y+(i-1.4)*spread*height*.36),"◆" if t<.6 else "·",5 if i%2 else 20)
+            if t<.48:
+                c.line(ex-1,ey-round(height*.46),ex+1,ey+round(height*.40),"ϟ",5)
+        elif spell=="blizzard":
+            # A tall helix collapses into the Grinch and releases one last puff.
+            for i in range(28):
+                a=i*.58-age*8
+                r=(1-t)*height*(.48+i/28)
+                x=ex+r*math.cos(a)
+                y=ey+(i/27-.5)*height*(1-t)+r*.19*math.sin(a)
+                c.put(round(x),round(y),"❄" if i%5==0 else "·",1 if i%3 else 12)
+            if t>.68: apparition(c,"ping",ex,ey,height*(t-.52)*1.5,age)
+    if kind=="disable" and age<.78:
+        symbol="⚙"
         r=height*(.22+age*.75)
         for i in range(8):
             angle=i*math.tau/8+age*2

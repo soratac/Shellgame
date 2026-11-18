@@ -81,6 +81,22 @@ class UnifiedTests(unittest.TestCase):
                 self.assertNotIn("ignored older entry",text)
                 self.assertLess(text.index("ls -a"),text.index("pwd"))
 
+    def test_score_list_separates_players_and_keeps_selected_history_on_screen(self):
+        from frost.board import paint_list
+        rows=[dict(public(fresh(f"Elf{i:02}")),command_active=True,command_label="ls",
+                   command_history=["pwd","ls","tree"]) for i in range(25)]
+        for height,width in ((12,32),(24,80)):
+            screen=type("Screen",(),{"getmaxyx":lambda self:(height,width),"erase":lambda self:None})()
+            with patch("frost.board.put") as put:
+                paint_list(screen,rows,18)
+            lines={call.args[1]:call.args[3] for call in put.call_args_list}
+            self.assertLess(max(lines),height)
+            self.assertTrue(any("Elf18 · Rucksack" in text for text in lines.values()))
+            for y,text in lines.items():
+                if "Elf" in text and "Rucksack" not in text:
+                    self.assertIn(lines[y+1][0],"─━")
+            self.assertIn("tree",lines[max(lines)])
+
     def test_avatar_presence_events_and_old_rows(self):
         with tempfile.TemporaryDirectory() as folder:
             board=Board(str(Path(folder)/'score.db'),{'player01':'t'})

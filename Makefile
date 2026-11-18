@@ -1,6 +1,6 @@
 .PHONY: prepare up down test scores logs
 prepare:
-	python3 scripts/provision.py --players 23
+	python3 scripts/provision.py
 up:
 	docker compose up -d --build
 down:

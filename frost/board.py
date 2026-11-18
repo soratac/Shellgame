@@ -349,8 +349,11 @@ def paint_list(screen,live,focus):
         put(screen,3,1,"Terminal vergrößern",3)
         return
     # Separate ranking and selection details, including a full backpack row.
-    capacity=max(1,h-11)
+    capacity=max(1,(h-10)//2)
     start=focus//capacity*capacity
+    end=min(len(live),start+capacity)
+    if len(live)>capacity:
+        put(screen,0,1,f"LIVE-LISTE   {len(live)} ONLINE   ·   {start+1}–{end}/{len(live)}",2,True)
     name_w=min(22,max(8,w//4))
     wide=w>=56
     def roster_line(rank,name,points,place,activity):
@@ -360,9 +363,13 @@ def paint_list(screen,live,focus):
     for index,row in enumerate(live[start:start+capacity],start):
         active=row.get("command_label","") if row.get("command_active") else ""
         place={"won":"Sieg","lost":"Niederlage"}.get(row["status"],row["area"])
-        put(screen,4+index-start,1,roster_line(index+1,row["name"],row["score"],place,screen_command(active)),
+        y=4+2*(index-start)
+        put(screen,y,0,"›" if index==focus else " ",5,True)
+        put(screen,y,1,roster_line(index+1,row["name"],row["score"],place,screen_command(active)),
             5 if index==focus else 1,index==focus)
-    y=4+min(len(live),capacity)
+        last=index+1==end
+        put(screen,y+1,1,("━" if last else "─")*(w-3),12 if last else 3)
+    y=4+2*(end-start)
     row=live[focus]
     bag=", ".join(row.get("bag",[])) or "leer"
     put(screen,y,1,row["name"]+" · Rucksack: "+bag,5)

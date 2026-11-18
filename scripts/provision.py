@@ -36,16 +36,20 @@ def credentials(folder,rotate=False,password_override=None):
     return password
 
 
-def main():
+def main(argv=None):
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--players",type=int,default=None)
     parser.add_argument("--host",default=None,help="Address shown in the private access.csv")
     parser.add_argument("--rotate-passwords",action="store_true",help="Neue 12-Zeichen-Passwoerter mit privater Sicherung vorbereiten")
     parser.add_argument("--static",action="store_true",help="Nur fuer alte feste Spielerplaetze/Tests")
-    args=parser.parse_args()
+    args=parser.parse_args(argv)
     if args.players is None:
         existing=json.loads((ROOT/"compose.yaml").read_text()) if (ROOT/"compose.yaml").exists() else {}
-        args.players=sum(k.startswith("player") for k in existing.get("services",{}))
+        # A cloned Compose file can describe the original workshop's fixed ports.
+        # Keep provisioned direct logins on upgrades; new installations use the spawner.
+        args.players=max((int(k[6:]) for k in existing.get("services",{})
+                          if k.startswith("player") and k[6:].isdigit() and
+                          (ROOT/"secrets"/k/"password").is_file()),default=0)
     if args.players<0: parser.error("--players must not be negative")
     secret_dir=ROOT/"secrets"
     secret_dir.mkdir(mode=0o700,exist_ok=True)

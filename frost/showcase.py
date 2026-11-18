@@ -41,6 +41,31 @@ def wordmark(screen,y,x,width,tick):
     return 4
 
 
+def studio_frame(screen, top, left, height, width, tick):
+    rows, cols = screen.getmaxyx()
+    bottom, right = top+height-1, left+width-1
+    for i in range(rows*cols//32):
+        depth = i%3
+        drift = int(tick*(.5+depth*.3))
+        x = (i*37+drift+i//7) % cols
+        y = (i*17+i//5+int(tick*(1+depth*.65))) % rows
+        if not (left <= x <= right and top <= y <= bottom):
+            put(screen, y, x, ("·","•","❄")[depth], (3,12,1)[depth])
+    if width < 3 or height < 2:
+        return
+    put(screen, top, left, "╔"+"═"*(width-2)+"╗", 1, True)
+    put(screen, bottom, left, "╚"+"═"*(width-2)+"╝", 12)
+    for row in range(top+1,bottom):
+        put(screen, row, left, "║", 1)
+        put(screen, row, right, "║", 12)
+    for x in (left+1, right-4):
+        if width >= 12:
+            put(screen, top, x, "═❄═", 2, True)
+    glint = int(tick*7)%(width+14)
+    if 5 <= glint < width-5:
+        put(screen, top, left+glint, "✧", 20, True)
+
+
 def blit(screen,canvas,y,x):
     for row,cells in enumerate(canvas.cells):
         offset=0

@@ -29,25 +29,12 @@ def static_map(s):
 
 
 def world_frame(w,h,s,position,tick,walking=False):
-    c=atlas_frame(w,h,tick)
-    def point(pos): return atlas_point(w,h,pos)
-    coords={name:point(pos) for name,pos in POSITIONS.items()}
-    wh=max(2,min(4,h//6))
+    c=atlas_frame(w,h)
     marked=None if discovered(s) else hiding_place(s)
-    for name,(x,y) in coords.items():
-        if name==marked:
-            # A moving pair of golden footprints leads to the current search area.
-            c.put(x+3,y-1,"✧" if int(tick*3)%2 else "✦",5)
-        label=name+(" ✧" if name==marked else "")
-        c.put(max(0,min(w-len(label)-2,x-len(label)//2-1)),min(h-1,y+wh//2)," "+label+" ",
-              5 if name==marked else 2 if name==s["area"] else 1)
-    x,y=point(position)
-    hh=max(4,min(9,h//2))
-    left=max(0,min(w-13,x+3 if x<w*.5 else x-15))
+    x,y=atlas_point(w,h,position)
+    hh=max(4,min(8,h//2))
+    left=max(0,min(w-13,x+5 if x<w*.5 else x-17))
     top=max(0,min(h-hh-1,y-hh//2))
-    if h>=12:
-        apparition(c,"life",left+(11 if left+14<w else 1),top+hh*.35+math.sin(tick*2)*.7,
-                   max(3,min(5,h//5)),tick)
     overlay(c,hero_frame(13,hh,tick,s.get("avatar"),walking=walking),left,top)
     c.put(left+5,top+hh,"DU",5)
     event=(s.get("events") or [None])[-1]
@@ -57,6 +44,12 @@ def world_frame(w,h,s,position,tick,walking=False):
             if event.get("kind")=="bag":
                 c.put(left, max(0,top+2-int(age*2)), "+"+event.get("spell",""),5)
             else: attack_effect(c,event,age,(left+4,top+hh//2),(x,max(1,y-1)))
+    offset=max(3,min(7,h//4))//2+1 if h>=14 and w>=46 else 1
+    for name,pos in POSITIONS.items():
+        lx,ly=atlas_point(w,h,pos)
+        label=("▸ " if name==s["area"] else "")+name+(" ✧" if name==marked else "")
+        lx=max(0,min(w-len(label)-2,lx-len(label)//2-1))
+        c.put(lx,min(h-1,ly+offset)," "+label+" ",5 if name==marked else 4 if name==s["area"] else 1)
     return c
 
 
@@ -149,8 +142,6 @@ def attack_effect(c,event,age,start,end):
                 for dy in (-1,0,1): c.put(start[0]+round(phase*3),start[1]+dy,"❘",2)
             elif kind=="disable":
                 c.put(end[0]-2,end[1]-1,("● ON","◐","○ OFF")[min(2,int(age*6))],6)
-            elif kind=="unload":
-                c.put(end[0]-3,end[1],("▣─▣","▣╱▣","·  ·")[min(2,int(age*6))],3)
             elif spell in ("kakao","beeren") and event["hurt"]<0:
                 for i in range(3):
                     rise=round((age+i*.17)*4)
@@ -433,7 +424,10 @@ def paint(screen,state,tick,position=None,walking=False):
             titles={"funke":"FUNKENSTURM", "frost":"FROSTWELLE", "stern":"STERNENREGEN",
                     "schild":"EISSCHILD", "beeren":"BEERENHEILUNG", "kakao":"WÄRMEZAUBER"}
             kind=event.get("kind")
-            if event["hurt"]>0 and age>.66:
+            if kind=="unload" and spell in ("frost_armor","blizzard") and spell in event.get("sounds",[]):
+                hint={"frost_armor":"❖  EISPANZER ZERBROCHEN","blizzard":"❄  SCHNEESTURM ERLOSCHEN"}[spell]
+                color=5
+            elif event["hurt"]>0 and age>.66:
                 hint=f"❄ GEGENANGRIFF   −{event['hurt']} LP"; color=6
             elif event["hurt"]<0:
                 hint=f"♥ {titles.get(spell,'HEILUNG')}   +{-event['hurt']} LP"; color=4

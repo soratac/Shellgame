@@ -1,19 +1,18 @@
 #!/usr/bin/env python3
 """Real SSH + reset tests in their own Compose project. Never reset live players."""
-import copy
 import json
-import os
 import socket
+import sys
 import subprocess
 import tarfile
-import tempfile
 import time
 import urllib.request
 import re
 import argparse
 import threading
 from pathlib import Path
-
+from functools import partial
+from unittest.mock import patch
 from ssh_smoke import Session
 
 ROOT=Path(__file__).resolve().parents[1]
@@ -28,7 +27,15 @@ def main():
     slots=[f"player{i:02}" for i in range(1,args.players+1)]
     folder=ROOT/".integration"
     folder.mkdir(mode=0o700,exist_ok=True)
-    config=json.loads((ROOT/"compose.yaml").read_text())
+    # Provision the fixed-port test independently of the installed player pool.
+    sys.path.insert(0,str(ROOT))
+    from scripts import provision
+    fixture=folder/"static"
+    fixture.mkdir(mode=0o700,exist_ok=True)
+    with patch.object(provision,"ROOT",fixture):
+        provision.main(["--static","--players",str(args.players),"--host","localhost"])
+    connect=partial(Session,secret_root=fixture/"secrets")
+    config=json.loads((fixture/"compose.yaml").read_text())
     config["name"]="frostbyte-check"
     config["services"]={k:v for k,v in config["services"].items() if k in ["scoreboard","gateway",*slots]}
     # A single test-only bridge avoids exhausting Docker's address pools while
@@ -36,7 +43,7 @@ def main():
     config["networks"]={"test":{}}
     config["volumes"]={key:{} for key in config["volumes"]}
     config["volumes"]={k:v for k,v in config["volumes"].items() if k.startswith(tuple(f"{s}-" for s in config["services"]))}
-    router=json.loads((ROOT/"secrets/gateway/router.json").read_text())
+    router=json.loads((fixture/"secrets/gateway/router.json").read_text())
     (folder/"router.json").write_text(json.dumps({k:v for k,v in router.items() if k in ["scoreboard",*slots]}))
     listeners=[]
     ports={}
@@ -53,7 +60,7 @@ def main():
         service["networks"]=["test"]
         service["healthcheck"]["interval"]="2s"
         service["ports"]=[f"127.0.0.1:{ports[name]}:22"]
-        service["volumes"]=[str(ROOT/v[2:]) if v.startswith("./") else v for v in service["volumes"]]
+        service["volumes"]=[str(fixture/v[2:]) if v.startswith("./") else v for v in service["volumes"]]
         if name=="gateway":
             service["networks"]=["test"]
             service["depends_on"]={k:v for k,v in service["depends_on"].items() if k in config["services"]}
@@ -97,7 +104,7 @@ def main():
         (folder/"known_hosts").unlink(missing_ok=True)
         for slot in slots:
             name="雪Elf" if slot=="player02" else "TestElf"+slot[-2:]
-            session=Session("gateway",ports["gateway"],folder,music=slot=="player02" and not args.load_only)
+            session=connect("gateway",ports["gateway"],folder,music=slot=="player02" and not args.load_only)
             sessions.append(session)
             session.expect("CHARAKTER",timeout=45)
             assert b"FORTSETZEN-CODE" not in session.output
@@ -120,7 +127,7 @@ def main():
             assert all(session.proc.poll() is None for session in sessions)
             active=run("exec","-T","gateway","python3","-c","import sqlite3; print(sqlite3.connect('/var/lib/frost/joins.sqlite').execute('SELECT count(*) FROM joins WHERE active=1').fetchone()[0])",capture_output=True,text=True)
             assert int(active.stdout)==args.players
-            spectator=Session("scoreboard",ports["gateway"],folder,user="score")
+            spectator=connect("scoreboard",ports["gateway"],folder,user="score")
             sessions.append(spectator)
             spectator.expect("LIVE-SCOREBOARD")
             print(f"PASS: {args.players} concurrent interactive gateway players plus a separate live scoreboard viewer",flush=True)
@@ -205,7 +212,7 @@ def main():
         limits=run("exec","-T","player01","sh","-c","cat /sys/fs/cgroup/memory.max /sys/fs/cgroup/memory.swap.max /sys/fs/cgroup/pids.max /sys/fs/cgroup/cpu.max",capture_output=True,text=True).stdout.splitlines()
         assert limits==["268435456","0","96","50000 100000"],limits
         print("PASS: nano save/exit, terminal resize, avatar editor return, RAM/swap/PID/CPU limits",flush=True)
-        extra=Session("gateway",ports["gateway"],folder)
+        extra=connect("gateway",ports["gateway"],folder)
         sessions.append(extra)
         extra.expect("Alle Spielerplaetze sind vergeben")
         extra.send("\r"); extra.close(); sessions.remove(extra)
@@ -290,6 +297,13 @@ def main():
         s.send("cp ../wald/wurzeln/frost ~/rucksack/\r")
         s.drain(.5)
         assert set(state()["bag"])<=set(state()["battle_items"])
+        with urllib.request.urlopen(stream_url, timeout=6) as stream:
+            assert volume_event(stream)==50
+            for module,title in (("frost_armor","EISPANZER ZERBROCHEN"),("blizzard","SCHNEESTURM ERLOSCHEN")):
+                s.send(f"modprobe -r {module}\r")
+                s.expect(title)
+                assert volume_event(stream)[0]==module
+        print("PASS: both modprobe commands animate the arena and reach the SSH player's audio stream",flush=True)
         s.send("while true; do ~/rucksack/funke; done\r")
         s.expect("Zur Shell",timeout=15)
         won=wait_state(lambda v:v["status"]=="won")
@@ -305,7 +319,7 @@ def main():
         run("exec","-T","player01","sh","-c","! command -v tmux && test ! -e /usr/bin/tmux")
         assert state()["avatar"]=={"hair":"blond","shirt":"blau","gender":"weiblich","style":"Locken"},state()["avatar"]
         print("PASS: avatar customization persists; tmux is absent",flush=True)
-        board=Session("scoreboard",ports["gateway"],folder,user="score")
+        board=connect("scoreboard",ports["gateway"],folder,user="score")
         sessions.append(board)
         board.expect("LIVE-SCOREBOARD")
         board.send("\t")
@@ -340,7 +354,7 @@ def main():
         assert not next(r for r in scores() if r["slot"]=="player01")["connected"]
         with urllib.request.urlopen(stream_url, timeout=4) as stream:
             assert volume_event(stream) is None
-        s=Session("player01",ports["player01"],folder)
+        s=connect("player01",ports["player01"],folder)
         sessions.append(s)
         s.expect("Rucksack")
         assert state()["name"]=="TestElf01" and state()["status"]=="won"
@@ -377,7 +391,7 @@ def main():
         with tarfile.open(backup/"player01"/"state.tar") as archive:
             member=next(m for m in archive.getmembers() if m.name.endswith("state.json"))
             assert json.load(archive.extractfile(member))["name"]=="TestElf01"
-        new=Session("gateway",ports["gateway"],folder)
+        new=connect("gateway",ports["gateway"],folder)
         sessions.append(new)
         new.expect("CHARAKTER")
         print("PASS: global reset backup, all names/scores/homes cleared, host keys preserved, fresh login modal",flush=True)

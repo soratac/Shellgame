@@ -16,13 +16,14 @@ FIELDS = (("Name", None), ("Geschlecht", "gender"), ("Haartyp", "style"),
 
 
 def draw_editor(screen, name, avatar, field, existing, tick, changed, error):
-    from .render import box, cell_width, fit
-    from .showcase import blit, button, studio, wordmark
+    from .render import cell_width, fit
+    from .showcase import blit, button, studio, studio_frame, wordmark
     screen.erase()
     rows, cols = screen.getmaxyx()
-    width, height = min(92, cols-1), min(31, rows)
+    width = min(92, cols-(5 if cols >= 50 else 1))
+    height = min(31, rows-(2 if rows >= 18 else 0))
     left, top = (cols-width)//2, (rows-height)//2
-    box(screen, top, left, height, width, 12)
+    studio_frame(screen, top, left, height, width, tick)
     logo_width = width-2 if height >= 18 else min(54, width-2)
     logo_height = wordmark(screen, top+1, left+(width-logo_width)//2, logo_width, tick)
     heading = top+logo_height+2
@@ -37,8 +38,8 @@ def draw_editor(screen, name, avatar, field, existing, tick, changed, error):
     panel = min(43, width//2) if preview else width-2
     if preview:
         divider = left+panel+1
-        pw, ph = width-panel-4, footer-heading
-        for y in range(heading, footer):
+        pw, ph = width-panel-4, max(1,footer-heading-1)
+        for y in range(heading, footer-1):
             put(screen, y, divider, "│", 3)
         blit(screen, studio(pw, ph, avatar, tick, changed), heading, divider+1)
     hits = {}
@@ -63,12 +64,18 @@ def draw_editor(screen, name, avatar, field, existing, tick, changed, error):
                 value = value[1:]
             put(screen, row, value_x, value, tint, focus)
         hits[row] = (i, x, right, value_x)
-    action = "↵  Übernehmen" if existing else "↵  Spielen"
-    target = button(screen, footer, left+max(1,(width-len(action)-4)//2), action)
+    action = "ENTER  ▸  Übernehmen" if existing else "ENTER  ▸  Spielen"
+    target = button(screen, footer, left+max(1,(width-len(action)-4)//2), action,5)
+    button_rows = range(footer, footer+1)
+    if height >= 18 and target:
+        span = len(target)
+        put(screen, footer-1, target.start, "╭"+"━"*(span-2)+"╮", 20)
+        put(screen, footer+1, target.start, "╰"+"▀"*(span-2)+"╯", 15)
+        button_rows = range(footer-1, footer+2)
     if error:
-        put(screen, footer+1, left+2, fit(error, width-4, center=True), 6)
+        put(screen, heading+1, left+2, fit(error, width-4), 6)
     screen.refresh()
-    return hits, footer, target
+    return hits, button_rows, target
 
 
 def name_dialog(screen):
@@ -87,7 +94,7 @@ def name_dialog(screen):
     screen.timeout(130)
     while True:
         now = time.monotonic()
-        hits, footer, target = draw_editor(screen, name, avatar, field, existing,
+        hits, button_rows, target = draw_editor(screen, name, avatar, field, existing,
                                             now-started, now-last_change, error)
         try:
             key = screen.get_wch()
@@ -98,7 +105,7 @@ def name_dialog(screen):
             if not pos:
                 continue
             x, y = pos
-            if y == footer and x in target:
+            if y in button_rows and x in target:
                 key = curses.KEY_ENTER
             elif y in hits:
                 index, start, end, arrows = hits[y]

@@ -23,6 +23,34 @@ class RenderTests(unittest.TestCase):
         self.assertNotIn("▓",[ch for ch,_ in settled.cells[0]])
         self.assertTrue(all(color not in (2,11,12,14) for row in hit.cells for ch,color in row if ch!=" "))
 
+    def test_successful_module_removals_have_distinct_animations(self):
+        from frost.engine import act
+        from frost.geometry import Canvas
+        from frost.spell_art import spell_motion
+        for module,marker in (("frost_armor","ϟ"),("blizzard","❄")):
+            state=fresh("Elf")
+            act(state,"observe",cwd="zitadelle")
+            act(state,"enter_boss")
+            for expected in (True,False):
+                self.assertEqual(act(state,"unload",[module])["ok"],expected)
+                event=state["events"][-1]
+                canvas=Canvas(70,18)
+                spell_motion(canvas,event,.24,(10,12),(48,7))
+                text="".join(ch for row in canvas.cells for ch,_ in row)
+                self.assertEqual(module in event["sounds"],expected)
+                self.assertEqual(marker in text,expected)
+
+    def test_all_map_labels_remain_legible_on_small_terminals(self):
+        for w,h in ((34,7),(46,9),(96,14)):
+            for area,pos in POSITIONS.items():
+                state=fresh("Elf")
+                state["area"]=area
+                canvas=world_frame(w,h,state,pos,.5)
+                lines=["".join(ch for ch,_ in row) for row in canvas.cells]
+                for name in POSITIONS:
+                    self.assertTrue(any(name in line for line in lines),(w,h,area,name))
+                self.assertTrue(any("▸ "+area in line for line in lines))
+
     def test_world_character_all_areas(self):
         for area,position in POSITIONS.items():
             state=fresh("Elf")

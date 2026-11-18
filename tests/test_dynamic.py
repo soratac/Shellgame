@@ -82,6 +82,7 @@ class DynamicTests(unittest.TestCase):
         import sys
         from scripts import provision
         with tempfile.TemporaryDirectory() as temp:
+            (Path(temp)/'compose.yaml').write_bytes((provision.ROOT/'compose.yaml').read_bytes())
             with patch.object(provision,'ROOT',Path(temp)),patch.object(sys,'argv',['provision.py','--host','example.test']),patch('builtins.print'):
                 provision.main()
             config=json.loads((Path(temp)/'compose.yaml').read_text())

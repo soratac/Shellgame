@@ -20,11 +20,11 @@ ROOT=Path(__file__).resolve().parents[1]
 
 
 class Session:
-    def __init__(self,slot,port,folder,user="player",key=None,host="127.0.0.1",music=False):
+    def __init__(self,slot,port,folder,user="player",key=None,host="127.0.0.1",music=False,secret_root=ROOT/"secrets"):
         master,slave=pty.openpty()
         fcntl.ioctl(slave,termios.TIOCSWINSZ,struct.pack("HHHH",42,120,0,0))
         env={**os.environ,"TERM":"xterm-256color","DISPLAY":":0","SSH_ASKPASS_REQUIRE":"force",
-             "SSH_ASKPASS":str(folder/"askpass"),"FROST_PASSWORD_FILE":str(ROOT/"secrets"/slot/"password")}
+             "SSH_ASKPASS":str(folder/"askpass"),"FROST_PASSWORD_FILE":str(secret_root/slot/"password")}
         authentication=["-o","PreferredAuthentications=password","-o","PubkeyAuthentication=no"] if key is None else ["-i",str(key),"-o","BatchMode=yes","-o","IdentitiesOnly=yes"]
         launcher=[sys.executable,str(ROOT/"scripts/spielmusik.py")] if music else ["ssh","-tt"]
         if music: env["BROWSER"]="/bin/true"

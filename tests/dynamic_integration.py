@@ -63,14 +63,18 @@ def main():
             assert b'FORTSETZEN-CODE' not in s.output
             s.send(f'DynamicElf{i:02}\r');s.expect('Rucksack')
             s.send("printf 'DYNAMIC_%s\\n' OK\r");s.expect('DYNAMIC_OK')
-            s.close();sessions.remove(s)
-            deadline=time.monotonic()+15
-            while time.monotonic()<deadline:
-                all_rows=managed()
-                if len(all_rows)==i+1 and all(r['State']=='exited' for r in all_rows): break
-                time.sleep(.2)
-            assert len(all_rows)==i+1 and all(r['State']=='exited' for r in all_rows),all_rows
-            print(f'PASS: new container {i+1}/{count} created and stopped after disconnect',flush=True)
+            print(f'PASS: interactive player {i+1}/{count} joined',flush=True)
+        rows=managed()
+        assert len(rows)==count and all(r['State']=='running' for r in rows)
+        assert all(s.proc.poll() is None for s in sessions)
+        print(f'PASS: {count} simultaneous SSH sessions in {count} separate containers',flush=True)
+        for s in sessions: s.close()
+        sessions.clear()
+        deadline=time.monotonic()+max(30,count*4)
+        while time.monotonic()<deadline:
+            if all(r['State']=='exited' for r in managed()): break
+            time.sleep(.3)
+        assert all(r['State']=='exited' for r in managed())
         rows=managed(); assert len(rows)==count
         first=next(r for r in scores() if r['name']=='DynamicElf00')['slot']
         before=next(r['Id'] for r in rows if r['Labels']['frost.slot']==first)
