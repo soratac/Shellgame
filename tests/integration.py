@@ -210,6 +210,18 @@ def main():
         extra.expect("Alle Spielerplaetze sind vergeben")
         extra.send("\r"); extra.close(); sessions.remove(extra)
         print("PASS: common SSH entry allocates distinct containers and rejects capacity overflow",flush=True)
+        # Both sides, and earlier commands in the same parsed input, must be inert.
+        for line in ("touch /tmp/chain-a&&touch /tmp/chain-b",
+                     "touch /tmp/chain-a; (true && touch /tmp/chain-b)",
+                     "touch /tmp/chain-a &&\r touch /tmp/chain-b",
+                     'echo "$(touch /tmp/chain-a && touch /tmp/chain-b)"',
+                     "eval 'touch /tmp/chain-a && touch /tmp/chain-b'"):
+            s.send(line+"\r")
+            s.expect("Gib die Befehle einzeln ein.")
+        run("exec","-T","player01","sh","-c","test ! -e /tmp/chain-a && test ! -e /tmp/chain-b")
+        s.send("printf 'LITERAL_%s_OK\\n' '&&'\r")
+        s.expect("LITERAL_&&_OK")
+        print("PASS: interactive && chains rejected before execution, literal ampersands preserved",flush=True)
         s.send("tree -L 2 ~/welt\r")
         s.expect("wurzeln")
         wait_state(lambda v:"shell:tree" in v["rewards"])
@@ -231,8 +243,7 @@ def main():
         wait_state(lambda v:{"schild","stern"}<=set(v["bag"]))
         s.send("cd ../wald; mv wurzeln/frost .lichtung/beeren ~/rucksack/; ~/rucksack/beeren\r")
         wait_state(lambda v:"heal:beeren" in v["rewards"] and v["hp"]==100)
-        s.send("test ! -e ~/rucksack/beeren && printf 'HEAL_%s\\n' CONSUMED\r")
-        s.expect("HEAL_CONSUMED")
+        run("exec","-T","player01","test","!","-e","/home/player/rucksack/beeren")
         # Visit the marked hiding place rather than assuming a fixed arena.
         place=run("exec","-T","player01","python3","-c",
                   "from frost.client import request; from frost.trail import hiding_place; print(hiding_place(request()['state']))",
@@ -291,16 +302,16 @@ def main():
         cmds=["echo 'two  spaces' | wc -c","pwd","pwd","true","printf '%s' winter"]
         for cmd in cmds:
             s.send(cmd+"\r")
-        s.send("sleep 4 && echo 'two  words'\r")
+        s.send("sleep 4; echo 'two  words'\r")
         deadline=time.monotonic()+9
         while time.monotonic()<deadline:
             raw=run("exec","-T","scoreboard","python3","-c",
                     "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8080/api/live').read().decode())",
                     text=True,capture_output=True).stdout
             hero=next(r for r in json.loads(raw)["players"] if r["slot"]=="player01")
-            if hero.get("command_active") and hero["command_label"]=="sleep 4 && echo 'two  words'": break
+            if hero.get("command_active") and hero["command_label"]=="sleep 4; echo 'two  words'": break
             time.sleep(.1)
-        assert hero["command_label"]=="sleep 4 && echo 'two  words'" and hero["command_history"]==cmds[::-1],hero
+        assert hero["command_label"]=="sleep 4; echo 'two  words'" and hero["command_history"]==cmds[::-1],hero
         board.send("\r"); board.expect("Befehlsverlauf")
         assert "funke" in hero["bag"]
         s.drain(3.1)

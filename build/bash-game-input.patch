@@ -1,0 +1,65 @@
+--- a/make_cmd.c
++++ b/make_cmd.c
+@@ -39,6 +39,7 @@
+ #include "parser.h"
+ #include "flags.h"
+ #include "input.h"
++#include <y.tab.h>
+
+ #if defined (JOB_CONTROL)
+ #include "jobs.h"
+@@ -47,6 +48,7 @@
+ #include "shmbutil.h"
+
+ int here_doc_first_line = 0;
++unsigned long frost_and_lists;
+
+ /* Object caching */
+ sh_obj_cache_t wdcache = {0, 0, 0};
+@@ -190,6 +192,9 @@
+   CONNECTION *temp;
+
+   temp = (CONNECTION *)xmalloc (sizeof (CONNECTION));
++  /* Count shell command lists, not logical expressions or literal words. */
++  if (connector == AND_AND && (bash_input.type != st_string || executing))
++    frost_and_lists++;
+   temp->connector = connector;
+   temp->first = com1;
+   temp->second = com2;
+--- a/eval.c
++++ b/eval.c
+@@ -322,7 +322,9 @@
+ int
+ parse_command ()
+ {
+-  int r;
++  int r, player_input;
++  extern unsigned long frost_and_lists;
++  unsigned long before;
+
+   need_here_doc = 0;
+   run_pending_traps ();
+@@ -345,10 +347,23 @@
+     }
+
+   current_command_line_count = 0;
++  player_input = (interactive && bash_input.type != st_string) || executing;
++  before = frost_and_lists;
+   r = yyparse ();
+
+   if (need_here_doc)
+     gather_here_documents ();
++
++  /* Finish parsing the whole input before deciding. In particular, consume
++     continuations and here-documents without executing either command. */
++  if (r == 0 && global_command && player_input && frost_and_lists != before)
++    {
++      dispose_command (global_command);
++      global_command = (COMMAND *)NULL;
++      fputs ("Frostbyte: && ist gesperrt. Gib die Befehle einzeln ein.\n", stderr);
++      last_command_exit_value = EX_BADUSAGE;
++      return 1;
++    }
+
+   return (r);
+ }

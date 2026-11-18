@@ -79,7 +79,7 @@ def frame(screen):
         for fd in (0,1,2): os.dup2(slave,fd)
         if slave>2: os.close(slave)
         os.environ.update(TERM='xterm-256color',FROST_TERMINAL='1')
-        os.execv('/bin/bash',['bash','--rcfile','/etc/frost/bashrc','-i'])
+        os.execv('/usr/local/bin/frost-bash',['bash','--rcfile','/etc/frost/bashrc','-i'])
     os.close(slave)
     terminal.write_process_input=lambda data: os.write(master,data.encode())
     listener=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM)

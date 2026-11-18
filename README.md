@@ -6,6 +6,8 @@ Ein Weihnachtsabenteuer in einer echten Linux-Shell: automatisch erzeugte, getre
 
 Der gemeinsame Einstieg öffnet direkt den Frostbyte-Charaktereditor. Hier Name, Geschlecht, Haartyp, Haarfarbe und Shirtfarbe wählen. **↑/↓** oder **Tab** wechselt das Feld, **←/→** ändert die Auswahl, **Enter** startet. Die Pfeile neben den Werten und die Schaltfläche sind auch anklickbar. Die animierte 3D-Vorschau zeigt Änderungen sofort. Mit `aussehen` kannst du das Aussehen später ändern. Dein Aussehen bleibt bei `restart` erhalten.
 
+Gib mit `&&` verkettete Befehle einzeln ein. Frostbyte verwirft die gesamte Kette vor der Ausführung.
+
 Im Dorf starten:
 
 ```bash
