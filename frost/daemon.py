@@ -9,6 +9,7 @@ import struct
 import threading
 import time
 import urllib.request
+from functools import lru_cache
 from pathlib import Path
 
 from .activity import Activity, MAX_COMMAND
@@ -35,7 +36,7 @@ def save():
 
 def connected():
     try:
-        with open("/tmp/frost-login.lock","r") as lock:
+        with open("/run/frost/login.lock","r") as lock:
             try: fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
             except BlockingIOError: return True
     except OSError: pass
@@ -70,6 +71,13 @@ def publish_forever():
         time.sleep(0.15)
 
 
+@lru_cache(maxsize=1)
+def music_url():
+    url = os.environ.get("SCORE_URL", "http://scoreboard:8080") + "/api/music-url"
+    with urllib.request.urlopen(url, timeout=2) as response:
+        return response.read(2048).decode().strip()
+
+
 class Handler(socketserver.StreamRequestHandler):
     def handle(self):
         self.connection.settimeout(2)
@@ -85,6 +93,11 @@ class Handler(socketserver.StreamRequestHandler):
             if not isinstance(action, str) or not isinstance(args, list) or len(args) > 8 or any(not isinstance(x, str) for x in args):
                 return
             if not isinstance(data.get("content", ""), str) or not isinstance(data.get("command", ""), str):
+                return
+            if action == "music-url":
+                self.wfile.write(json.dumps({"url": music_url()}).encode()+b"\n")
+                return
+            if action != "activity" and any(len(arg)>128 for arg in args):
                 return
             with LOCK:
                 peer = self.connection.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, struct.calcsize("3i"))

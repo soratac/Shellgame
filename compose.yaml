@@ -83,6 +83,7 @@
         "test": [
           "CMD",
           "python3",
+          "-I",
           "-c",
           "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health',timeout=2)"
         ],
@@ -106,7 +107,7 @@
         "no-new-privileges:true"
       ],
       "cap_drop": [
-        "NET_RAW"
+        "ALL"
       ],
       "pids_limit": 96,
       "mem_limit": "256m",
@@ -117,21 +118,24 @@
           "soft": 1024,
           "hard": 2048
         },
-        "core": 0
+        "core": 0,
+        "fsize": 83886080
       },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2201:22"
       ],
       "tmpfs": [
         "/run:rw,nosuid,nodev,size=16m",
-        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777",
+        "/home/player:rw,exec,nosuid,nodev,size=64m,nr_inodes=4096,uid=1000,gid=1000,mode=0700"
       ],
       "volumes": [
         "player01-state:/var/lib/frost",
-        "player01-home:/home/player",
+        "player01-home:/var/lib/frost-private/legacy:ro",
         "./secrets/player01/shadow:/run/bootstrap/shadow:ro",
         "./secrets/player01/authorized_keys:/run/bootstrap/authorized_keys:ro",
-        "./secrets/player01/token:/run/bootstrap/score_token:ro"
+        "./secrets/player01/token:/run/bootstrap/score_token:ro",
+        "player01-checkpoint:/var/lib/frost-private/saved"
       ],
       "networks": [
         "lane01"
@@ -144,7 +148,8 @@
         }
       },
       "environment": {
-        "SCORE_URL": "http://scoreboard:8080"
+        "SCORE_URL": "http://scoreboard:8080",
+        "FROST_CHECKPOINT_HOME": "1"
       },
       "depends_on": {
         "scoreboard": {
@@ -155,6 +160,7 @@
         "test": [
           "CMD",
           "python3",
+          "-I",
           "-c",
           "from frost.client import request; request()"
         ],
@@ -162,6 +168,22 @@
         "timeout": "4s",
         "retries": 3,
         "start_period": "10s"
+      },
+      "cap_add": [
+        "CHOWN",
+        "DAC_OVERRIDE",
+        "FOWNER",
+        "KILL",
+        "SETGID",
+        "SETUID",
+        "SYS_CHROOT",
+        "NET_BIND_SERVICE",
+        "AUDIT_WRITE"
+      ],
+      "cpu_shares": 256,
+      "stop_grace_period": "30s",
+      "labels": {
+        "frost.home": "checkpoint"
       }
     },
     "player02": {
@@ -176,7 +198,7 @@
         "no-new-privileges:true"
       ],
       "cap_drop": [
-        "NET_RAW"
+        "ALL"
       ],
       "pids_limit": 96,
       "mem_limit": "256m",
@@ -187,21 +209,24 @@
           "soft": 1024,
           "hard": 2048
         },
-        "core": 0
+        "core": 0,
+        "fsize": 83886080
       },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2202:22"
       ],
       "tmpfs": [
         "/run:rw,nosuid,nodev,size=16m",
-        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777",
+        "/home/player:rw,exec,nosuid,nodev,size=64m,nr_inodes=4096,uid=1000,gid=1000,mode=0700"
       ],
       "volumes": [
         "player02-state:/var/lib/frost",
-        "player02-home:/home/player",
+        "player02-home:/var/lib/frost-private/legacy:ro",
         "./secrets/player02/shadow:/run/bootstrap/shadow:ro",
         "./secrets/player02/authorized_keys:/run/bootstrap/authorized_keys:ro",
-        "./secrets/player02/token:/run/bootstrap/score_token:ro"
+        "./secrets/player02/token:/run/bootstrap/score_token:ro",
+        "player02-checkpoint:/var/lib/frost-private/saved"
       ],
       "networks": [
         "lane02"
@@ -214,7 +239,8 @@
         }
       },
       "environment": {
-        "SCORE_URL": "http://scoreboard:8080"
+        "SCORE_URL": "http://scoreboard:8080",
+        "FROST_CHECKPOINT_HOME": "1"
       },
       "depends_on": {
         "scoreboard": {
@@ -225,6 +251,7 @@
         "test": [
           "CMD",
           "python3",
+          "-I",
           "-c",
           "from frost.client import request; request()"
         ],
@@ -232,6 +259,22 @@
         "timeout": "4s",
         "retries": 3,
         "start_period": "10s"
+      },
+      "cap_add": [
+        "CHOWN",
+        "DAC_OVERRIDE",
+        "FOWNER",
+        "KILL",
+        "SETGID",
+        "SETUID",
+        "SYS_CHROOT",
+        "NET_BIND_SERVICE",
+        "AUDIT_WRITE"
+      ],
+      "cpu_shares": 256,
+      "stop_grace_period": "30s",
+      "labels": {
+        "frost.home": "checkpoint"
       }
     },
     "player03": {
@@ -246,7 +289,7 @@
         "no-new-privileges:true"
       ],
       "cap_drop": [
-        "NET_RAW"
+        "ALL"
       ],
       "pids_limit": 96,
       "mem_limit": "256m",
@@ -257,21 +300,24 @@
           "soft": 1024,
           "hard": 2048
         },
-        "core": 0
+        "core": 0,
+        "fsize": 83886080
       },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2203:22"
       ],
       "tmpfs": [
         "/run:rw,nosuid,nodev,size=16m",
-        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777",
+        "/home/player:rw,exec,nosuid,nodev,size=64m,nr_inodes=4096,uid=1000,gid=1000,mode=0700"
       ],
       "volumes": [
         "player03-state:/var/lib/frost",
-        "player03-home:/home/player",
+        "player03-home:/var/lib/frost-private/legacy:ro",
         "./secrets/player03/shadow:/run/bootstrap/shadow:ro",
         "./secrets/player03/authorized_keys:/run/bootstrap/authorized_keys:ro",
-        "./secrets/player03/token:/run/bootstrap/score_token:ro"
+        "./secrets/player03/token:/run/bootstrap/score_token:ro",
+        "player03-checkpoint:/var/lib/frost-private/saved"
       ],
       "networks": [
         "lane03"
@@ -284,7 +330,8 @@
         }
       },
       "environment": {
-        "SCORE_URL": "http://scoreboard:8080"
+        "SCORE_URL": "http://scoreboard:8080",
+        "FROST_CHECKPOINT_HOME": "1"
       },
       "depends_on": {
         "scoreboard": {
@@ -295,6 +342,7 @@
         "test": [
           "CMD",
           "python3",
+          "-I",
           "-c",
           "from frost.client import request; request()"
         ],
@@ -302,6 +350,22 @@
         "timeout": "4s",
         "retries": 3,
         "start_period": "10s"
+      },
+      "cap_add": [
+        "CHOWN",
+        "DAC_OVERRIDE",
+        "FOWNER",
+        "KILL",
+        "SETGID",
+        "SETUID",
+        "SYS_CHROOT",
+        "NET_BIND_SERVICE",
+        "AUDIT_WRITE"
+      ],
+      "cpu_shares": 256,
+      "stop_grace_period": "30s",
+      "labels": {
+        "frost.home": "checkpoint"
       }
     },
     "player04": {
@@ -316,7 +380,7 @@
         "no-new-privileges:true"
       ],
       "cap_drop": [
-        "NET_RAW"
+        "ALL"
       ],
       "pids_limit": 96,
       "mem_limit": "256m",
@@ -327,21 +391,24 @@
           "soft": 1024,
           "hard": 2048
         },
-        "core": 0
+        "core": 0,
+        "fsize": 83886080
       },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2204:22"
       ],
       "tmpfs": [
         "/run:rw,nosuid,nodev,size=16m",
-        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777",
+        "/home/player:rw,exec,nosuid,nodev,size=64m,nr_inodes=4096,uid=1000,gid=1000,mode=0700"
       ],
       "volumes": [
         "player04-state:/var/lib/frost",
-        "player04-home:/home/player",
+        "player04-home:/var/lib/frost-private/legacy:ro",
         "./secrets/player04/shadow:/run/bootstrap/shadow:ro",
         "./secrets/player04/authorized_keys:/run/bootstrap/authorized_keys:ro",
-        "./secrets/player04/token:/run/bootstrap/score_token:ro"
+        "./secrets/player04/token:/run/bootstrap/score_token:ro",
+        "player04-checkpoint:/var/lib/frost-private/saved"
       ],
       "networks": [
         "lane04"
@@ -354,7 +421,8 @@
         }
       },
       "environment": {
-        "SCORE_URL": "http://scoreboard:8080"
+        "SCORE_URL": "http://scoreboard:8080",
+        "FROST_CHECKPOINT_HOME": "1"
       },
       "depends_on": {
         "scoreboard": {
@@ -365,6 +433,7 @@
         "test": [
           "CMD",
           "python3",
+          "-I",
           "-c",
           "from frost.client import request; request()"
         ],
@@ -372,6 +441,22 @@
         "timeout": "4s",
         "retries": 3,
         "start_period": "10s"
+      },
+      "cap_add": [
+        "CHOWN",
+        "DAC_OVERRIDE",
+        "FOWNER",
+        "KILL",
+        "SETGID",
+        "SETUID",
+        "SYS_CHROOT",
+        "NET_BIND_SERVICE",
+        "AUDIT_WRITE"
+      ],
+      "cpu_shares": 256,
+      "stop_grace_period": "30s",
+      "labels": {
+        "frost.home": "checkpoint"
       }
     },
     "player05": {
@@ -386,7 +471,7 @@
         "no-new-privileges:true"
       ],
       "cap_drop": [
-        "NET_RAW"
+        "ALL"
       ],
       "pids_limit": 96,
       "mem_limit": "256m",
@@ -397,21 +482,24 @@
           "soft": 1024,
           "hard": 2048
         },
-        "core": 0
+        "core": 0,
+        "fsize": 83886080
       },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2205:22"
       ],
       "tmpfs": [
         "/run:rw,nosuid,nodev,size=16m",
-        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777",
+        "/home/player:rw,exec,nosuid,nodev,size=64m,nr_inodes=4096,uid=1000,gid=1000,mode=0700"
       ],
       "volumes": [
         "player05-state:/var/lib/frost",
-        "player05-home:/home/player",
+        "player05-home:/var/lib/frost-private/legacy:ro",
         "./secrets/player05/shadow:/run/bootstrap/shadow:ro",
         "./secrets/player05/authorized_keys:/run/bootstrap/authorized_keys:ro",
-        "./secrets/player05/token:/run/bootstrap/score_token:ro"
+        "./secrets/player05/token:/run/bootstrap/score_token:ro",
+        "player05-checkpoint:/var/lib/frost-private/saved"
       ],
       "networks": [
         "lane05"
@@ -424,7 +512,8 @@
         }
       },
       "environment": {
-        "SCORE_URL": "http://scoreboard:8080"
+        "SCORE_URL": "http://scoreboard:8080",
+        "FROST_CHECKPOINT_HOME": "1"
       },
       "depends_on": {
         "scoreboard": {
@@ -435,6 +524,7 @@
         "test": [
           "CMD",
           "python3",
+          "-I",
           "-c",
           "from frost.client import request; request()"
         ],
@@ -442,6 +532,22 @@
         "timeout": "4s",
         "retries": 3,
         "start_period": "10s"
+      },
+      "cap_add": [
+        "CHOWN",
+        "DAC_OVERRIDE",
+        "FOWNER",
+        "KILL",
+        "SETGID",
+        "SETUID",
+        "SYS_CHROOT",
+        "NET_BIND_SERVICE",
+        "AUDIT_WRITE"
+      ],
+      "cpu_shares": 256,
+      "stop_grace_period": "30s",
+      "labels": {
+        "frost.home": "checkpoint"
       }
     },
     "player06": {
@@ -456,7 +562,7 @@
         "no-new-privileges:true"
       ],
       "cap_drop": [
-        "NET_RAW"
+        "ALL"
       ],
       "pids_limit": 96,
       "mem_limit": "256m",
@@ -467,21 +573,24 @@
           "soft": 1024,
           "hard": 2048
         },
-        "core": 0
+        "core": 0,
+        "fsize": 83886080
       },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2206:22"
       ],
       "tmpfs": [
         "/run:rw,nosuid,nodev,size=16m",
-        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777",
+        "/home/player:rw,exec,nosuid,nodev,size=64m,nr_inodes=4096,uid=1000,gid=1000,mode=0700"
       ],
       "volumes": [
         "player06-state:/var/lib/frost",
-        "player06-home:/home/player",
+        "player06-home:/var/lib/frost-private/legacy:ro",
         "./secrets/player06/shadow:/run/bootstrap/shadow:ro",
         "./secrets/player06/authorized_keys:/run/bootstrap/authorized_keys:ro",
-        "./secrets/player06/token:/run/bootstrap/score_token:ro"
+        "./secrets/player06/token:/run/bootstrap/score_token:ro",
+        "player06-checkpoint:/var/lib/frost-private/saved"
       ],
       "networks": [
         "lane06"
@@ -494,7 +603,8 @@
         }
       },
       "environment": {
-        "SCORE_URL": "http://scoreboard:8080"
+        "SCORE_URL": "http://scoreboard:8080",
+        "FROST_CHECKPOINT_HOME": "1"
       },
       "depends_on": {
         "scoreboard": {
@@ -505,6 +615,7 @@
         "test": [
           "CMD",
           "python3",
+          "-I",
           "-c",
           "from frost.client import request; request()"
         ],
@@ -512,6 +623,22 @@
         "timeout": "4s",
         "retries": 3,
         "start_period": "10s"
+      },
+      "cap_add": [
+        "CHOWN",
+        "DAC_OVERRIDE",
+        "FOWNER",
+        "KILL",
+        "SETGID",
+        "SETUID",
+        "SYS_CHROOT",
+        "NET_BIND_SERVICE",
+        "AUDIT_WRITE"
+      ],
+      "cpu_shares": 256,
+      "stop_grace_period": "30s",
+      "labels": {
+        "frost.home": "checkpoint"
       }
     },
     "player07": {
@@ -526,7 +653,7 @@
         "no-new-privileges:true"
       ],
       "cap_drop": [
-        "NET_RAW"
+        "ALL"
       ],
       "pids_limit": 96,
       "mem_limit": "256m",
@@ -537,21 +664,24 @@
           "soft": 1024,
           "hard": 2048
         },
-        "core": 0
+        "core": 0,
+        "fsize": 83886080
       },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2207:22"
       ],
       "tmpfs": [
         "/run:rw,nosuid,nodev,size=16m",
-        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777",
+        "/home/player:rw,exec,nosuid,nodev,size=64m,nr_inodes=4096,uid=1000,gid=1000,mode=0700"
       ],
       "volumes": [
         "player07-state:/var/lib/frost",
-        "player07-home:/home/player",
+        "player07-home:/var/lib/frost-private/legacy:ro",
         "./secrets/player07/shadow:/run/bootstrap/shadow:ro",
         "./secrets/player07/authorized_keys:/run/bootstrap/authorized_keys:ro",
-        "./secrets/player07/token:/run/bootstrap/score_token:ro"
+        "./secrets/player07/token:/run/bootstrap/score_token:ro",
+        "player07-checkpoint:/var/lib/frost-private/saved"
       ],
       "networks": [
         "lane07"
@@ -564,7 +694,8 @@
         }
       },
       "environment": {
-        "SCORE_URL": "http://scoreboard:8080"
+        "SCORE_URL": "http://scoreboard:8080",
+        "FROST_CHECKPOINT_HOME": "1"
       },
       "depends_on": {
         "scoreboard": {
@@ -575,6 +706,7 @@
         "test": [
           "CMD",
           "python3",
+          "-I",
           "-c",
           "from frost.client import request; request()"
         ],
@@ -582,6 +714,22 @@
         "timeout": "4s",
         "retries": 3,
         "start_period": "10s"
+      },
+      "cap_add": [
+        "CHOWN",
+        "DAC_OVERRIDE",
+        "FOWNER",
+        "KILL",
+        "SETGID",
+        "SETUID",
+        "SYS_CHROOT",
+        "NET_BIND_SERVICE",
+        "AUDIT_WRITE"
+      ],
+      "cpu_shares": 256,
+      "stop_grace_period": "30s",
+      "labels": {
+        "frost.home": "checkpoint"
       }
     },
     "player08": {
@@ -596,7 +744,7 @@
         "no-new-privileges:true"
       ],
       "cap_drop": [
-        "NET_RAW"
+        "ALL"
       ],
       "pids_limit": 96,
       "mem_limit": "256m",
@@ -607,21 +755,24 @@
           "soft": 1024,
           "hard": 2048
         },
-        "core": 0
+        "core": 0,
+        "fsize": 83886080
       },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2208:22"
       ],
       "tmpfs": [
         "/run:rw,nosuid,nodev,size=16m",
-        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777",
+        "/home/player:rw,exec,nosuid,nodev,size=64m,nr_inodes=4096,uid=1000,gid=1000,mode=0700"
       ],
       "volumes": [
         "player08-state:/var/lib/frost",
-        "player08-home:/home/player",
+        "player08-home:/var/lib/frost-private/legacy:ro",
         "./secrets/player08/shadow:/run/bootstrap/shadow:ro",
         "./secrets/player08/authorized_keys:/run/bootstrap/authorized_keys:ro",
-        "./secrets/player08/token:/run/bootstrap/score_token:ro"
+        "./secrets/player08/token:/run/bootstrap/score_token:ro",
+        "player08-checkpoint:/var/lib/frost-private/saved"
       ],
       "networks": [
         "lane08"
@@ -634,7 +785,8 @@
         }
       },
       "environment": {
-        "SCORE_URL": "http://scoreboard:8080"
+        "SCORE_URL": "http://scoreboard:8080",
+        "FROST_CHECKPOINT_HOME": "1"
       },
       "depends_on": {
         "scoreboard": {
@@ -645,6 +797,7 @@
         "test": [
           "CMD",
           "python3",
+          "-I",
           "-c",
           "from frost.client import request; request()"
         ],
@@ -652,6 +805,22 @@
         "timeout": "4s",
         "retries": 3,
         "start_period": "10s"
+      },
+      "cap_add": [
+        "CHOWN",
+        "DAC_OVERRIDE",
+        "FOWNER",
+        "KILL",
+        "SETGID",
+        "SETUID",
+        "SYS_CHROOT",
+        "NET_BIND_SERVICE",
+        "AUDIT_WRITE"
+      ],
+      "cpu_shares": 256,
+      "stop_grace_period": "30s",
+      "labels": {
+        "frost.home": "checkpoint"
       }
     },
     "player09": {
@@ -666,7 +835,7 @@
         "no-new-privileges:true"
       ],
       "cap_drop": [
-        "NET_RAW"
+        "ALL"
       ],
       "pids_limit": 96,
       "mem_limit": "256m",
@@ -677,21 +846,24 @@
           "soft": 1024,
           "hard": 2048
         },
-        "core": 0
+        "core": 0,
+        "fsize": 83886080
       },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2209:22"
       ],
       "tmpfs": [
         "/run:rw,nosuid,nodev,size=16m",
-        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777",
+        "/home/player:rw,exec,nosuid,nodev,size=64m,nr_inodes=4096,uid=1000,gid=1000,mode=0700"
       ],
       "volumes": [
         "player09-state:/var/lib/frost",
-        "player09-home:/home/player",
+        "player09-home:/var/lib/frost-private/legacy:ro",
         "./secrets/player09/shadow:/run/bootstrap/shadow:ro",
         "./secrets/player09/authorized_keys:/run/bootstrap/authorized_keys:ro",
-        "./secrets/player09/token:/run/bootstrap/score_token:ro"
+        "./secrets/player09/token:/run/bootstrap/score_token:ro",
+        "player09-checkpoint:/var/lib/frost-private/saved"
       ],
       "networks": [
         "lane09"
@@ -704,7 +876,8 @@
         }
       },
       "environment": {
-        "SCORE_URL": "http://scoreboard:8080"
+        "SCORE_URL": "http://scoreboard:8080",
+        "FROST_CHECKPOINT_HOME": "1"
       },
       "depends_on": {
         "scoreboard": {
@@ -715,6 +888,7 @@
         "test": [
           "CMD",
           "python3",
+          "-I",
           "-c",
           "from frost.client import request; request()"
         ],
@@ -722,6 +896,22 @@
         "timeout": "4s",
         "retries": 3,
         "start_period": "10s"
+      },
+      "cap_add": [
+        "CHOWN",
+        "DAC_OVERRIDE",
+        "FOWNER",
+        "KILL",
+        "SETGID",
+        "SETUID",
+        "SYS_CHROOT",
+        "NET_BIND_SERVICE",
+        "AUDIT_WRITE"
+      ],
+      "cpu_shares": 256,
+      "stop_grace_period": "30s",
+      "labels": {
+        "frost.home": "checkpoint"
       }
     },
     "player10": {
@@ -736,7 +926,7 @@
         "no-new-privileges:true"
       ],
       "cap_drop": [
-        "NET_RAW"
+        "ALL"
       ],
       "pids_limit": 96,
       "mem_limit": "256m",
@@ -747,21 +937,24 @@
           "soft": 1024,
           "hard": 2048
         },
-        "core": 0
+        "core": 0,
+        "fsize": 83886080
       },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2210:22"
       ],
       "tmpfs": [
         "/run:rw,nosuid,nodev,size=16m",
-        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777",
+        "/home/player:rw,exec,nosuid,nodev,size=64m,nr_inodes=4096,uid=1000,gid=1000,mode=0700"
       ],
       "volumes": [
         "player10-state:/var/lib/frost",
-        "player10-home:/home/player",
+        "player10-home:/var/lib/frost-private/legacy:ro",
         "./secrets/player10/shadow:/run/bootstrap/shadow:ro",
         "./secrets/player10/authorized_keys:/run/bootstrap/authorized_keys:ro",
-        "./secrets/player10/token:/run/bootstrap/score_token:ro"
+        "./secrets/player10/token:/run/bootstrap/score_token:ro",
+        "player10-checkpoint:/var/lib/frost-private/saved"
       ],
       "networks": [
         "lane10"
@@ -774,7 +967,8 @@
         }
       },
       "environment": {
-        "SCORE_URL": "http://scoreboard:8080"
+        "SCORE_URL": "http://scoreboard:8080",
+        "FROST_CHECKPOINT_HOME": "1"
       },
       "depends_on": {
         "scoreboard": {
@@ -785,6 +979,7 @@
         "test": [
           "CMD",
           "python3",
+          "-I",
           "-c",
           "from frost.client import request; request()"
         ],
@@ -792,6 +987,22 @@
         "timeout": "4s",
         "retries": 3,
         "start_period": "10s"
+      },
+      "cap_add": [
+        "CHOWN",
+        "DAC_OVERRIDE",
+        "FOWNER",
+        "KILL",
+        "SETGID",
+        "SETUID",
+        "SYS_CHROOT",
+        "NET_BIND_SERVICE",
+        "AUDIT_WRITE"
+      ],
+      "cpu_shares": 256,
+      "stop_grace_period": "30s",
+      "labels": {
+        "frost.home": "checkpoint"
       }
     },
     "player11": {
@@ -806,7 +1017,7 @@
         "no-new-privileges:true"
       ],
       "cap_drop": [
-        "NET_RAW"
+        "ALL"
       ],
       "pids_limit": 96,
       "mem_limit": "256m",
@@ -817,21 +1028,24 @@
           "soft": 1024,
           "hard": 2048
         },
-        "core": 0
+        "core": 0,
+        "fsize": 83886080
       },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2211:22"
       ],
       "tmpfs": [
         "/run:rw,nosuid,nodev,size=16m",
-        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777",
+        "/home/player:rw,exec,nosuid,nodev,size=64m,nr_inodes=4096,uid=1000,gid=1000,mode=0700"
       ],
       "volumes": [
         "player11-state:/var/lib/frost",
-        "player11-home:/home/player",
+        "player11-home:/var/lib/frost-private/legacy:ro",
         "./secrets/player11/shadow:/run/bootstrap/shadow:ro",
         "./secrets/player11/authorized_keys:/run/bootstrap/authorized_keys:ro",
-        "./secrets/player11/token:/run/bootstrap/score_token:ro"
+        "./secrets/player11/token:/run/bootstrap/score_token:ro",
+        "player11-checkpoint:/var/lib/frost-private/saved"
       ],
       "networks": [
         "lane11"
@@ -844,7 +1058,8 @@
         }
       },
       "environment": {
-        "SCORE_URL": "http://scoreboard:8080"
+        "SCORE_URL": "http://scoreboard:8080",
+        "FROST_CHECKPOINT_HOME": "1"
       },
       "depends_on": {
         "scoreboard": {
@@ -855,6 +1070,7 @@
         "test": [
           "CMD",
           "python3",
+          "-I",
           "-c",
           "from frost.client import request; request()"
         ],
@@ -862,6 +1078,22 @@
         "timeout": "4s",
         "retries": 3,
         "start_period": "10s"
+      },
+      "cap_add": [
+        "CHOWN",
+        "DAC_OVERRIDE",
+        "FOWNER",
+        "KILL",
+        "SETGID",
+        "SETUID",
+        "SYS_CHROOT",
+        "NET_BIND_SERVICE",
+        "AUDIT_WRITE"
+      ],
+      "cpu_shares": 256,
+      "stop_grace_period": "30s",
+      "labels": {
+        "frost.home": "checkpoint"
       }
     },
     "player12": {
@@ -876,7 +1108,7 @@
         "no-new-privileges:true"
       ],
       "cap_drop": [
-        "NET_RAW"
+        "ALL"
       ],
       "pids_limit": 96,
       "mem_limit": "256m",
@@ -887,21 +1119,24 @@
           "soft": 1024,
           "hard": 2048
         },
-        "core": 0
+        "core": 0,
+        "fsize": 83886080
       },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2212:22"
       ],
       "tmpfs": [
         "/run:rw,nosuid,nodev,size=16m",
-        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777",
+        "/home/player:rw,exec,nosuid,nodev,size=64m,nr_inodes=4096,uid=1000,gid=1000,mode=0700"
       ],
       "volumes": [
         "player12-state:/var/lib/frost",
-        "player12-home:/home/player",
+        "player12-home:/var/lib/frost-private/legacy:ro",
         "./secrets/player12/shadow:/run/bootstrap/shadow:ro",
         "./secrets/player12/authorized_keys:/run/bootstrap/authorized_keys:ro",
-        "./secrets/player12/token:/run/bootstrap/score_token:ro"
+        "./secrets/player12/token:/run/bootstrap/score_token:ro",
+        "player12-checkpoint:/var/lib/frost-private/saved"
       ],
       "networks": [
         "lane12"
@@ -914,7 +1149,8 @@
         }
       },
       "environment": {
-        "SCORE_URL": "http://scoreboard:8080"
+        "SCORE_URL": "http://scoreboard:8080",
+        "FROST_CHECKPOINT_HOME": "1"
       },
       "depends_on": {
         "scoreboard": {
@@ -925,6 +1161,7 @@
         "test": [
           "CMD",
           "python3",
+          "-I",
           "-c",
           "from frost.client import request; request()"
         ],
@@ -932,6 +1169,22 @@
         "timeout": "4s",
         "retries": 3,
         "start_period": "10s"
+      },
+      "cap_add": [
+        "CHOWN",
+        "DAC_OVERRIDE",
+        "FOWNER",
+        "KILL",
+        "SETGID",
+        "SETUID",
+        "SYS_CHROOT",
+        "NET_BIND_SERVICE",
+        "AUDIT_WRITE"
+      ],
+      "cpu_shares": 256,
+      "stop_grace_period": "30s",
+      "labels": {
+        "frost.home": "checkpoint"
       }
     },
     "player13": {
@@ -946,7 +1199,7 @@
         "no-new-privileges:true"
       ],
       "cap_drop": [
-        "NET_RAW"
+        "ALL"
       ],
       "pids_limit": 96,
       "mem_limit": "256m",
@@ -957,21 +1210,24 @@
           "soft": 1024,
           "hard": 2048
         },
-        "core": 0
+        "core": 0,
+        "fsize": 83886080
       },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2213:22"
       ],
       "tmpfs": [
         "/run:rw,nosuid,nodev,size=16m",
-        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777",
+        "/home/player:rw,exec,nosuid,nodev,size=64m,nr_inodes=4096,uid=1000,gid=1000,mode=0700"
       ],
       "volumes": [
         "player13-state:/var/lib/frost",
-        "player13-home:/home/player",
+        "player13-home:/var/lib/frost-private/legacy:ro",
         "./secrets/player13/shadow:/run/bootstrap/shadow:ro",
         "./secrets/player13/authorized_keys:/run/bootstrap/authorized_keys:ro",
-        "./secrets/player13/token:/run/bootstrap/score_token:ro"
+        "./secrets/player13/token:/run/bootstrap/score_token:ro",
+        "player13-checkpoint:/var/lib/frost-private/saved"
       ],
       "networks": [
         "lane13"
@@ -984,7 +1240,8 @@
         }
       },
       "environment": {
-        "SCORE_URL": "http://scoreboard:8080"
+        "SCORE_URL": "http://scoreboard:8080",
+        "FROST_CHECKPOINT_HOME": "1"
       },
       "depends_on": {
         "scoreboard": {
@@ -995,6 +1252,7 @@
         "test": [
           "CMD",
           "python3",
+          "-I",
           "-c",
           "from frost.client import request; request()"
         ],
@@ -1002,6 +1260,22 @@
         "timeout": "4s",
         "retries": 3,
         "start_period": "10s"
+      },
+      "cap_add": [
+        "CHOWN",
+        "DAC_OVERRIDE",
+        "FOWNER",
+        "KILL",
+        "SETGID",
+        "SETUID",
+        "SYS_CHROOT",
+        "NET_BIND_SERVICE",
+        "AUDIT_WRITE"
+      ],
+      "cpu_shares": 256,
+      "stop_grace_period": "30s",
+      "labels": {
+        "frost.home": "checkpoint"
       }
     },
     "player14": {
@@ -1016,7 +1290,7 @@
         "no-new-privileges:true"
       ],
       "cap_drop": [
-        "NET_RAW"
+        "ALL"
       ],
       "pids_limit": 96,
       "mem_limit": "256m",
@@ -1027,21 +1301,24 @@
           "soft": 1024,
           "hard": 2048
         },
-        "core": 0
+        "core": 0,
+        "fsize": 83886080
       },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2214:22"
       ],
       "tmpfs": [
         "/run:rw,nosuid,nodev,size=16m",
-        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777",
+        "/home/player:rw,exec,nosuid,nodev,size=64m,nr_inodes=4096,uid=1000,gid=1000,mode=0700"
       ],
       "volumes": [
         "player14-state:/var/lib/frost",
-        "player14-home:/home/player",
+        "player14-home:/var/lib/frost-private/legacy:ro",
         "./secrets/player14/shadow:/run/bootstrap/shadow:ro",
         "./secrets/player14/authorized_keys:/run/bootstrap/authorized_keys:ro",
-        "./secrets/player14/token:/run/bootstrap/score_token:ro"
+        "./secrets/player14/token:/run/bootstrap/score_token:ro",
+        "player14-checkpoint:/var/lib/frost-private/saved"
       ],
       "networks": [
         "lane14"
@@ -1054,7 +1331,8 @@
         }
       },
       "environment": {
-        "SCORE_URL": "http://scoreboard:8080"
+        "SCORE_URL": "http://scoreboard:8080",
+        "FROST_CHECKPOINT_HOME": "1"
       },
       "depends_on": {
         "scoreboard": {
@@ -1065,6 +1343,7 @@
         "test": [
           "CMD",
           "python3",
+          "-I",
           "-c",
           "from frost.client import request; request()"
         ],
@@ -1072,6 +1351,22 @@
         "timeout": "4s",
         "retries": 3,
         "start_period": "10s"
+      },
+      "cap_add": [
+        "CHOWN",
+        "DAC_OVERRIDE",
+        "FOWNER",
+        "KILL",
+        "SETGID",
+        "SETUID",
+        "SYS_CHROOT",
+        "NET_BIND_SERVICE",
+        "AUDIT_WRITE"
+      ],
+      "cpu_shares": 256,
+      "stop_grace_period": "30s",
+      "labels": {
+        "frost.home": "checkpoint"
       }
     },
     "player15": {
@@ -1086,7 +1381,7 @@
         "no-new-privileges:true"
       ],
       "cap_drop": [
-        "NET_RAW"
+        "ALL"
       ],
       "pids_limit": 96,
       "mem_limit": "256m",
@@ -1097,21 +1392,24 @@
           "soft": 1024,
           "hard": 2048
         },
-        "core": 0
+        "core": 0,
+        "fsize": 83886080
       },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2215:22"
       ],
       "tmpfs": [
         "/run:rw,nosuid,nodev,size=16m",
-        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777",
+        "/home/player:rw,exec,nosuid,nodev,size=64m,nr_inodes=4096,uid=1000,gid=1000,mode=0700"
       ],
       "volumes": [
         "player15-state:/var/lib/frost",
-        "player15-home:/home/player",
+        "player15-home:/var/lib/frost-private/legacy:ro",
         "./secrets/player15/shadow:/run/bootstrap/shadow:ro",
         "./secrets/player15/authorized_keys:/run/bootstrap/authorized_keys:ro",
-        "./secrets/player15/token:/run/bootstrap/score_token:ro"
+        "./secrets/player15/token:/run/bootstrap/score_token:ro",
+        "player15-checkpoint:/var/lib/frost-private/saved"
       ],
       "networks": [
         "lane15"
@@ -1124,7 +1422,8 @@
         }
       },
       "environment": {
-        "SCORE_URL": "http://scoreboard:8080"
+        "SCORE_URL": "http://scoreboard:8080",
+        "FROST_CHECKPOINT_HOME": "1"
       },
       "depends_on": {
         "scoreboard": {
@@ -1135,6 +1434,7 @@
         "test": [
           "CMD",
           "python3",
+          "-I",
           "-c",
           "from frost.client import request; request()"
         ],
@@ -1142,6 +1442,22 @@
         "timeout": "4s",
         "retries": 3,
         "start_period": "10s"
+      },
+      "cap_add": [
+        "CHOWN",
+        "DAC_OVERRIDE",
+        "FOWNER",
+        "KILL",
+        "SETGID",
+        "SETUID",
+        "SYS_CHROOT",
+        "NET_BIND_SERVICE",
+        "AUDIT_WRITE"
+      ],
+      "cpu_shares": 256,
+      "stop_grace_period": "30s",
+      "labels": {
+        "frost.home": "checkpoint"
       }
     },
     "player16": {
@@ -1156,7 +1472,7 @@
         "no-new-privileges:true"
       ],
       "cap_drop": [
-        "NET_RAW"
+        "ALL"
       ],
       "pids_limit": 96,
       "mem_limit": "256m",
@@ -1167,21 +1483,24 @@
           "soft": 1024,
           "hard": 2048
         },
-        "core": 0
+        "core": 0,
+        "fsize": 83886080
       },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2216:22"
       ],
       "tmpfs": [
         "/run:rw,nosuid,nodev,size=16m",
-        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777",
+        "/home/player:rw,exec,nosuid,nodev,size=64m,nr_inodes=4096,uid=1000,gid=1000,mode=0700"
       ],
       "volumes": [
         "player16-state:/var/lib/frost",
-        "player16-home:/home/player",
+        "player16-home:/var/lib/frost-private/legacy:ro",
         "./secrets/player16/shadow:/run/bootstrap/shadow:ro",
         "./secrets/player16/authorized_keys:/run/bootstrap/authorized_keys:ro",
-        "./secrets/player16/token:/run/bootstrap/score_token:ro"
+        "./secrets/player16/token:/run/bootstrap/score_token:ro",
+        "player16-checkpoint:/var/lib/frost-private/saved"
       ],
       "networks": [
         "lane16"
@@ -1194,7 +1513,8 @@
         }
       },
       "environment": {
-        "SCORE_URL": "http://scoreboard:8080"
+        "SCORE_URL": "http://scoreboard:8080",
+        "FROST_CHECKPOINT_HOME": "1"
       },
       "depends_on": {
         "scoreboard": {
@@ -1205,6 +1525,7 @@
         "test": [
           "CMD",
           "python3",
+          "-I",
           "-c",
           "from frost.client import request; request()"
         ],
@@ -1212,6 +1533,22 @@
         "timeout": "4s",
         "retries": 3,
         "start_period": "10s"
+      },
+      "cap_add": [
+        "CHOWN",
+        "DAC_OVERRIDE",
+        "FOWNER",
+        "KILL",
+        "SETGID",
+        "SETUID",
+        "SYS_CHROOT",
+        "NET_BIND_SERVICE",
+        "AUDIT_WRITE"
+      ],
+      "cpu_shares": 256,
+      "stop_grace_period": "30s",
+      "labels": {
+        "frost.home": "checkpoint"
       }
     },
     "player17": {
@@ -1226,7 +1563,7 @@
         "no-new-privileges:true"
       ],
       "cap_drop": [
-        "NET_RAW"
+        "ALL"
       ],
       "pids_limit": 96,
       "mem_limit": "256m",
@@ -1237,21 +1574,24 @@
           "soft": 1024,
           "hard": 2048
         },
-        "core": 0
+        "core": 0,
+        "fsize": 83886080
       },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2217:22"
       ],
       "tmpfs": [
         "/run:rw,nosuid,nodev,size=16m",
-        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777",
+        "/home/player:rw,exec,nosuid,nodev,size=64m,nr_inodes=4096,uid=1000,gid=1000,mode=0700"
       ],
       "volumes": [
         "player17-state:/var/lib/frost",
-        "player17-home:/home/player",
+        "player17-home:/var/lib/frost-private/legacy:ro",
         "./secrets/player17/shadow:/run/bootstrap/shadow:ro",
         "./secrets/player17/authorized_keys:/run/bootstrap/authorized_keys:ro",
-        "./secrets/player17/token:/run/bootstrap/score_token:ro"
+        "./secrets/player17/token:/run/bootstrap/score_token:ro",
+        "player17-checkpoint:/var/lib/frost-private/saved"
       ],
       "networks": [
         "lane17"
@@ -1264,7 +1604,8 @@
         }
       },
       "environment": {
-        "SCORE_URL": "http://scoreboard:8080"
+        "SCORE_URL": "http://scoreboard:8080",
+        "FROST_CHECKPOINT_HOME": "1"
       },
       "depends_on": {
         "scoreboard": {
@@ -1275,6 +1616,7 @@
         "test": [
           "CMD",
           "python3",
+          "-I",
           "-c",
           "from frost.client import request; request()"
         ],
@@ -1282,6 +1624,22 @@
         "timeout": "4s",
         "retries": 3,
         "start_period": "10s"
+      },
+      "cap_add": [
+        "CHOWN",
+        "DAC_OVERRIDE",
+        "FOWNER",
+        "KILL",
+        "SETGID",
+        "SETUID",
+        "SYS_CHROOT",
+        "NET_BIND_SERVICE",
+        "AUDIT_WRITE"
+      ],
+      "cpu_shares": 256,
+      "stop_grace_period": "30s",
+      "labels": {
+        "frost.home": "checkpoint"
       }
     },
     "player18": {
@@ -1296,7 +1654,7 @@
         "no-new-privileges:true"
       ],
       "cap_drop": [
-        "NET_RAW"
+        "ALL"
       ],
       "pids_limit": 96,
       "mem_limit": "256m",
@@ -1307,21 +1665,24 @@
           "soft": 1024,
           "hard": 2048
         },
-        "core": 0
+        "core": 0,
+        "fsize": 83886080
       },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2218:22"
       ],
       "tmpfs": [
         "/run:rw,nosuid,nodev,size=16m",
-        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777",
+        "/home/player:rw,exec,nosuid,nodev,size=64m,nr_inodes=4096,uid=1000,gid=1000,mode=0700"
       ],
       "volumes": [
         "player18-state:/var/lib/frost",
-        "player18-home:/home/player",
+        "player18-home:/var/lib/frost-private/legacy:ro",
         "./secrets/player18/shadow:/run/bootstrap/shadow:ro",
         "./secrets/player18/authorized_keys:/run/bootstrap/authorized_keys:ro",
-        "./secrets/player18/token:/run/bootstrap/score_token:ro"
+        "./secrets/player18/token:/run/bootstrap/score_token:ro",
+        "player18-checkpoint:/var/lib/frost-private/saved"
       ],
       "networks": [
         "lane18"
@@ -1334,7 +1695,8 @@
         }
       },
       "environment": {
-        "SCORE_URL": "http://scoreboard:8080"
+        "SCORE_URL": "http://scoreboard:8080",
+        "FROST_CHECKPOINT_HOME": "1"
       },
       "depends_on": {
         "scoreboard": {
@@ -1345,6 +1707,7 @@
         "test": [
           "CMD",
           "python3",
+          "-I",
           "-c",
           "from frost.client import request; request()"
         ],
@@ -1352,6 +1715,22 @@
         "timeout": "4s",
         "retries": 3,
         "start_period": "10s"
+      },
+      "cap_add": [
+        "CHOWN",
+        "DAC_OVERRIDE",
+        "FOWNER",
+        "KILL",
+        "SETGID",
+        "SETUID",
+        "SYS_CHROOT",
+        "NET_BIND_SERVICE",
+        "AUDIT_WRITE"
+      ],
+      "cpu_shares": 256,
+      "stop_grace_period": "30s",
+      "labels": {
+        "frost.home": "checkpoint"
       }
     },
     "player19": {
@@ -1366,7 +1745,7 @@
         "no-new-privileges:true"
       ],
       "cap_drop": [
-        "NET_RAW"
+        "ALL"
       ],
       "pids_limit": 96,
       "mem_limit": "256m",
@@ -1377,21 +1756,24 @@
           "soft": 1024,
           "hard": 2048
         },
-        "core": 0
+        "core": 0,
+        "fsize": 83886080
       },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2219:22"
       ],
       "tmpfs": [
         "/run:rw,nosuid,nodev,size=16m",
-        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777",
+        "/home/player:rw,exec,nosuid,nodev,size=64m,nr_inodes=4096,uid=1000,gid=1000,mode=0700"
       ],
       "volumes": [
         "player19-state:/var/lib/frost",
-        "player19-home:/home/player",
+        "player19-home:/var/lib/frost-private/legacy:ro",
         "./secrets/player19/shadow:/run/bootstrap/shadow:ro",
         "./secrets/player19/authorized_keys:/run/bootstrap/authorized_keys:ro",
-        "./secrets/player19/token:/run/bootstrap/score_token:ro"
+        "./secrets/player19/token:/run/bootstrap/score_token:ro",
+        "player19-checkpoint:/var/lib/frost-private/saved"
       ],
       "networks": [
         "lane19"
@@ -1404,7 +1786,8 @@
         }
       },
       "environment": {
-        "SCORE_URL": "http://scoreboard:8080"
+        "SCORE_URL": "http://scoreboard:8080",
+        "FROST_CHECKPOINT_HOME": "1"
       },
       "depends_on": {
         "scoreboard": {
@@ -1415,6 +1798,7 @@
         "test": [
           "CMD",
           "python3",
+          "-I",
           "-c",
           "from frost.client import request; request()"
         ],
@@ -1422,6 +1806,22 @@
         "timeout": "4s",
         "retries": 3,
         "start_period": "10s"
+      },
+      "cap_add": [
+        "CHOWN",
+        "DAC_OVERRIDE",
+        "FOWNER",
+        "KILL",
+        "SETGID",
+        "SETUID",
+        "SYS_CHROOT",
+        "NET_BIND_SERVICE",
+        "AUDIT_WRITE"
+      ],
+      "cpu_shares": 256,
+      "stop_grace_period": "30s",
+      "labels": {
+        "frost.home": "checkpoint"
       }
     },
     "player20": {
@@ -1436,7 +1836,7 @@
         "no-new-privileges:true"
       ],
       "cap_drop": [
-        "NET_RAW"
+        "ALL"
       ],
       "pids_limit": 96,
       "mem_limit": "256m",
@@ -1447,21 +1847,24 @@
           "soft": 1024,
           "hard": 2048
         },
-        "core": 0
+        "core": 0,
+        "fsize": 83886080
       },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2220:22"
       ],
       "tmpfs": [
         "/run:rw,nosuid,nodev,size=16m",
-        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777",
+        "/home/player:rw,exec,nosuid,nodev,size=64m,nr_inodes=4096,uid=1000,gid=1000,mode=0700"
       ],
       "volumes": [
         "player20-state:/var/lib/frost",
-        "player20-home:/home/player",
+        "player20-home:/var/lib/frost-private/legacy:ro",
         "./secrets/player20/shadow:/run/bootstrap/shadow:ro",
         "./secrets/player20/authorized_keys:/run/bootstrap/authorized_keys:ro",
-        "./secrets/player20/token:/run/bootstrap/score_token:ro"
+        "./secrets/player20/token:/run/bootstrap/score_token:ro",
+        "player20-checkpoint:/var/lib/frost-private/saved"
       ],
       "networks": [
         "lane20"
@@ -1474,7 +1877,8 @@
         }
       },
       "environment": {
-        "SCORE_URL": "http://scoreboard:8080"
+        "SCORE_URL": "http://scoreboard:8080",
+        "FROST_CHECKPOINT_HOME": "1"
       },
       "depends_on": {
         "scoreboard": {
@@ -1485,6 +1889,7 @@
         "test": [
           "CMD",
           "python3",
+          "-I",
           "-c",
           "from frost.client import request; request()"
         ],
@@ -1492,6 +1897,22 @@
         "timeout": "4s",
         "retries": 3,
         "start_period": "10s"
+      },
+      "cap_add": [
+        "CHOWN",
+        "DAC_OVERRIDE",
+        "FOWNER",
+        "KILL",
+        "SETGID",
+        "SETUID",
+        "SYS_CHROOT",
+        "NET_BIND_SERVICE",
+        "AUDIT_WRITE"
+      ],
+      "cpu_shares": 256,
+      "stop_grace_period": "30s",
+      "labels": {
+        "frost.home": "checkpoint"
       }
     },
     "player21": {
@@ -1506,7 +1927,7 @@
         "no-new-privileges:true"
       ],
       "cap_drop": [
-        "NET_RAW"
+        "ALL"
       ],
       "pids_limit": 96,
       "mem_limit": "256m",
@@ -1517,21 +1938,24 @@
           "soft": 1024,
           "hard": 2048
         },
-        "core": 0
+        "core": 0,
+        "fsize": 83886080
       },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2221:22"
       ],
       "tmpfs": [
         "/run:rw,nosuid,nodev,size=16m",
-        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777",
+        "/home/player:rw,exec,nosuid,nodev,size=64m,nr_inodes=4096,uid=1000,gid=1000,mode=0700"
       ],
       "volumes": [
         "player21-state:/var/lib/frost",
-        "player21-home:/home/player",
+        "player21-home:/var/lib/frost-private/legacy:ro",
         "./secrets/player21/shadow:/run/bootstrap/shadow:ro",
         "./secrets/player21/authorized_keys:/run/bootstrap/authorized_keys:ro",
-        "./secrets/player21/token:/run/bootstrap/score_token:ro"
+        "./secrets/player21/token:/run/bootstrap/score_token:ro",
+        "player21-checkpoint:/var/lib/frost-private/saved"
       ],
       "networks": [
         "lane21"
@@ -1544,7 +1968,8 @@
         }
       },
       "environment": {
-        "SCORE_URL": "http://scoreboard:8080"
+        "SCORE_URL": "http://scoreboard:8080",
+        "FROST_CHECKPOINT_HOME": "1"
       },
       "depends_on": {
         "scoreboard": {
@@ -1555,6 +1980,7 @@
         "test": [
           "CMD",
           "python3",
+          "-I",
           "-c",
           "from frost.client import request; request()"
         ],
@@ -1562,6 +1988,22 @@
         "timeout": "4s",
         "retries": 3,
         "start_period": "10s"
+      },
+      "cap_add": [
+        "CHOWN",
+        "DAC_OVERRIDE",
+        "FOWNER",
+        "KILL",
+        "SETGID",
+        "SETUID",
+        "SYS_CHROOT",
+        "NET_BIND_SERVICE",
+        "AUDIT_WRITE"
+      ],
+      "cpu_shares": 256,
+      "stop_grace_period": "30s",
+      "labels": {
+        "frost.home": "checkpoint"
       }
     },
     "player22": {
@@ -1576,7 +2018,7 @@
         "no-new-privileges:true"
       ],
       "cap_drop": [
-        "NET_RAW"
+        "ALL"
       ],
       "pids_limit": 96,
       "mem_limit": "256m",
@@ -1587,21 +2029,24 @@
           "soft": 1024,
           "hard": 2048
         },
-        "core": 0
+        "core": 0,
+        "fsize": 83886080
       },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2222:22"
       ],
       "tmpfs": [
         "/run:rw,nosuid,nodev,size=16m",
-        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777",
+        "/home/player:rw,exec,nosuid,nodev,size=64m,nr_inodes=4096,uid=1000,gid=1000,mode=0700"
       ],
       "volumes": [
         "player22-state:/var/lib/frost",
-        "player22-home:/home/player",
+        "player22-home:/var/lib/frost-private/legacy:ro",
         "./secrets/player22/shadow:/run/bootstrap/shadow:ro",
         "./secrets/player22/authorized_keys:/run/bootstrap/authorized_keys:ro",
-        "./secrets/player22/token:/run/bootstrap/score_token:ro"
+        "./secrets/player22/token:/run/bootstrap/score_token:ro",
+        "player22-checkpoint:/var/lib/frost-private/saved"
       ],
       "networks": [
         "lane22"
@@ -1614,7 +2059,8 @@
         }
       },
       "environment": {
-        "SCORE_URL": "http://scoreboard:8080"
+        "SCORE_URL": "http://scoreboard:8080",
+        "FROST_CHECKPOINT_HOME": "1"
       },
       "depends_on": {
         "scoreboard": {
@@ -1625,6 +2071,7 @@
         "test": [
           "CMD",
           "python3",
+          "-I",
           "-c",
           "from frost.client import request; request()"
         ],
@@ -1632,6 +2079,22 @@
         "timeout": "4s",
         "retries": 3,
         "start_period": "10s"
+      },
+      "cap_add": [
+        "CHOWN",
+        "DAC_OVERRIDE",
+        "FOWNER",
+        "KILL",
+        "SETGID",
+        "SETUID",
+        "SYS_CHROOT",
+        "NET_BIND_SERVICE",
+        "AUDIT_WRITE"
+      ],
+      "cpu_shares": 256,
+      "stop_grace_period": "30s",
+      "labels": {
+        "frost.home": "checkpoint"
       }
     },
     "player23": {
@@ -1646,7 +2109,7 @@
         "no-new-privileges:true"
       ],
       "cap_drop": [
-        "NET_RAW"
+        "ALL"
       ],
       "pids_limit": 96,
       "mem_limit": "256m",
@@ -1657,21 +2120,24 @@
           "soft": 1024,
           "hard": 2048
         },
-        "core": 0
+        "core": 0,
+        "fsize": 83886080
       },
       "ports": [
         "${SSH_BIND:-0.0.0.0}:2223:22"
       ],
       "tmpfs": [
         "/run:rw,nosuid,nodev,size=16m",
-        "/tmp:rw,nosuid,nodev,size=32m,mode=1777"
+        "/tmp:rw,nosuid,nodev,size=32m,mode=1777",
+        "/home/player:rw,exec,nosuid,nodev,size=64m,nr_inodes=4096,uid=1000,gid=1000,mode=0700"
       ],
       "volumes": [
         "player23-state:/var/lib/frost",
-        "player23-home:/home/player",
+        "player23-home:/var/lib/frost-private/legacy:ro",
         "./secrets/player23/shadow:/run/bootstrap/shadow:ro",
         "./secrets/player23/authorized_keys:/run/bootstrap/authorized_keys:ro",
-        "./secrets/player23/token:/run/bootstrap/score_token:ro"
+        "./secrets/player23/token:/run/bootstrap/score_token:ro",
+        "player23-checkpoint:/var/lib/frost-private/saved"
       ],
       "networks": [
         "lane23"
@@ -1684,7 +2150,8 @@
         }
       },
       "environment": {
-        "SCORE_URL": "http://scoreboard:8080"
+        "SCORE_URL": "http://scoreboard:8080",
+        "FROST_CHECKPOINT_HOME": "1"
       },
       "depends_on": {
         "scoreboard": {
@@ -1695,6 +2162,7 @@
         "test": [
           "CMD",
           "python3",
+          "-I",
           "-c",
           "from frost.client import request; request()"
         ],
@@ -1702,6 +2170,22 @@
         "timeout": "4s",
         "retries": 3,
         "start_period": "10s"
+      },
+      "cap_add": [
+        "CHOWN",
+        "DAC_OVERRIDE",
+        "FOWNER",
+        "KILL",
+        "SETGID",
+        "SETUID",
+        "SYS_CHROOT",
+        "NET_BIND_SERVICE",
+        "AUDIT_WRITE"
+      ],
+      "cpu_shares": 256,
+      "stop_grace_period": "30s",
+      "labels": {
+        "frost.home": "checkpoint"
       }
     },
     "spawner": {
@@ -1754,6 +2238,7 @@
         "test": [
           "CMD",
           "python3",
+          "-I",
           "-c",
           "from frost.dynamic import Client; assert Client().call('ping')"
         ],
@@ -1942,6 +2427,7 @@
         "test": [
           "CMD",
           "python3",
+          "-I",
           "-c",
           "import socket; from frost.wire import send,receive; s=socket.socket(socket.AF_UNIX); s.settimeout(3); s.connect('/run/frost/gateway.sock'); send(s,b'J',{'action':'ping'}); assert receive(s)[0]==b'M'"
         ],
@@ -2008,7 +2494,30 @@
     "gateway-home": {},
     "controller-socket": {},
     "spawner-state": {},
-    "spawner-home": {}
+    "spawner-home": {},
+    "player01-checkpoint": {},
+    "player02-checkpoint": {},
+    "player03-checkpoint": {},
+    "player04-checkpoint": {},
+    "player05-checkpoint": {},
+    "player06-checkpoint": {},
+    "player07-checkpoint": {},
+    "player08-checkpoint": {},
+    "player09-checkpoint": {},
+    "player10-checkpoint": {},
+    "player11-checkpoint": {},
+    "player12-checkpoint": {},
+    "player13-checkpoint": {},
+    "player14-checkpoint": {},
+    "player15-checkpoint": {},
+    "player16-checkpoint": {},
+    "player17-checkpoint": {},
+    "player18-checkpoint": {},
+    "player19-checkpoint": {},
+    "player20-checkpoint": {},
+    "player21-checkpoint": {},
+    "player22-checkpoint": {},
+    "player23-checkpoint": {}
   },
   "networks": {
     "control": {},

@@ -31,7 +31,8 @@ def main():
     parser.add_argument('--plan',action='store_true')
     args=parser.parse_args()
     if args.plan:
-        print('Pro Container: 64 MiB persistentes Home + 16 MiB Spielstand; Board-Zustand 32 MiB.')
+        print('Für Installationen mit begrenztem Arbeits-Home ist keine zusätzliche Einrichtung nötig.')
+        print('Für ältere feste Volumes: 64 MiB persistentes Home + 16 MiB Spielstand; Board-Zustand 32 MiB.')
         print('Sichert alle Daten, stoppt das Spiel, kopiert in begrenzte ext4-Dateisysteme und startet es neu.')
         print('Alte Docker-Volumes bleiben erhalten. Mounts werden vor Docker beim Booten geladen.')
         return
@@ -41,6 +42,10 @@ def main():
     dc=['docker','compose','-f',str(ROOT/'compose.yaml')]
     config=json.loads(subprocess.check_output([*dc,'config','--format','json']))
     if config['name']!='shell-game': raise SystemExit('Unerwartetes Compose-Projekt; nichts geaendert.')
+    players=[v for k,v in config["services"].items() if k.startswith("player")]
+    if (not players and "spawner" in config["services"]) or (players and all(v.get("labels",{}).get("frost.home")=="checkpoint" for v in players)):
+        print("Spieler-Homes verwenden bereits begrenzte Arbeitsdateisysteme und private Sicherungen.")
+        return
     # Inspect the actual current mounts; never assume Docker's storage path.
     sources={}
     for slot in config['services']:

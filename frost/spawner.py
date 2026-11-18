@@ -16,6 +16,7 @@ import time
 
 from .docker_api import Docker,DockerError
 from .dynamic import SOCKET
+from .isolation import SSH_CAPS, ARCHIVE_BYTES, HOME_TMPFS, PLAYER_MEMORY, check_capacity
 
 LABEL='frost.managed'
 
@@ -45,6 +46,9 @@ class Manager:
         self.path=self.root/'dynamic.json'
         self.rows=json.loads(self.path.read_text()) if self.path.exists() else {}
         self.lock=threading.RLock(); self.paused=False
+        self.join_queue=threading.BoundedSemaphore(32)
+        self.join_credit=32.0
+        self.credit_at=time.monotonic()
         self.project=config['project']
         self.pool=ipaddress.ip_network(config.get('network_pool','10.240.0.0/16'))
         if self.pool.version!=4 or not self.pool.is_private: raise ValueError('Private IPv4 pool required')
@@ -82,13 +86,43 @@ class Manager:
                 if part.get('Subnet'):
                     try: used.append(ipaddress.ip_network(part['Subnet']))
                     except ValueError: pass
-        subnet=next((net for net in self.pool.subnets(new_prefix=29) if not any(net.overlaps(other) for other in used if other.version==4)),None)
-        if subnet is None: raise ValueError('Kein freies Spielernetz mehr. Der Veranstalter muss den Netzwerkpool erweitern.')
-        self.docker.call('POST','/networks/create',{'Name':name,'Driver':'bridge','Labels':labels,'IPAM':{'Config':[{'Subnet':str(subnet)}]}})
+        # Find the first aligned /29 gap, including larger overlapping host routes.
+        first = int(self.pool.network_address)
+        for net in sorted((net for net in used if net.version == 4 and net.overlaps(self.pool)),
+                          key=lambda net: int(net.network_address)):
+            if int(net.network_address) > first+7:
+                break
+            first = max(first, (int(net.broadcast_address)//8+1)*8)
+        if first+7 > int(self.pool.broadcast_address):
+            raise ValueError('Kein freies Spielernetz mehr. Der Veranstalter muss den Netzwerkpool erweitern.')
+        subnet = ipaddress.IPv4Network((first,29))
+        self.docker.call('POST','/networks/create',{'Name':name,'Driver':'bridge','Internal':True,
+            'Options':{'com.docker.network.bridge.gateway_mode_ipv4':'isolated'},'Labels':labels,'IPAM':{'Config':[{'Subnet':str(subnet)}]}})
+
+    def admit(self):
+        containers=self.docker.call('GET','/containers/json')
+        active=sum(1 for row in containers if row['Labels'].get(LABEL) or
+                   (row['Image']==self.config['image'] and row['Labels'].get('com.docker.compose.service','').startswith('player')))
+        check_capacity("/run/controller",active)
+
+    def new_join(self):
+        if not self.join_queue.acquire(blocking=False):
+            raise ValueError("Viele Anmeldungen gleichzeitig. Bitte gleich erneut verbinden.")
+        try:
+            return self.create()
+        finally:
+            self.join_queue.release()
 
     def create(self):
         with self.lock:
             if self.paused: raise ValueError('Wartung: Bitte gleich erneut verbinden.')
+            now=time.monotonic()
+            self.join_credit=min(32,self.join_credit+(now-self.credit_at)/5)
+            self.credit_at=now
+            if self.join_credit<1:
+                raise ValueError("Viele neue Anmeldungen. Bitte in fünf Sekunden erneut versuchen.")
+            self.admit()
+            self.join_credit-=1
             slot='elf-'+secrets.token_hex(8)
             prefix=self.project+'-'+slot
             # Compose adds its own project/service labels to built images. Clear
@@ -112,28 +146,29 @@ class Manager:
                     'Memory':64*1024**2,'MemorySwap':64*1024**2,'PidsLimit':16,'CapDrop':['ALL'],'SecurityOpt':['no-new-privileges:true']}})
                 try: self.docker.call('PUT',f'/containers/{helper}/archive?path=/run/bootstrap',archive(bootstrap))
                 finally: self.docker.call('DELETE',f'/containers/{helper}?force=1')
-                spec={'Image':self.config['image'],'Cmd':['player'],'Labels':labels,'Env':['SCORE_URL=http://scoreboard:8080'],
-                      'Healthcheck':{'Test':['CMD','python3','-c','from frost.client import request; request()'],'Interval':2_000_000_000,'Timeout':3_000_000_000,'Retries':3},
-                      'HostConfig':{'Init':True,'ReadonlyRootfs':True,'Memory':256*1024**2,'MemorySwap':256*1024**2,
-                           'NanoCpus':500_000_000,'PidsLimit':96,'CapDrop':['NET_RAW'],'SecurityOpt':['no-new-privileges:true'],
+                spec={'Image':self.config['image'],'Cmd':['player'],'Labels':{**labels,'frost.home':'checkpoint'},'Env':['SCORE_URL=http://scoreboard:8080','FROST_CHECKPOINT_HOME=1'],
+                      'Healthcheck':{'Test':['CMD','python3','-I','-c','from frost.client import request; request()'],'Interval':2_000_000_000,'Timeout':3_000_000_000,'Retries':3},
+                      'HostConfig':{'Init':True,'ReadonlyRootfs':True,'Memory':PLAYER_MEMORY,'MemorySwap':PLAYER_MEMORY,
+                           'NanoCpus':500_000_000,'PidsLimit':96,'CpuShares':256,'CapDrop':['ALL'],'CapAdd':SSH_CAPS,'SecurityOpt':['no-new-privileges:true'],
                            'RestartPolicy':{'Name':'unless-stopped'},'NetworkMode':row['network'],
-                           'Tmpfs':{'/run':'rw,nosuid,nodev,size=16m','/tmp':'rw,nosuid,nodev,size=32m,mode=1777'},
-                           'Binds':[row['home']+':/home/player',row['state']+':/var/lib/frost',row['bootstrap']+':/run/bootstrap:ro'],
-                           'Ulimits':[{'Name':'nofile','Soft':1024,'Hard':2048},{'Name':'core','Soft':0,'Hard':0}],
+                           'Tmpfs':{'/home/player':HOME_TMPFS,'/run':'rw,nosuid,nodev,size=16m','/tmp':'rw,nosuid,nodev,size=32m,mode=1777'},
+                           'Binds':[row['home']+':/var/lib/frost-private/saved',row['state']+':/var/lib/frost',row['bootstrap']+':/run/bootstrap:ro'],
+                           'Ulimits':[{'Name':'nofile','Soft':1024,'Hard':2048},{'Name':'core','Soft':0,'Hard':0},{'Name':'fsize','Soft':ARCHIVE_BYTES,'Hard':ARCHIVE_BYTES}],
                            'LogConfig':{'Type':'json-file','Config':{'max-size':'5m','max-file':'2'}}}}
                 self.docker.call('POST','/containers/create?name='+prefix,spec)
-                self.start(slot)
+                self.start(slot,admitted=True)
                 return {'slot':slot}
             except Exception:
                 self.remove(slot)
                 raise
 
-    def start(self,slot):
+    def start(self,slot,admitted=False):
         with self.lock:
             if self.paused: raise ValueError('Wartung: Bitte gleich erneut verbinden.')
             row=self.rows[slot]
-            self.attach(row)
             info=self.docker.call('GET',f"/containers/{row['container']}/json")
+            if not info['State']['Running'] and not admitted: self.admit()
+            self.attach(row)
             if not info['State']['Running']: self.docker.call('POST',f"/containers/{row['container']}/start")
             deadline=time.monotonic()+35
             while time.monotonic()<deadline:
@@ -157,7 +192,13 @@ class Manager:
             row=self.rows.get(slot)
             if not row: return
             if self.name(slot)=='': self.remove(slot); return
-            self.docker.call('POST',f"/containers/{row['container']}/stop?t=3")
+            self.docker.call('POST',f"/containers/{row['container']}/stop?t=30")
+            self.detach(row)
+
+    def detach(self,row):
+        for role in ('gateway','scoreboard'):
+            try: self.docker.call('POST',f"/networks/{row['network']}/disconnect",{'Container':self.service(role),'Force':True})
+            except (DockerError,ValueError): pass
 
     def remove(self,slot):
         row=self.rows.get(slot)
@@ -165,9 +206,7 @@ class Manager:
         for name in (row['container']+'-init',row['container']):
             try: self.docker.call('DELETE',f'/containers/{name}?force=1')
             except DockerError: pass
-        for role in ('gateway','scoreboard'):
-            try: self.docker.call('POST',f"/networks/{row['network']}/disconnect",{'Container':self.service(role),'Force':True})
-            except (DockerError,ValueError): pass
+        self.detach(row)
         try: self.docker.call('DELETE','/networks/'+row['network'])
         except DockerError: pass
         for key in ('home','state','bootstrap'):
@@ -187,7 +226,7 @@ def main():
             try:
                 data=json.loads(self.rfile.readline(2048)); action=data.get('action'); slot=data.get('slot')
                 if action in ('start','name','idle','forget') and slot not in manager.rows: raise ValueError('Spieler nicht gefunden.')
-                if action=='create': result=manager.create()
+                if action=='create': result=manager.new_join()
                 elif action=='start': result=manager.start(slot)
                 elif action=='name': result=manager.name(slot)
                 elif action=='idle': result=manager.idle(slot)

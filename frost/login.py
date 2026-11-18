@@ -170,7 +170,7 @@ def main():
         from .board import watch
         watch()
         return 0
-    lock=open("/tmp/frost-login.lock","w")
+    lock=open("/run/frost/login.lock","w")
     try: fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
     except BlockingIOError:
         print("Dieser Spielerplatz hat bereits eine aktive SSH-Verbindung.")

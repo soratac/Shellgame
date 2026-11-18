@@ -11,9 +11,8 @@ PermitEmptyPasswords no
 UsePAM no
 PrintMotd no
 PrintLastLog no
-X11Forwarding no
-AllowTcpForwarding no
-AllowAgentForwarding no
+DisableForwarding yes
+PermitUserRC no
 PermitTunnel no
 GatewayPorts no
 PermitUserEnvironment no

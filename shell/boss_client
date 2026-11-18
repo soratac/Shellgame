@@ -8,3 +8,4 @@ Host 127.12.24.1
     BatchMode yes
     ConnectTimeout 3
     RequestTTY no
+    ProxyCommand /usr/bin/socat STDIO UNIX-CONNECT:/run/frost-boss/ssh.sock

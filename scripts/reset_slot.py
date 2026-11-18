@@ -35,6 +35,7 @@ def main():
     result=json.loads(run(args.slot,f"from frost.client import request; import json; print(json.dumps(request('admin-reset', [{args.expected_name!r}])))").stdout)
     if not result["ok"]: raise SystemExit(result["message"])
     subprocess.run(["docker","compose","exec","-T","--user","player",args.slot,"python3","-m","frost.world","reset"],cwd=ROOT,check=True)
+    run(args.slot,"import os; from frost.home_store import save; save() if os.environ.get('FROST_CHECKPOINT_HOME')=='1' else None")
     run("scoreboard",f"import sqlite3; db=sqlite3.connect('/var/lib/frost/scoreboard.sqlite'); db.execute('DELETE FROM scores WHERE slot=?', ({args.slot!r},)); db.commit()")
     config=json.loads(subprocess.check_output(["docker","compose","config","--format","json"],cwd=ROOT,text=True))
     if "gateway" in config["services"]:

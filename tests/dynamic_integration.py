@@ -4,6 +4,7 @@ import argparse
 import json
 import re
 import socket
+import tarfile
 import subprocess
 import time
 import urllib.request
@@ -66,6 +67,17 @@ def main():
             print(f'PASS: interactive player {i+1}/{count} joined',flush=True)
         rows=managed()
         assert len(rows)==count and all(r['State']=='running' for r in rows)
+        first=next(r for r in scores() if r['name']=='DynamicElf00')['slot']
+        player=next(r for r in rows if r['Labels']['frost.slot']==first)
+        with (ROOT/'tests/player_isolation.py').open('rb') as probe:
+            subprocess.run(['docker','exec','-i','-u','player',player['Id'],'tee','/tmp/check.py'],
+                           stdin=probe,stdout=subprocess.DEVNULL,check=True)
+        sessions[0].send("python3 /tmp/check.py\r");sessions[0].expect("ISOLATION_OK")
+        sessions[0].send("echo checkpoint-ok > ~/checkpoint-test\r")
+        sessions[0].send("printf 'SAVED_%s\\n' OK\r")
+        sessions[0].expect("SAVED_OK")
+        network=docker.call('GET','/networks/'+next(iter(player['NetworkSettings']['Networks'])))
+        assert network['Internal'] and network['Options']['com.docker.network.bridge.gateway_mode_ipv4']=='isolated'
         assert all(s.proc.poll() is None for s in sessions)
         print(f'PASS: {count} simultaneous SSH sessions in {count} separate containers',flush=True)
         for s in sessions: s.close()
@@ -85,7 +97,16 @@ def main():
             assert not info['Config']['Labels'].get('com.docker.compose.project')
             assert not info['Config']['Labels'].get('com.docker.compose.service')
             assert all(m['Destination']!='/var/run/docker.sock' for m in info['Mounts'])
-        assert len({next(iter(r['NetworkSettings']['Networks'])) for r in rows})==count
+        networks={next(iter(r['NetworkSettings']['Networks'])) for r in rows}
+        assert len(networks)==count
+        for role in ('gateway','scoreboard'):
+            ident=run('ps','-q',role,capture_output=True,text=True).stdout.strip()
+            deadline=time.monotonic()+8
+            while True:
+                attached=docker.call('GET','/containers/'+ident+'/json')['NetworkSettings']['Networks']
+                if not networks.intersection(attached): break
+                assert time.monotonic()<deadline, "idle network endpoints still attached"
+                time.sleep(.2)
         # An abandoned name prompt must leave neither a slot nor a container.
         abandoned=Session('gateway',ports['gateway'],folder);sessions.append(abandoned)
         abandoned.expect('CHARAKTER',timeout=60)
@@ -98,6 +119,14 @@ def main():
         backup_only=['python3',str(ROOT/'scripts/reset_event.py'),'--compose-file',str(path),
                      '--backup-dir',str(folder/'backups'),'--backup-only','--recreate']
         subprocess.run(backup_only,check=True)
+        backup=max((folder/'backups').iterdir())
+        with tarfile.open(backup/first/'home.tar') as archive:
+            assert archive.extractfile('./checkpoint-test').read()==b'checkpoint-ok\n'
+        run('exec','-T','gateway','python3','-I','-c',
+            f"from frost.dynamic import Client; Client().destination({first!r})")
+        content=subprocess.check_output(['docker','exec','-u','player',before,'cat','/home/player/checkpoint-test'])
+        assert content==b'checkpoint-ok\n'
+        run('exec','-T','gateway','python3','-I','-c',f"from frost.dynamic import Client; Client().idle({first!r})")
         print('PASS: abandoned joins cleaned up; unprivileged controller access denied; forced service recreation preserves players',flush=True)
         s=Session('gateway',ports['gateway'],folder);sessions.append(s)
         s.expect('CHARAKTER',timeout=60)

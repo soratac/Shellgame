@@ -8,11 +8,14 @@ import secrets
 import shutil
 import datetime
 import subprocess
+import sys
 from pathlib import Path
 try: from .env_config import read_env,write_env
 except ImportError: from env_config import read_env,write_env
 
 ROOT=Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(ROOT))
+from frost.isolation import SSH_CAPS, FILE_BYTES, ARCHIVE_BYTES, HOME_TMPFS
 
 
 def write_private(path,text):
@@ -112,13 +115,25 @@ def main(argv=None):
         # ports to be reachable from outside the VM (Docker drops these on internal networks).
         networks[network]={}
         services[slot]=common(slot,"player",2200+i,[network])
+        services[slot].update(cap_drop=["ALL"],cap_add=SSH_CAPS,cpu_shares=256)
+        services[slot]["ulimits"]["fsize"]=FILE_BYTES
         token_path=secret_dir/slot/"token"
         if not token_path.exists(): write_private(token_path,secrets.token_hex(32))
         tokens[slot]=token_path.read_text().strip()
         services[slot]["volumes"].append(f"./secrets/{slot}/token:/run/bootstrap/score_token:ro")
         services[slot]["environment"]={"SCORE_URL":"http://scoreboard:8080"}
+        if not (ROOT/"storage/volumes.json").exists():
+            service=services[slot]
+            volumes[slot+"-checkpoint"]={}
+            service["volumes"][1]=f"{slot}-home:/var/lib/frost-private/legacy:ro"
+            service["volumes"].append(f"{slot}-checkpoint:/var/lib/frost-private/saved")
+            service["environment"]["FROST_CHECKPOINT_HOME"]="1"
+            service["tmpfs"].append("/home/player:"+HOME_TMPFS)
+            service["ulimits"]["fsize"]=ARCHIVE_BYTES
+            service["stop_grace_period"]="30s"
+            service["labels"]={"frost.home":"checkpoint"}
         services[slot]["depends_on"]={"scoreboard":{"condition":"service_healthy"}}
-        services[slot]["healthcheck"]={"test":["CMD","python3","-c","from frost.client import request; request()"],"interval":"15s","timeout":"4s","retries":3,"start_period":"10s"}
+        services[slot]["healthcheck"]={"test":["CMD","python3","-I","-c","from frost.client import request; request()"],"interval":"15s","timeout":"4s","retries":3,"start_period":"10s"}
     services["scoreboard"]=common("scoreboard","scoreboard",2200,list(networks))
     services["scoreboard"]["build"]={"context":"."}
     services["scoreboard"]["cpus"]="1.0"
@@ -127,13 +142,13 @@ def main(argv=None):
     services["scoreboard"]["environment"]={"MUSIC_URL":"${MUSIC_URL:-http://${GAME_HOST:-localhost}:${MUSIC_PORT:-8094}}"}
     services["scoreboard"]["ports"].append("${MUSIC_BIND:-0.0.0.0}:${MUSIC_PORT:-8094}:8094")
     services["scoreboard"]["volumes"].append("./secrets/scoreboard/tokens.json:/run/bootstrap/score_tokens:ro")
-    services["scoreboard"]["healthcheck"]={"test":["CMD","python3","-c","import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health',timeout=2)"],"interval":"10s","timeout":"3s","retries":3}
+    services["scoreboard"]["healthcheck"]={"test":["CMD","python3","-I","-c","import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health',timeout=2)"],"interval":"10s","timeout":"3s","retries":3}
     write_private(secret_dir/"scoreboard"/"tokens.json",json.dumps(tokens))
     gateway=common("gateway","gateway",2299,list(networks))
     gateway.update(mem_limit="512m",memswap_limit="512m",cpus="2.0",pids_limit=384)
     gateway["ports"]=["${GATEWAY_BIND:-127.0.0.1}:${GATEWAY_PORT:-2299}:22"]
     gateway["depends_on"]={slot:{"condition":"service_healthy"} for slot in services if slot.startswith("player") or slot=="scoreboard"}
-    gateway["healthcheck"]={"test":["CMD","python3","-c","import socket; from frost.wire import send,receive; s=socket.socket(socket.AF_UNIX); s.settimeout(3); s.connect('/run/frost/gateway.sock'); send(s,b'J',{'action':'ping'}); assert receive(s)[0]==b'M'"],"interval":"15s","timeout":"4s","retries":3,"start_period":"15s"}
+    gateway["healthcheck"]={"test":["CMD","python3","-I","-c","import socket; from frost.wire import send,receive; s=socket.socket(socket.AF_UNIX); s.settimeout(3); s.connect('/run/frost/gateway.sock'); send(s,b'J',{'action':'ping'}); assert receive(s)[0]==b'M'"],"interval":"15s","timeout":"4s","retries":3,"start_period":"15s"}
     router={slot:{"password":(secret_dir/slot/"password").read_text().strip()} for slot in [*tokens,"scoreboard"]}
     write_private(secret_dir/"gateway"/"router.json",json.dumps(router))
     shadow=secret_dir/"gateway"/"shadow"
@@ -156,7 +171,7 @@ def main(argv=None):
         controller.update(cpus="1.0",mem_limit="512m",memswap_limit="512m",pids_limit=128)
         controller["volumes"] += ["/var/run/docker.sock:/var/run/docker.sock", "controller-socket:/run/controller",
                                   "./secrets/spawner/spawn-config.json:/run/bootstrap/spawn-config.json:ro"]
-        controller["healthcheck"]={"test":["CMD","python3","-c","from frost.dynamic import Client; assert Client().call('ping')"],"interval":"10s","timeout":"4s","retries":3}
+        controller["healthcheck"]={"test":["CMD","python3","-I","-c","from frost.dynamic import Client; assert Client().call('ping')"],"interval":"10s","timeout":"4s","retries":3}
         write_private(secret_dir/"spawner"/"spawn-config.json",json.dumps({"project":"shell-game","image":"frostbyte:local","network_pool":env["PLAYER_NETWORK_POOL"]}))
         services["spawner"]=controller
         gateway.setdefault("environment",{})["FROST_DYNAMIC"]="1"

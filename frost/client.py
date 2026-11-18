@@ -92,7 +92,7 @@ def main():
             return 1
         sync_files()
         handshake = subprocess.run(["/usr/bin/ssh", "-F", "/etc/frost/boss_client", BOSS_IP],
-                                   stdout=subprocess.PIPE, text=True)
+                                   stdout=subprocess.PIPE, text=True, env={**os.environ, "SHELL": "/bin/sh"})
         if handshake.returncode or handshake.stdout.strip() != "GRINCH":
             print("Grinch antwortet nicht.")
             return 1

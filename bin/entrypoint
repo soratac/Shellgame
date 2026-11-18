@@ -1,11 +1,12 @@
 #!/bin/bash
 set -euo pipefail
+cd /
 role=${1:-player}
 if [[ $role == spawner ]]; then
-    exec python3 -m frost.spawner
+    exec python3 -I -m frost.spawner
 fi
 if [[ ${FROST_BOUNDED_STORAGE:-0} == 1 ]]; then
-    python3 - <<'CHECK'
+    python3 -I - <<'CHECK'
 import os
 for path in ('/home/player','/var/lib/frost'):
     fs=os.statvfs(path)
@@ -25,23 +26,48 @@ if [[ ! -f /var/lib/frost/hostkeys/ssh_host_ed25519_key ]]; then
 fi
 # Docker initializes fresh named volumes from the ownership in the image.
 sshd_config=/etc/frost/sshd_config
+sshd=(/usr/sbin/sshd)
+if [[ $role == player ]]; then
+    sshd=(prlimit --fsize=16777216:16777216 -- /usr/sbin/sshd)
+fi
+checkpoint_pid=
+if [[ ${FROST_CHECKPOINT_HOME:-0} == 1 ]]; then
+    python3 -I -m frost.home_store restore
+    python3 -I -m frost.home_store watch &
+    checkpoint_pid=$!
+fi
 if [[ $role == gateway ]]; then
     install -m 644 /run/bootstrap/entry-player.pub /run/frost/authorized_keys.player
     install -m 644 /run/bootstrap/entry-score.pub /run/frost/authorized_keys.score
     sshd_config=/etc/frost/gateway_sshd_config
-    python3 -m frost.gateway &
+    python3 -I -m frost.gateway &
 elif [[ $role == scoreboard ]]; then
-    python3 -m frost.board &
+    python3 -I -m frost.board &
 else
     printf 'krampus:x:20000:0:99999:7:::\n' >> /run/frost/shadow
     if [[ ! -f /run/frost/boss-key ]]; then ssh-keygen -q -t ed25519 -N '' -f /run/frost/boss-key; fi
     chown player:player /run/frost/boss-key
+    install -m 600 -o player -g player /dev/null /run/frost/login.lock
+    install -d -m 755 -o nobody -g nogroup /run/frost-boss
+    setpriv --reuid=nobody --regid=nogroup --clear-groups socat \
+        UNIX-LISTEN:/run/frost-boss/ssh.sock,mode=666,fork,max-children=4 TCP4:127.12.24.1:2224 &
     { printf '[127.12.24.1]:2224 '; cat /var/lib/frost/hostkeys/ssh_host_ed25519_key.pub; } > /run/frost/boss-host
-    /usr/sbin/sshd -f /etc/frost/boss_sshd
-    python3 -m frost.daemon &
+    "${sshd[@]}" -f /etc/frost/boss_sshd
+    python3 -I -m frost.daemon &
 fi
 service_pid=$!
-/usr/sbin/sshd -D -e -f "$sshd_config" &
+"${sshd[@]}" -D -e -f "$sshd_config" &
 ssh_pid=$!
-trap 'kill "$service_pid" "$ssh_pid" 2>/dev/null || true; wait || true' TERM INT EXIT
+shutdown() {
+    trap - TERM INT EXIT
+    kill "$service_pid" "$ssh_pid" 2>/dev/null || true
+    if [[ -n $checkpoint_pid ]]; then
+        kill "$checkpoint_pid" 2>/dev/null || true
+        pkill -KILL -u player || true
+        python3 -I -m frost.home_store save
+    fi
+    wait "$service_pid" "$ssh_pid" 2>/dev/null || true
+}
+trap 'exit 0' TERM INT
+trap shutdown EXIT
 wait -n "$service_pid" "$ssh_pid"

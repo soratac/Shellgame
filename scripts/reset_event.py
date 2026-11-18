@@ -45,22 +45,41 @@ def main():
     backup.mkdir(parents=True,mode=0o700)
     backup.chmod(0o700)
     dynamic={}
+    checkpointed=set()
+    if players:
+        live_info=json.loads(subprocess.check_output(["docker","inspect",*(ids[s] for s in players)]))
+        checkpointed.update(s for s,info in zip(players,live_info)
+                            if info["Config"]["Labels"].get("frost.home")=="checkpoint")
     if "spawner" in config["services"]:
         import sys
         sys.path.insert(0,str(ROOT))
         from frost.docker_api import Docker
         docker=Docker()
         run("exec","-T","spawner","python3","-c","from frost.dynamic import Client; Client().call('pause')",stdout=subprocess.DEVNULL)
-        dynamic={r['Labels']['frost.slot']:r['Id'] for r in docker.containers(['frost.managed='+config['name']]) if not r['Names'][0].endswith('-init')}
-        for ident in dynamic.values(): docker.call('POST','/containers/'+ident+'/stop?t=3')
+        managed=docker.containers(['frost.managed='+config['name']])
+        checkpointed.update(r['Labels']['frost.slot'] for r in managed if r['Labels'].get('frost.home')=='checkpoint')
+        dynamic={r['Labels']['frost.slot']:r['Id'] for r in managed if not r['Names'][0].endswith('-init')}
+        for ident in dynamic.values(): docker.call('POST','/containers/'+ident+'/stop?t=30')
     run("stop")
     try:
         # Complete every backup before the first mutation. Stopped containers cannot
         # submit stale scores or create files while the reset is in progress.
+        if checkpointed:
+            containers = [ids.get(slot, dynamic.get(slot)) for slot in sorted(checkpointed)]
+            stopped = json.loads(subprocess.check_output(["docker", "inspect", *containers]))
+            for slot, info in zip(sorted(checkpointed), stopped):
+                state = info["State"]
+                if state["Running"] or state["ExitCode"] or state["OOMKilled"]:
+                    raise SystemExit(f"{slot} wurde nicht sauber beendet. Letzte Home-Sicherung prüfen. Kein Reset.")
         for slot in [*targets,*dynamic]:
             target=backup/slot
             target.mkdir(mode=0o700)
             for location,label in [("/var/lib/frost","state"),("/home/player","home")]:
+                if label=="home" and slot in checkpointed:
+                    ident=ids.get(slot,dynamic.get(slot))
+                    subprocess.run(["docker","cp",ident+":/var/lib/frost-private/saved/home.tar",str(target/"home.tar")],check=True)
+                    (target/"home.tar").chmod(0o600)
+                    continue
                 with (target/(label+".tar")).open("wb") as archive:
                     subprocess.run(["docker","cp",f"{ids.get(slot,dynamic.get(slot))}:{location}/.","-"],stdout=archive,check=True)
                 (target/(label+".tar")).chmod(0o600)
@@ -72,7 +91,10 @@ def main():
         for slot in players:
             run("run","--rm","--no-deps","--user","root","--entrypoint","python3",slot,"-c",
                 "from pathlib import Path; Path('/var/lib/frost/state.json').unlink(missing_ok=True)",stdout=subprocess.DEVNULL)
-            run("run","--rm","--no-deps","--user","player","--entrypoint","python3",slot,"-m","frost.world","wipe",stdout=subprocess.DEVNULL)
+            if config["services"][slot].get("labels",{}).get("frost.home")=="checkpoint":
+                run("run","--rm","--no-deps","--entrypoint","python3",slot,"-I","-m","frost.home_store","clear",stdout=subprocess.DEVNULL)
+            else:
+                run("run","--rm","--no-deps","--user","player","--entrypoint","python3",slot,"-I","-m","frost.world","wipe",stdout=subprocess.DEVNULL)
             print(f"{slot}: zurueckgesetzt",flush=True)
         run("run","--rm","--no-deps","--user","root","--entrypoint","python3","scoreboard","-c",
             "from pathlib import Path; [Path('/var/lib/frost/'+name).unlink(missing_ok=True) for name in ('scoreboard.sqlite','scoreboard.sqlite-wal','scoreboard.sqlite-shm')]",stdout=subprocess.DEVNULL)

@@ -60,11 +60,15 @@ class Allocator:
     def reserve(self,code=None,*,issue_code=True):
         if not code and self.provider:
             slot=self.provider.create()
-            with self.lock:
-                code=self._insert(slot,issue_code)
-                lease=secrets.token_hex(16)
-                self.db.execute("UPDATE joins SET active=1,lease=? WHERE slot=?",(lease,slot)); self.db.commit()
+            try:
+                with self.lock, self.db:
+                    code=self._insert(slot,issue_code)
+                    lease=secrets.token_hex(16)
+                    self.db.execute("UPDATE joins SET active=1,lease=? WHERE slot=?",(lease,slot))
                 return slot,code,lease
+            except sqlite3.Error:
+                self.provider.idle(slot)
+                raise
         with self.lock:
             if code:
                 if not isinstance(code,str) or not re.fullmatch(r"[A-F0-9]{16}",normalize(code)):

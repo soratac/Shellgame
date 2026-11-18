@@ -6,7 +6,6 @@ import select
 import sys
 import termios
 import tty
-import urllib.request
 
 
 class Mixer:
@@ -59,9 +58,7 @@ def music_link():
     from .client import request
     url = os.environ.get("FROST_LOCAL_MUSIC")
     if not url:
-        base = os.environ.get("SCORE_URL", "http://scoreboard:8080")
-        with urllib.request.urlopen(base + "/api/music-url", timeout=3) as response:
-            address = response.read(2048).decode().strip()
+        address = request("music-url")["url"]
         session = request("music", ["open"])
         url = f"{address}/#{session['key']}"
     return url
