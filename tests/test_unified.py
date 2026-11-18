@@ -37,11 +37,30 @@ class UnifiedTests(unittest.TestCase):
             self.assertNotEqual((p/'shadow').read_text(),shadow)
             self.assertEqual((p/'password').stat().st_mode & 0o777,0o600)
 
-    def test_command_labels_include_game_items_but_no_private_arguments(self):
-        from frost.activity import public_command
-        for cmd,expected in [("cat my-password.txt","cat"),("mv .depot/stern ~/rucksack/","mv .depot/stern ~/rucksack/"),
-                             ("~/rucksack/funke","~/rucksack/funke"),("token=secret","Shell")]:
-            self.assertEqual(public_command(cmd),expected)
+    def test_exact_command_and_last_five_completed(self):
+        from frost.activity import Activity, screen_command
+        log=Activity()
+        for cmd in ("ls", "pwd", "ls -la", "echo 'a  b' | cat", "pwd", "pwd"):
+            log.begin(cmd)
+            log.finish()
+        log.begin("sleep 3 && printf 'done!'")
+        self.assertEqual(log.snapshot()["command_label"],"sleep 3 && printf 'done!'")
+        self.assertEqual(log.snapshot()["command_history"],["pwd","pwd","echo 'a  b' | cat","ls -la","pwd"])
+        self.assertNotIn(chr(27),screen_command("echo "+chr(27)+"[2J"))
+
+    def test_live_activity_is_separate_from_persisted_scores(self):
+        from frost.board import wrap_command
+        with tempfile.TemporaryDirectory() as folder:
+            b=Board(str(Path(folder)/'b.db'),{})
+            data=dict(public(fresh("Elf")),connected=True,command_label="sleep 12", command_active=True,
+                      command_history=["echo 'one  two' | wc -c"])
+            b.update("a",data)
+            self.assertEqual(b.rows(live=True)[0]["command_history"],data["command_history"])
+            self.assertNotIn("command_history",b.rows()[0])
+            b.update("a",dict(data,connected=False))
+            self.assertEqual(b.rows(live=True),[])
+            b.db.close()
+        self.assertEqual("".join(wrap_command("echo 'one  two' | wc -c",6)),"echo 'one  two' | wc -c")
 
     def test_avatar_presence_events_and_old_rows(self):
         with tempfile.TemporaryDirectory() as folder:

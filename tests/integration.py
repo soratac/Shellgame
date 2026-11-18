@@ -217,13 +217,22 @@ def main():
         board=Session("scoreboard",ports["gateway"],folder,user="score")
         sessions.append(board)
         board.expect("LIVE-SCOREBOARD")
-        s.send("sleep 3\r")
-        deadline=time.monotonic()+3
+        board.send("\t")
+        board.expect("Enter Verlauf")
+        cmds=["echo 'two  spaces' | wc -c","pwd","pwd","true","printf '%s' winter"]
+        for cmd in cmds:
+            s.send(cmd+"\r")
+        s.send("sleep 4 && echo 'two  words'\r")
+        deadline=time.monotonic()+9
         while time.monotonic()<deadline:
-            hero=next(r for r in scores() if r["slot"]=="player01")
-            if hero.get("command_active") and hero["command_label"]=="sleep": break
+            raw=run("exec","-T","scoreboard","python3","-c",
+                    "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8080/api/live').read().decode())",
+                    text=True,capture_output=True).stdout
+            hero=next(r for r in json.loads(raw)["players"] if r["slot"]=="player01")
+            if hero.get("command_active") and hero["command_label"]=="sleep 4 && echo 'two  words'": break
             time.sleep(.1)
-        assert hero.get("command_active") and hero["command_label"]=="sleep",hero
+        assert hero["command_label"]=="sleep 4 && echo 'two  words'" and hero["command_history"]==cmds[::-1],hero
+        board.send("\r"); board.expect("Befehlsverlauf")
         assert "funke" in hero["bag"]
         s.drain(3.1)
         payload=scores()

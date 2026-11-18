@@ -3,7 +3,9 @@
 export LANG=C.UTF-8
 export TERM=${TERM:-xterm-256color}
 export PATH=/usr/local/bin:/usr/bin:/bin
-HISTCONTROL=ignoredups
+HISTCONTROL=
+HISTIGNORE=
+shopt -s cmdhist lithist
 HISTSIZE=2000
 shopt -s histappend checkwinsize
 bind 'set show-all-if-ambiguous off'
@@ -100,7 +102,7 @@ _frost_prompt() {
         43) builtin cd "$HOME/welt/dorf" ;;
         44) builtin cd "$HOME/welt/zitadelle" ;;
     esac
-    command frost observe "$rc" "$last"
+    command frost observe "$rc" "${last:0:500}" --prompt
     command frost finish
     PS1='\[\e[38;5;45m\]\w\[\e[38;5;205m\] ❯ \[\e[0m\]'
 }
@@ -112,4 +114,4 @@ _frost_live_begin() {
 PS0='$(_frost_live_begin)'
 PROMPT_COMMAND=_frost_prompt
 builtin cd "$HOME/welt/dorf"
-printf '\n  ls umsehen · mv mitnehmen · cd gehen · hilfe\n\n'
+printf '\n  Ausgeführte Befehle sind im Live-Scoreboard sichtbar.\n\n'

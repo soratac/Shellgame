@@ -11,6 +11,7 @@ import time
 import urllib.request
 from pathlib import Path
 
+from .activity import Activity, MAX_COMMAND
 from .engine import act, fresh, public
 from .records import migrate
 
@@ -19,7 +20,7 @@ SOCKET = os.environ.get("FROST_SOCKET", "/run/frost/game.sock")
 LOCK = threading.RLock()
 DIRTY = threading.Event()
 STATE = None
-ACTIVITY = {"command_label": "", "command_active": False}
+ACTIVITY = Activity()
 
 
 def save():
@@ -49,7 +50,8 @@ def publish_forever():
         with LOCK:
             snapshot = public(STATE)
             snapshot["connected"] = connected()
-            snapshot.update(ACTIVITY)
+            if not snapshot["connected"]: ACTIVITY.clear()
+            snapshot.update(ACTIVITY.snapshot())
         if not token or not snapshot["name"]:
             continue
         try:
@@ -67,8 +69,8 @@ class Handler(socketserver.StreamRequestHandler):
     def handle(self):
         self.connection.settimeout(2)
         try:
-            raw = self.rfile.readline(16385)
-            if len(raw) > 16384 or not raw.endswith(b"\n"):
+            raw = self.rfile.readline(12*MAX_COMMAND+1025)
+            if len(raw) > 12*MAX_COMMAND+1024 or not raw.endswith(b"\n"):
                 return
             data = json.loads(raw)
             if not isinstance(data, dict):
@@ -83,13 +85,12 @@ class Handler(socketserver.StreamRequestHandler):
                 peer = self.connection.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, struct.calcsize("3i"))
                 uid = struct.unpack("3i", peer)[1]
                 if action == "activity":
-                    from .activity import public_command
-                    ACTIVITY.update(command_label=public_command(args[0]) if args else "", command_active=True)
+                    if args: ACTIVITY.begin(args[0])
                     DIRTY.set()
                     self.wfile.write(b'{"ok":true}\n')
                     return
-                if action == "observe" and "command" in data and data["command"]:
-                    ACTIVITY["command_active"] = False
+                if action == "observe" and data.get("prompt") is True:
+                    ACTIVITY.finish()
                 if action == "admin-reset":
                     if uid != 0 or args != [STATE["name"]]:
                         result = {"ok": False, "message": "Administrator identity/name check failed.", "stop": False}

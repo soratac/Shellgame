@@ -63,8 +63,8 @@ def main():
     args = sys.argv[1:]
     action = args.pop(0) if args else "status"
     if action == "activity":
-        from .activity import public_command
-        request("activity", [public_command(sys.stdin.read(1024))])
+        from .activity import bounded_command, MAX_COMMAND
+        request("activity", [bounded_command(sys.stdin.read(MAX_COMMAND+1))])
         return 0
     if action == "boss-arrive":
         from .trail import BOSS_IP
@@ -99,7 +99,7 @@ def main():
     kwargs = {}
     quiet = action == "observe"
     if quiet:
-        kwargs = dict(cwd=area(), code=int(args[0]) if args else 0, command=args[1] if len(args) > 1 else "")
+        kwargs = dict(cwd=area(), code=int(args[0]) if args else 0, command=args[1][:500] if len(args) > 1 else "", prompt=args[2:]==["--prompt"])
         args = []
     if action in ("collect", "submit"):
         if len(args) != 1:
