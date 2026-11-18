@@ -168,7 +168,11 @@ def combat_frame(w,h,s,tick):
     hx = 1-round(slide*bw)
     b_hit = active and event["damage"]>0 and .28<age<.48
     p_hit = active and event["hurt"]>0 and .8<age<1.05
-    overlay(c, boss_frame(bw,bheight,tick),bx+int(b_hit),0,6 if b_hit else None)
+    monster_w=max(6,w*3//5)
+    monster_h=max(5,h-2)
+    monster_x=bx-(monster_w-bw)//2
+    overlay(c,boss_frame(monster_w,monster_h,tick,event=event,age=age),
+            monster_x+int(b_hit),0,6 if b_hit else None)
     overlay(c, hero_frame(bw,bheight,tick,s.get("avatar"),back=True),hx-int(p_hit),h-bheight,6 if p_hit else None)
     start,end = (w//4+3,h-3),(3*w//4-2,max(2,bheight//2))
     if active: attack_effect(c,event,age,start,end)
@@ -263,33 +267,69 @@ def cone(cx, cy, cz, radius, height, color):
     return [(bottom[i], bottom[(i+1)%6], (cx,cy+height,cz), color) for i in range(6)]
 
 
-def boss_mesh():
-    mesh = cube(0,-.57,0,1.36,.95,.85,6)  # red winter coat, fur cuff and belt
-    mesh += cube(0,-.98,0,1.48,.18,.92,1)+cube(0,-.7,0,1.43,.15,.91,8)
-    mesh += cube(0,-.69,-.48,.25,.17,.1,5)
-    for side in (-1,1):
-        mesh+=cube(side*.42,-1.29,0,.33,.51,.36,4)
-        mesh+=cube(side*.44,-1.58,-.14,.43,.20,.65,7)
-        mesh+=cube(side*.82,-.46,0,.28,.67,.48,6)+cube(side*.84,-.82,0,.32,.16,.50,1)
-        mesh+=cube(side*.84,-.96,-.06,.27,.23,.36,4)
-    mesh += cube(0,.25,-.05,1.2,1.1,1.0,4)  # green face
-    # Upturned mouth and full cheeks make the Grinch grin in profile too.
-    mesh += cube(0,.03,-.59,.55,.09,.12,8)
-    for sign in (-1,1):
-        mesh += cube(sign*.33,.12,-.60,.18,.12,.13,8)
-        mesh += cube(sign*.52,.22,-.45,.27,.27,.32,4)
-    mesh += cube(0,.26,-.65,.24,.19,.23,4)
-    for x in (-.32,.32):
-        mesh += cube(x,.42,-.59,.22,.13,.08,5)  # amber eyes
-        mesh += cube(x,.56,-.58,.32,.09,.10,8)  # dark brows
-    mesh += cone(0,.83,.03,.65,.85,6)  # Santa hat
-    mesh += cube(0,.82,.03,1.25,.13,1.05,1)
-    mesh += cube(0,1.68,.03,.18,.18,.18,1)
-    mesh += cube(0,-.32,-.45,.15,.36,.1,1)
+def beast_segment(base, tip, lower, upper, color):
+    """Tapered elliptical rings form sloping shoulders, bent limbs and sharp tips."""
+    rings = []
+    for (cx,cy,cz),(rx,rz) in ((base,lower),(tip,upper)):
+        rings.append([(cx+rx*math.cos(a*math.tau/8),cy,cz+rz*math.sin(a*math.tau/8))
+                      for a in range(8)])
+    lo,hi = rings
+    mesh = []
+    for a in range(8):
+        b=(a+1)%8
+        mesh.extend(((lo[a],lo[b],hi[a],color),(hi[a],lo[b],hi[b],color),
+                     (tip,hi[a],hi[b],color),(base,lo[b],lo[a],color)))
     return mesh
 
 
-MESH = boss_mesh()
+def beast_posture(breath,lunge,recoil):
+    lift=breath*.048
+    reach=lunge*.20
+    return lift, reach, -.16-reach*.65+recoil*.14, .47+lift-reach*.20
+
+
+@lru_cache(maxsize=96)
+def boss_mesh(breath, lunge, recoil):
+    lift,reach,cx,neck=beast_posture(breath,lunge,recoil)
+    mesh=[]
+    # Planted hind legs, heavy paws and a ripped winter coat over a deep chest.
+    for side in (-1,1):
+        mesh+=beast_segment((side*.86,-1.34,.19),(side*.57,-.64,.17),(.31,.34),(.47,.46),4)
+        mesh+=cube(side*.88,-1.44,-.12,.65,.30,.83,8)
+        for toe in (-.17,.07,.27):
+            mesh+=beast_segment((side*.88+toe,-1.38,-.46),(side*.88+toe,-1.57,-.75),(.09,.13),(0,0),1)
+    mesh+=beast_segment((0,-.94,.15),(cx,neck,-.04),(.77,.51),(1.28,.62),6)
+    mesh+=beast_segment((0,-.83,.15),(0,-.64,.15),(.82,.54),(.86,.54),8)
+    for side in (-1,1):
+        shoulder=cx+side*1.00
+        wrist=cx+side*(1.40+reach*.28)
+        wy=-.44+lift+(reach*.46 if side<0 else -reach*.12)
+        wz=-.47-(reach*.90 if side<0 else 0)
+        mesh+=beast_segment((wrist,wy,wz),(shoulder,neck,.02),(.29,.32),(.54,.53),4)
+        mesh+=beast_segment((shoulder,neck-.29,.02),(shoulder,neck+.12,.04),(.56,.54),(.46,.47),6)
+        mesh+=cube(wrist,wy-.15,wz,.61,.45,.56,4)
+        for finger in (-.22,0,.22):
+            mesh+=beast_segment((wrist+finger,wy-.24,wz-.20),(wrist+finger-.13,wy-.69,wz-.49),
+                                (.105,.13),(0,0),1)
+    hx=cx-.13; hy=neck+.44+lift
+    def face(x,y,z,w,h,d,color):
+        return cube(hx+x,hy+y,z,w,h,d,color)
+    mesh+=beast_segment((hx,hy-.42,-.24),(hx,hy+.27,-.17),(.62,.48),(.84,.60),4)
+    mesh+=face(0,-.20,-.81,1.00,.38,.21,8)  # dark maw with a projecting jaw
+    mesh+=face(0,-.43,-.69,.78,.15,.36,4)
+    mesh+=face(0,-.01,-.81,.51,.20,.39,4)
+    for side in (-1,1):
+        mesh+=face(side*.39,.12,-.74,.42,.16,.21,5)
+        mesh+=face(side*.35,.12,-.86,.08,.16,.04,8)
+        mesh+=face(side*.30,.24,-.76,.42,.10,.19,8)
+        mesh+=beast_segment((hx+side*.39,hy-.08,-.96),(hx+side*.34,hy-.39,-1.0),(.12,.07),(0,0),1)
+        mesh+=beast_segment((hx+side*.66,hy+.22,-.15),(hx+side*1.15,hy+.63,.04),
+                            (.33,.31),(0,0),4)
+        mesh+=beast_segment((hx+side*.46,hy+.30,.14),(hx+side*.75,hy+.94,.26),
+                            (.20,.21),(0,0),7)
+    mesh+=beast_segment((hx,hy+.28,-.14),(hx-.48,hy+.79,.12),(.49,.38),(0,0),6)
+    return mesh
+
 
 
 def overlay(canvas, layer, left, top, flash=None):
@@ -343,13 +383,37 @@ def hero_frame(w,h,tick,avatar,back=False,walking=False):
     return project_mesh(w,h,angle,mesh)
 
 
-def boss_frame(w,h,tick,won=False):
-    angle = .38+math.sin(tick*.8)*.38 if not won else tick*.5
-    return project_mesh(w,h,angle,MESH,extent=3.9)
+def boss_frame(w,h,tick,won=False,event=None,age=99):
+    def pulse(start,duration):
+        phase=(age-start)/duration
+        return math.sin(phase*math.pi) if 0<phase<1 else 0
+    lunging=event and any(s in ("claw","gale") for s in event.get("sounds",[]))
+    if event and "sounds" not in event: lunging=event.get("hurt",0)>0
+    lunge=round(5*pulse(.48,.54)) if lunging else 0
+    recoil=round(3*pulse(.20,.36)) if event and event.get("damage",0)>0 else 0
+    breath=round(2*math.sin(tick*1.8))
+    return monster_pose(w,h,breath,lunge,recoil)
 
 
-def project_mesh(w,h,angle,mesh,extent=3.1):
-    c = Canvas(w,h)
+@lru_cache(maxsize=32)
+def monster_pose(w,h,breath,lunge,recoil):
+    angle, extent=.32,3.35
+    canvas=project_mesh(w,h,angle,boss_mesh(breath,lunge,recoil),extent)
+    if h>=7:
+        # Reserve one cell for each glint even when a fang is smaller than a terminal cell.
+        project=projector(w,h,angle,extent)
+        lift,_,cx,neck=beast_posture(breath,lunge,recoil)
+        for side in (-1,1):
+            x,y,_=project((cx-.13+side*.39,neck+.56+lift,-.86))
+            eye_row=round(y)
+            canvas.put(round(x),eye_row,"◥" if side<0 else "◤",5)
+            if h>=10:
+                x,y,_=project((cx-.13+side*.39,neck+.15+lift,-.98))
+                canvas.put(round(x),max(round(y),eye_row+1),"▾",1)
+    return canvas
+
+
+def projector(w,h,angle,extent):
     ca, sa = math.cos(angle), math.sin(angle)
     scale = max(2, min(h/extent, w/7.2))
 
@@ -359,6 +423,12 @@ def project_mesh(w,h,angle,mesh,extent=3.1):
         depth = z + 5
         return (w/2+x*scale*8/depth, h*.56-y*scale*4/depth, depth)
 
+    return project
+
+
+def project_mesh(w,h,angle,mesh,extent=3.1):
+    c = Canvas(w,h)
+    project = projector(w,h,angle,extent)
     for a,b,d,color in mesh:
         p,q,r = project(a), project(b), project(d)
         denominator = (q[1]-r[1])*(p[0]-r[0])+(r[0]-q[0])*(p[1]-r[1])

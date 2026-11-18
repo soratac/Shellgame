@@ -67,19 +67,20 @@ def win(s, method, now):
 def counter(s, damage=7):
     if s["frozen"]:
         s["frozen"] -= 1
-        return " Grinch ist eingefroren."
+        return " Grinch ist eingefroren.", "ice_lock"
     if s["shield"]:
         s["shield"] -= 1
-        return " Dein Schild faengt den Angriff ab."
+        return " Dein Schild faengt den Angriff ab.", "parry"
     s["combat_turn"] += 1
     heavy = damage == 7 and s["storm_service"] and s["combat_turn"] % 3 == 0
     if heavy: damage += 5
     damage = damage if s["blizzard"] else max(1, damage // 3)
     s["hp"] = max(0, s["hp"] - damage)
+    sound = "gale" if heavy else "claw"
     if s["hp"] == 0:
         s["status"] = "lost"
-        return " DEIN LICHT ERLISCHT. Starte mit neustart erneut."
-    return f" {'Sturmböe' if heavy else 'Eissturm'}: -{damage} HP."
+        return " DEIN LICHT ERLISCHT. Starte mit neustart erneut.", sound
+    return f" {'Sturmböe' if heavy else 'Eissturm'}: -{damage} HP.", sound
 
 
 def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=""):
@@ -210,7 +211,8 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
         if code == 0 and first in {"ls", "cat", "pwd", "cp", "mkdir", "grep", "find", "sort", "uniq", "head", "tail", "wc", "sed", "awk", "tree"}:
             reward(s, "shell:" + first, 10)
         if code not in (0, 130) and s["boss_started"]:
-            message = "Ein fehlgeschlagener Shell-Befehl weckt Grinch." + counter(s, 10)
+            reply, result["counter_sound"] = counter(s, 10)
+            message = "Ein fehlgeschlagener Shell-Befehl weckt Grinch." + reply
     elif action == "collect":
         item = args[0].split("/")[-1] if args else ""
         found = SPELL_FILES.get(item)
@@ -233,6 +235,7 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
         elif reward(s, "heal:" + item, 25):
             old = s["hp"]
             s["hp"] = min(100, s["hp"] + source[1])
+            result["sound"] = item
             message = f"{item}: +{s['hp'] - old} HP."
         else:
             message = "Schon aufgebraucht."
@@ -268,12 +271,14 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
                 elif not s["storm_service"]:
                     return {"ok":True, "message":"eissturm.service ist bereits deaktiviert.", "stop":False}
                 else:
+                    result["sound"] = "disable"
                     s["storm_service"] = False
                     reward(s, "service:eissturm", 100)
                     message = "Sturmböe deaktiviert. +100 Punkte."
             elif action == "unload":
                 key = {"frost_armor": "armor", "blizzard": "blizzard"}.get(spell)
                 if key and s[key]:
+                    result["sound"] = spell
                     s[key] = False
                     reward(s, "driver:" + spell, 120)
                     message = f"Spiel-Treiber {spell} entfernt! +120 Punkte."
@@ -283,15 +288,18 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
             elif action == "ping":
                 if args != [BOSS_IP] or "ping" not in s["bag"]:
                     return {"ok": False, "message": "Dafür brauchst du das Echo und die Boss-IP.", "stop": False}
+                result["sound"] = "ping"
                 damage = 4
                 message = "Echo-Zauber: 4 Treffer mit je 1 Schaden."
             elif action == "attack":
+                result["sound"] = "staff"
                 damage = 24
                 message = "Zuckerstabschlag!"
             elif s["spells"].get(spell, 0) == 0:
                 result["ok"] = False
                 message = "Zauber unbekannt oder aufgebraucht. Nutze inventar."
             else:
+                result["sound"] = spell
                 if s["spells"][spell] > 0:
                     s["spells"][spell] -= 1
                 damage = {"funke": 30, "frost": 38, "stern": 75, "schild": 0}[spell]
@@ -303,6 +311,7 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
                     s["loop_hits"] = [t for t in s["loop_hits"] if now - t < 2.0] + [now]
                     if len(s["loop_hits"]) >= 6:
                         reward(s, "exploit:loop", 200)
+                        result["sound"] = "loop"
                         win(s, "loop", now)
                         result.update(message=s["message"], stop=True)
                         return result
@@ -318,7 +327,8 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
                 win(s, "driver" if not s["armor"] or not s["blizzard"] else method, now)
                 result.update(message=s["message"], stop=True)
                 return result
-            message += counter(s, 7 if result["ok"] else 12)
+            reply, result["counter_sound"] = counter(s, 7 if result["ok"] else 12)
+            message += reply
     else:
         result["ok"] = False
         message = "Unbekannte Spielaktion. Nutze hilfe."
@@ -341,10 +351,11 @@ def act(s, action, args=(), **kwargs):
     before_bag=set(s.get("bag",[]))
     before_hp, before_boss = s["hp"], s["boss_hp"]
     result = _act(s, action, args, **kwargs)
-    if action not in ("reset","name") and (before_hp!=s["hp"] or before_boss!=s["boss_hp"] or action in ("cast","attack","unload","use","disable","ping","scan") or (action=="bag" and set(s["bag"])-before_bag)):
+    sounds = [result.pop(key) for key in ("sound", "counter_sound") if key in result]
+    if action not in ("reset","name") and (sounds or before_hp!=s["hp"] or before_boss!=s["boss_hp"] or action in ("cast","attack","unload","use","disable","ping","scan") or (action=="bag" and set(s["bag"])-before_bag)):
         s["event_seq"] += 1
         s["events"].append(dict(id=s["event_seq"], at=kwargs.get("now",time.time()),
-            kind=action, spell=(sorted(set(s["bag"])-before_bag)[0] if action=="bag" else args[0] if args else "stab"), hp_before=before_hp,
+            sounds=sounds, kind=action, spell=(sorted(set(s["bag"])-before_bag)[0] if action=="bag" else args[0] if args else "stab"), hp_before=before_hp,
             boss_before=before_boss, hp=s["hp"], boss_hp=s["boss_hp"],
             damage=before_boss-s["boss_hp"], hurt=before_hp-s["hp"]))
         s["events"]=s["events"][-24:]

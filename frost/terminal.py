@@ -17,6 +17,7 @@ import tty
 
 from .client import request
 from .music import indicator
+from .music_http import recent_sounds
 from .render import colors, paint, put, box, POSITIONS
 
 CONTROL='/tmp/frost-terminal.sock'
@@ -85,6 +86,8 @@ def frame(screen):
     music={"level":40,"muted":False}
     state=None; fetched=0; painted=0; previous_size=None
     local_music = bool(os.environ.get("FROST_LOCAL_MUSIC"))
+    local_sfx = bool(os.environ.get("FROST_LOCAL_SFX"))
+    last_sound = time.time()
     sent_level, last_signal = None, 0
     attrs={}
     position=origin=target=POSITIONS["dorf"]
@@ -145,7 +148,7 @@ def frame(screen):
                         data=data.replace(b'\x1b['+key,b'\x1bO'+key)
                 os.write(master,data)
             now=time.monotonic()
-            if not zoom and now-fetched>.15:
+            if (not zoom or local_sfx) and now-fetched>.15:
                 try:
                     snapshot=request()
                     state=snapshot['state']
@@ -165,6 +168,11 @@ def frame(screen):
                 if level != sent_level or now-last_signal >= 2:
                     os.write(1, f"\x1b]777;frost-volume={level:03}\x07".encode())
                     last_signal, sent_level = now, level
+                if local_sfx and state:
+                    for at, sounds in recent_sounds(state.get("events"), last_sound):
+                        if level:
+                            os.write(1, ("\x1b]777;frost-sound="+",".join(sounds)+"\x07").encode())
+                        last_sound = at
             if now-painted<.075: continue
             screen.erase()
             if not zoom:

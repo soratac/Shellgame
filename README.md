@@ -38,7 +38,7 @@ Die goldene Spur ✧ zeigt den aktuellen Aufenthaltsort des Grinch. Er wechselt 
 
 ## Weihnachtsmusik
 
-Gib in der Spiel-Shell `musik` ein, öffne den persönlichen Link auf deinem Gerät und drücke **▶ Musik starten**. Der Browser spielt „Schneefunken“, einen eigens für Frostbyte komponierten Glockenspiel-Chiptune. Lass den Tab beim Spielen offen.
+Gib in der Spiel-Shell `musik` ein, öffne den persönlichen Link auf deinem Gerät und drücke **▶ Musik starten**. Der Browser spielt „Schneefunken“, einen eigens für Frostbyte komponierten Glockenspiel-Chiptune. Lass den Tab beim Spielen offen. Über denselben Lautstärkeregler hörst du auch Treffer, Zauber und die Angriffe des Grinch. Das Echo sendet vier kurze Töne, Frost klingt wie splitterndes Eis, und die schwere Sturmböe kündigt sich mit einem tiefen Grollen an.
 
 Im Musikregler unten rechts ändern **← / →** die Lautstärke in Zehnerschritten, **M** schaltet stumm und wieder laut. **Enter** bringt dich zurück zur Eingabe. Direkt an der Bash funktionieren auch `musik 30` und `musik mute`. Beim Trennen der Spielsitzung endet die Wiedergabe.
 

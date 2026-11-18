@@ -143,6 +143,8 @@ def main():
             assert volume_event(stream)==40
             sessions[1].send("musik 70\r")
             assert volume_event(stream)==70
+            sessions[1].send("cd ../wald; mv .lichtung/beeren ~/rucksack/; ~/rucksack/beeren\r")
+            assert volume_event(stream)==["beeren"]
             assert b"frost-volume=" not in sessions[1].output
         print("PASS: local browser receives volume through SSH gateway alone", flush=True)
         with urllib.request.urlopen(stream_url, timeout=6) as stream:
@@ -221,7 +223,10 @@ def main():
         wait_state(lambda v:v["boss_started"])
         s.send("systemctl disable eissturm.service\r")
         wait_state(lambda v:not v["storm_service"])
-        s.send("ping -c 4 127.12.24.1\r")
+        with urllib.request.urlopen(stream_url, timeout=6) as stream:
+            assert volume_event(stream)==50
+            s.send("ping -c 4 127.12.24.1\r")
+            assert volume_event(stream)==["ping","claw"]
         wait_state(lambda v:v["boss_hp"]==236)
         s.send("cd ../dorf; printf 'LOCK_%s\\n' \"$PWD\"\r")
         s.expect("LOCK_/home/player/welt/zitadelle")

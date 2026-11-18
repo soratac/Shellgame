@@ -125,7 +125,7 @@ class Board:
         selected["area"]=data.get("area") if data.get("area") in {"dorf","wald","werkstatt","archiv","zitadelle"} else "unterwegs"
         selected["method"]=selected["method"] if selected["method"] in {"loop","staff","spell","driver"} else None
         with self.lock:
-            self.music.update(slot, data.get("music") if selected["connected"] else None)
+            self.music.update(slot, data.get("music") if selected["connected"] else None, events)
             if selected["connected"]: self.activity[slot]=activity
             else: self.activity.pop(slot,None)
             self.db.execute("INSERT INTO scores VALUES (?,?,?) ON CONFLICT(slot) DO UPDATE SET payload=excluded.payload, updated=excluded.updated",
@@ -251,7 +251,9 @@ def tile(screen,row,y,x,h,w,now):
             canvas=Canvas(min(inner,70),min(scene_h,14))
             if fighting:
                 overlay(canvas,hero_frame(canvas.w//2,canvas.h,tick,row.get("avatar"),True),0,0)
-                overlay(canvas,boss_frame(canvas.w//2,canvas.h,tick),canvas.w//2,0)
+                event=next(iter(row.get("events",[])),None)
+                age=now-event["at"] if event else 99
+                overlay(canvas,boss_frame(canvas.w//2,canvas.h,tick,event=event,age=age),canvas.w//2,0)
                 if live and row.get("events"):
                     event=row["events"][-1]
                     attack_effect(canvas,event,now-event["at"],(canvas.w//4,canvas.h-1),(3*canvas.w//4,0))

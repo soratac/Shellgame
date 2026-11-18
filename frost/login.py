@@ -86,10 +86,11 @@ def main():
     if role=="gateway":
         from .gateway_client import main as join
         return join()
-    audio = re.fullmatch(r"frost-music-(\d{1,5})-([A-Za-z0-9_-]{16})", os.environ.get("TERM",""))
-    if audio and 0 < int(audio[1]) <= 65535:
+    audio = re.fullmatch(r"frost-music(2?)-(\d{1,5})-([A-Za-z0-9_-]{16})", os.environ.get("TERM",""))
+    if audio and 0 < int(audio[2]) <= 65535:
         os.environ["TERM"] = "xterm-256color"
-        os.environ["FROST_LOCAL_MUSIC"] = f"http://127.0.0.1:{audio[1]}/#{audio[2]}"
+        if audio[1]: os.environ["FROST_LOCAL_SFX"] = "1"
+        os.environ["FROST_LOCAL_MUSIC"] = f"http://127.0.0.1:{audio[2]}/#{audio[3]}"
     if role=="scoreboard":
         from .board import watch
         watch()

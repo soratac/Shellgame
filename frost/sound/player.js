@@ -3,6 +3,7 @@ const button = document.querySelector("button");
 const statusText = document.querySelector("[role=status]");
 let context, gain, buffer, source, volume;
 let loading = false;
+let effectBus;
 
 function setLevel(value) {
     volume = value;
@@ -13,6 +14,7 @@ function setLevel(value) {
 }
 
 function stop() {
+    if (effectBus) { effectBus.disconnect(); effectBus = null; }
     if (source) {
         source.stop();
         source.disconnect();
@@ -46,6 +48,8 @@ button.onclick = async () => {
         source.buffer = buffer;
         source.loop = true;
         source.connect(gain);
+        effectBus = context.createDynamicsCompressor();
+        effectBus.connect(gain);
         source.start();
         button.textContent = "Ⅱ Pausieren";
     } catch {
@@ -75,6 +79,9 @@ if (/^[\w-]{16}$/.test(key)) {
         setLevel(value);
         button.disabled = loading;
     };
+    events.addEventListener("attack", event => {
+        if (source && effectBus && volume > 0) playTurn(context, effectBus, JSON.parse(event.data));
+    });
     events.onerror = offline;
 } else {
     statusText.textContent = "Gib im Spiel musik ein und öffne deinen persönlichen Link.";
