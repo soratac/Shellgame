@@ -84,6 +84,8 @@ def frame(screen):
     listener.bind(CONTROL); os.chmod(CONTROL,0o600); listener.listen(4)
     music={"level":40,"muted":False}
     state=None; fetched=0; painted=0; previous_size=None
+    local_music = bool(os.environ.get("FROST_LOCAL_MUSIC"))
+    sent_level, last_signal = None, 0
     attrs={}
     position=origin=target=POSITIONS["dorf"]
     travel_start=time.monotonic()
@@ -158,6 +160,11 @@ def frame(screen):
                         origin,target,travel_start=position,destination,now
                 except (OSError,ValueError): pass
                 fetched=now
+            if local_music:
+                level = 0 if music["muted"] else music["level"]
+                if level != sent_level or now-last_signal >= 2:
+                    os.write(1, f"\x1b]777;frost-volume={level:03}\x07".encode())
+                    last_signal, sent_level = now, level
             if now-painted<.075: continue
             screen.erase()
             if not zoom:

@@ -8,6 +8,7 @@ import pty
 import re
 import select
 import struct
+import sys
 import subprocess
 import tempfile
 import termios
@@ -19,13 +20,15 @@ ROOT=Path(__file__).resolve().parents[1]
 
 
 class Session:
-    def __init__(self,slot,port,folder,user="player",key=None,host="127.0.0.1"):
+    def __init__(self,slot,port,folder,user="player",key=None,host="127.0.0.1",music=False):
         master,slave=pty.openpty()
         fcntl.ioctl(slave,termios.TIOCSWINSZ,struct.pack("HHHH",42,120,0,0))
         env={**os.environ,"TERM":"xterm-256color","DISPLAY":":0","SSH_ASKPASS_REQUIRE":"force",
              "SSH_ASKPASS":str(folder/"askpass"),"FROST_PASSWORD_FILE":str(ROOT/"secrets"/slot/"password")}
         authentication=["-o","PreferredAuthentications=password","-o","PubkeyAuthentication=no"] if key is None else ["-i",str(key),"-o","BatchMode=yes","-o","IdentitiesOnly=yes"]
-        self.proc=subprocess.Popen(["ssh","-tt",*(["-p",str(port)] if port!=22 else []),*authentication,"-o","StrictHostKeyChecking=accept-new",
+        launcher=[sys.executable,str(ROOT/"scripts/spielmusik.py")] if music else ["ssh","-tt"]
+        if music: env["BROWSER"]="/bin/true"
+        self.proc=subprocess.Popen([*launcher,*(["-p",str(port)] if port!=22 else []),*authentication,"-o","StrictHostKeyChecking=accept-new",
                                     "-o",f"UserKnownHostsFile={folder/'known_hosts'}","-o","ConnectTimeout=5",
                                     f"{user}@{host}"],stdin=slave,stdout=slave,stderr=slave,env=env,start_new_session=True)
         os.close(slave)

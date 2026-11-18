@@ -96,7 +96,7 @@ def main():
         (folder/"known_hosts").unlink(missing_ok=True)
         for slot in slots:
             name="雪Elf" if slot=="player02" else "TestElf"+slot[-2:]
-            session=Session("gateway",ports["gateway"],folder)
+            session=Session("gateway",ports["gateway"],folder,music=slot=="player02" and not args.load_only)
             sessions.append(session)
             session.expect("GEMEINSAMER EINSTIEG",timeout=45)
             assert b"FORTSETZEN-CODE" not in session.output
@@ -136,6 +136,15 @@ def main():
                 if line.startswith(b"data: "):
                     return json.loads(line[6:])
             raise AssertionError("Music stream ended")
+        local_link=re.search(rb"Musik im Browser: (http://127\.0\.0\.1:\d+)/#([\w-]{16})", sessions[1].output)
+        assert local_link, "Missing local music companion"
+        local_stream=(local_link[1]+b"/stream/"+local_link[2]).decode()
+        with urllib.request.urlopen(local_stream, timeout=6) as stream:
+            assert volume_event(stream)==40
+            sessions[1].send("musik 70\r")
+            assert volume_event(stream)==70
+            assert b"frost-volume=" not in sessions[1].output
+        print("PASS: local browser receives volume through SSH gateway alone", flush=True)
         with urllib.request.urlopen(stream_url, timeout=6) as stream:
             assert volume_event(stream)==40
             s.send("\x1b[C")

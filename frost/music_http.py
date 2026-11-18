@@ -33,7 +33,7 @@ class Sessions:
                 return volume
 
 
-def handler_for(board):
+def handler_for(board, track=ASSETS / "winter.wav"):
     class MusicHandler(BaseHTTPRequestHandler):
         def log_message(self, *args):
             pass
@@ -41,7 +41,7 @@ def handler_for(board):
         def do_GET(self):
             if self.path in FILES:
                 name, kind = FILES[self.path]
-                body = (ASSETS / name).read_bytes()
+                body = (track if name == "winter.wav" else ASSETS / name).read_bytes()
             elif self.path.startswith("/stream/") and KEY.fullmatch(self.path[8:]):
                 return self.stream_volume(self.path[8:])
             else:

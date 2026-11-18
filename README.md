@@ -42,7 +42,9 @@ Gib in der Spiel-Shell `musik` ein, öffne den persönlichen Link auf deinem Ger
 
 Im Musikregler unten rechts ändern **← / →** die Lautstärke in Zehnerschritten, **M** schaltet stumm und wieder laut. **Enter** bringt dich zurück zur Eingabe. Direkt an der Bash funktionieren auch `musik 30` und `musik mute`. Beim Trennen der Spielsitzung endet die Wiedergabe.
 
-Der Browser muss den Musikport des Spielservers erreichen (Standard **8094/tcp**). Der Link verwendet `GAME_HOST` und `MUSIC_PORT` aus der Compose-Umgebung. Für eine abweichende, vom Browser erreichbare Adresse setze `MUSIC_URL` in `.env`. Bei Zugriff ausschließlich über den Jumphost kannst du auf deinem Rechner `ssh -N -L 8094:10.0.0.60:8094 jump` laufen lassen und im Musiklink den Host durch `localhost` ersetzen.
+**Über den Jumphost:** Starte auf deinem eigenen Rechner im geklonten Repository `python3 scripts/spielmusik.py -J jump spiel@10.0.0.60`. Das öffnet das Spiel und den Musik-Tab über dieselbe SSH-Verbindung. Dafür werden Python 3.9+, OpenSSH und ein lokaler Browser benötigt. `jump` steht für deinen SSH-Alias. Das gilt auch bei gesperrten zusätzlichen Ports.
+
+Beim gewöhnlichen SSH-Einstieg muss der Browser den Musikport des Spielservers erreichen (Standard **8094/tcp**). Der Link verwendet `GAME_HOST` und `MUSIC_PORT` aus der Compose-Umgebung. Für eine andere vom Browser erreichbare Adresse setze `MUSIC_URL` in `.env`.
 
 ## Fünf Orte
 

@@ -51,11 +51,14 @@ def controls(args):
         result = request("music", args)
         print(indicator(result["music"]) if result["ok"] else result["message"])
         return 0 if result["ok"] else 1
-    base = os.environ.get("SCORE_URL", "http://scoreboard:8080")
-    with urllib.request.urlopen(base + "/api/music-url", timeout=3) as response:
-        address = response.read(2048).decode().strip()
-    session = request("music", ["open"])
-    print(f"Im Browser öffnen und ▶ drücken:\n{address}/#{session['key']}", flush=True)
+    url = os.environ.get("FROST_LOCAL_MUSIC")
+    if not url:
+        base = os.environ.get("SCORE_URL", "http://scoreboard:8080")
+        with urllib.request.urlopen(base + "/api/music-url", timeout=3) as response:
+            address = response.read(2048).decode().strip()
+        session = request("music", ["open"])
+        url = f"{address}/#{session['key']}"
+    print(f"Im Browser öffnen und ▶ drücken:\n{url}", flush=True)
     if not sys.stdin.isatty():
         return 0
     print("← → Lautstärke   M stumm   Enter zurück", flush=True)
