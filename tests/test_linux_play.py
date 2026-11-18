@@ -7,6 +7,7 @@ from frost.render import cell_width, fit
 class LinuxPlayTests(unittest.TestCase):
     def test_inventory_removal_and_no_charge_farming(self):
         s=fresh("Elf",now=0)
+        s["rewards"].extend(("quest:wunschzettel","quest:waldzeichen"))
         act(s,"bag",["frost","funke"])
         act(s,"observe",cwd="zitadelle")
         act(s,"enter_boss")

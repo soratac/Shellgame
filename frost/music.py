@@ -69,6 +69,9 @@ def music_link():
 
 def controls(args):
     from .client import request
+    if args == ["link"]:
+        print("Ton im Browser starten: "+music_link(),flush=True)
+        return 0
     if args:
         result = request("music", args)
         print(indicator(result["music"]) if result["ok"] else result["message"])

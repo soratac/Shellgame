@@ -65,23 +65,30 @@ def smooth_life(value,before,progress):
     return before+(value-before)*t*t*(3-2*t)
 
 
-def life_meter(value,maximum,size,trail=None):
-    fill=round(max(0,min(1,value/maximum))*size*8)
-    full,part=divmod(fill,8)
-    track="█"*full+("▏▎▍▌▋▊▉"[part-1] if part else "")
-    ghost=max(0,min(size,round((trail or 0)*size/maximum))-len(track))
-    return "❨"+track+"▒"*ghost+"░"*(size-len(track)-ghost)+"❩ "+f"{round(value)}/{maximum}"
-
-
-def beveled_meter(c,x,y,text,color):
-    c.put(x,y,text,color)
-    end=text.index("❩")
-    c.put(x,y,"❨",1)
-    c.put(x+end,y,"❩",12)
-    for i,ch in enumerate(text[1:end],1):
-        if ch=="░": c.put(x+i,y,"░",11)
-        elif ch=="▒": c.put(x+i,y,"▒",15)
-        elif ch=="█" and i%4==1: c.put(x+i,y,"▓",2 if color==4 else 1)
+def health_gauge(value, maximum, size, previous, age, tick):
+    """A continuous enamel face with a darker lower edge and a fading damage trail."""
+    label=f" {round(value)}/{maximum}"
+    c=Canvas(size+len(label),2)
+    amount=max(0,min(size*8,round(value/maximum*size*8)))
+    healing=previous<value and 0<=age<1.45
+    trailing=smooth_life(value,previous,(age-.66)/.70) if 0<=age<1.5 else value
+    shine=int(tick*8)%(size+5)
+    for x in range(size):
+        units=max(0,min(8,amount-x*8))
+        color=4 if value>maximum*.45 else 5 if value>maximum*.23 else 16
+        if units:
+            shadow=19 if color==4 else 7 if color==5 else 16
+            ch="▏▎▍▌▋▊▉█"[units-1]
+            if healing and abs(x-shine)<3: color=20
+            elif color==16 and math.sin(tick*5)>.55: color=6
+            if units==8 and x==0: ch="▐"
+            elif units==8 and x==size-1: ch="▌"
+            c.put(x,0,ch,color)
+            c.put(x,1,"▝" if x==0 else "▘" if x==size-1 else "▀",shadow)
+        else:
+            c.put(x,0,"▓" if x<trailing/maximum*size else "▁",15 if x<trailing/maximum*size else 8)
+    c.put(size,0,label,20)
+    return c
 
 
 def combat_frame(w,h,s,tick):
@@ -107,7 +114,7 @@ def combat_frame(w,h,s,tick):
     monster_x=bx-(monster_w-bw)//2
     # Flattened contact shadows anchor the sprites to the same paved surface.
     for cx,cy,r in ((w//4,h-2,max(2,w//12)),(3*w//4,monster_h-1,max(3,w//10))):
-        c.put(cx-r,cy,"╶"+"▄"*(r*2-1)+"╴",11)
+        c.put(cx-r,cy,"╶"+"▄"*(r*2-1)+"╴",18)
     overlay(c,boss_frame(monster_w,monster_h,tick,event=event,age=age),
             monster_x+int(b_hit),0,6 if b_hit else None)
     overlay(c, hero_frame(bw,bheight,tick,s.get("avatar"),back=True),hx-int(p_hit),h-bheight,6 if p_hit else None)
@@ -115,15 +122,15 @@ def combat_frame(w,h,s,tick):
     if w>=37 and h>=7:
         size=max(3,min(7,h//4))
         apparition(c,"shade",min(w//2-1,meter+10),2+.7*math.sin(tick*2),size,tick)
-        apparition(c,"life",w-len(life_meter(hp,100,meter))-3,h-3+.6*math.sin(tick*2.3),size,tick+.5)
+        apparition(c,"life",w-(meter+8)-3,h-3+.6*math.sin(tick*2.3),size,tick+.5)
     if active: attack_effect(c,event,age,start,end)
-    boss_bar=life_meter(bhp,240,meter,event["boss_before"] if active else None)
-    player_bar=life_meter(hp,100,meter,event["hp_before"] if active else None)
+    boss_bar=health_gauge(bhp,240,meter,event["boss_before"] if active else bhp,age,tick)
+    player_bar=health_gauge(hp,100,meter,event["hp_before"] if active else hp,age,tick)
     label=s["name"][:18]
     c.put(1,0,"♥ GRINCH",4)
-    beveled_meter(c,1,1,boss_bar,6 if b_hit else 4)
-    c.put(w-len(label)-2,h-2,"♥ "+label,5)
-    beveled_meter(c,w-len(player_bar),h-1,player_bar,2 if active and event["hurt"]<0 else 6 if p_hit or hp<25 else 4)
+    overlay(c,boss_bar,1,1)
+    c.put(w-len(label)-2,h-3,"♥ "+label,5)
+    overlay(c,player_bar,w-player_bar.w,h-2)
     return c
 
 
@@ -212,7 +219,7 @@ def boss_mesh(breath, lunge, recoil):
         mesh+=cube(side*.88,-1.44,-.12,.65,.30,.83,8)
         for toe in (-.17,.07,.27):
             mesh+=beast_segment((side*.88+toe,-1.38,-.46),(side*.88+toe,-1.57,-.75),(.09,.13),(0,0),1)
-    mesh+=beast_segment((0,-.94,.15),(cx,neck,-.04),(.77,.51),(1.28,.62),6)
+    mesh+=beast_segment((0,-.94,.15),(cx,neck,-.04),(.77,.51),(1.28,.62),16)
     mesh+=beast_segment((0,-.83,.15),(0,-.64,.15),(.82,.54),(.86,.54),8)
     for side in (-1,1):
         shoulder=cx+side*1.00
@@ -220,7 +227,7 @@ def boss_mesh(breath, lunge, recoil):
         wy=-.44+lift+(reach*.46 if side<0 else -reach*.12)
         wz=-.47-(reach*.90 if side<0 else 0)
         mesh+=beast_segment((wrist,wy,wz),(shoulder,neck,.02),(.29,.32),(.54,.53),4)
-        mesh+=beast_segment((shoulder,neck-.29,.02),(shoulder,neck+.12,.04),(.56,.54),(.46,.47),6)
+        mesh+=beast_segment((shoulder,neck-.29,.02),(shoulder,neck+.12,.04),(.56,.54),(.46,.47),16)
         mesh+=cube(wrist,wy-.15,wz,.61,.45,.56,4)
         for finger in (-.22,0,.22):
             mesh+=beast_segment((wrist+finger,wy-.24,wz-.20),(wrist+finger-.13,wy-.69,wz-.49),
@@ -241,7 +248,14 @@ def boss_mesh(breath, lunge, recoil):
                             (.33,.31),(0,0),4)
         mesh+=beast_segment((hx+side*.46,hy+.30,.14),(hx+side*.75,hy+.94,.26),
                             (.20,.21),(0,0),7)
-    mesh+=beast_segment((hx,hy+.28,-.14),(hx-.48,hy+.79,.12),(.49,.38),(0,0),6)
+    # Fur-trimmed coat, brass buckle and a bent stocking cap with a pompom.
+    mesh+=beast_segment((0,-.99,.15),(0,-.82,.15),(.82,.56),(.85,.56),20)
+    mesh+=cube(0,-.72,-.43,.36,.20,.13,5)
+    mesh+=beast_segment((cx,neck-.20,-.05),(cx,neck-.05,-.05),(1.07,.62),(1.15,.62),20)
+    mesh+=beast_segment((hx,hy+.22,-.17),(hx,hy+.40,-.16),(.82,.62),(.78,.59),20)
+    mesh+=beast_segment((hx,hy+.39,-.16),(hx-.33,hy+.87,-.14),(.78,.59),(.32,.27),16)
+    mesh+=beast_segment((hx-.33,hy+.87,-.14),(hx-.91,hy+.54,-.26),(.32,.27),(.10,.10),16)
+    mesh+=beast_segment((hx-.91,hy+.38,-.26),(hx-.91,hy+.62,-.26),(.20,.17),(.15,.15),20)
     return mesh
 
 
@@ -311,6 +325,9 @@ def monster_pose(w,h,breath,lunge,recoil):
         # Reserve one cell for each glint even when a fang is smaller than a terminal cell.
         project=projector(w,h,angle,extent)
         lift,_,cx,neck=beast_posture(breath,lunge,recoil)
+        if h>=12:
+            x,y,_=project((cx-1.04,neck+.94+lift,-.30))
+            canvas.put(round(x),round(y),"✹",20)
         for side in (-1,1):
             x,y,_=project((cx-.13+side*.39,neck+.56+lift,-.86))
             eye_row=round(y)
@@ -324,9 +341,9 @@ def monster_pose(w,h,breath,lunge,recoil):
 def colors():
     curses.start_color()
     curses.use_default_colors()
-    palette = [252, 86, 60, 120, 221, 204, 130, 240, 141, 223, 24, 67, 103, 37, 173]
+    palette = [252, 86, 60, 120, 221, 204, 130, 240, 141, 223, 24, 67, 103, 37, 173, 160, 22, 237, 28, 230]
     for i, color in enumerate(palette, 1):
-        curses.init_pair(i, color if curses.COLORS >= 256 else [7,6,4,2,3,1,3,0,5,3,4,6,4,6,3][i-1], -1)
+        curses.init_pair(i, color if curses.COLORS >= 256 else [7,6,4,2,3,1,3,0,5,3,4,6,4,6,3,1,2,0,2,7][i-1], -1)
 
 
 def put(screen, y, x, text, color=1, bold=False):
@@ -431,12 +448,15 @@ def paint(screen,state,tick,position=None,walking=False):
         event=(state.get("events") or [None])[-1]
         age=time.time()-event["at"] if event else 9
         if 0<=age<1.4: hp=smooth_life(hp,event["hp_before"],age/.78)
-        health=life_meter(hp,100,min(15,w//7))
-        put(screen,1,w-len(health)-1,health,2 if event and age<1 and event["hurt"]<0 else 4)
-        put(screen,1,1,fit(hud_hint(state),w-len(health)-4),5,True)
+        health=health_gauge(hp,100,min(15,w//7),event["hp_before"] if event else hp,age,tick)
+        put(screen,1,1,fit(hud_hint(state),w-health.w-4),5,True)
     for y,row in enumerate(scene.cells):
         for x,(char,color) in enumerate(row):
             if char!=" ": put(screen,y+2,x+sx,char,color)
+    if not fight:
+        for y,row in enumerate(health.cells):
+            for x,(ch,color) in enumerate(row):
+                if ch!=" ": put(screen,y+1,w-health.w-1+x,ch,color)
 
 
 def hud(screen):

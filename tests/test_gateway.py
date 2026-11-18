@@ -73,6 +73,7 @@ class BossGateTests(unittest.TestCase):
 
     def test_no_retreat_or_new_resources_after_acceptance(self):
         s=fresh("Elf")
+        s["rewards"].append("quest:wunschzettel")
         act(s,"bag",["funke","kakao"])
         act(s,"observe",cwd="zitadelle")
         act(s,"enter_boss")

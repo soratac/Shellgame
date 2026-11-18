@@ -19,7 +19,17 @@ def bag_count(item,state):
     return "×1" if item in ITEMS else ""
 
 
-DELIVERIES = {"dorf": "gerettet.txt", "werkstatt": "maschine.conf", "archiv": "passwort.txt"}
+DELIVERIES = {"dorf": "gerettet.txt", "wald": "zeichen.txt", "werkstatt": "maschine.conf", "archiv": "passwort.txt"}
+
+
+SPELL_QUEST = {"funke":"wunschzettel", "ping":"wunschzettel", "frost":"waldzeichen",
+               "schild":"geschenkband", "stern":"passwort"}
+
+
+def unlocked(state, item):
+    # Already earned spells stay playable in saves from before quest rewards.
+    return (item not in SPELL_QUEST or "quest:"+SPELL_QUEST[item] in state["rewards"]
+            or item in state["spells"] or (item=="ping" and item in state.get("bag", [])))
 
 
 MOVE_ITEMS = {"schild", "stern"}

@@ -3,7 +3,8 @@ const button = document.querySelector("button");
 const statusText = document.querySelector("[role=status]");
 let context, gain, buffer, source, volume;
 let loading = false;
-let effectBus;
+let effectBus, backing;
+let autoTried = false;
 
 function setLevel(value) {
     volume = value;
@@ -15,6 +16,7 @@ function setLevel(value) {
 
 function stop() {
     if (effectBus) { effectBus.disconnect(); effectBus = null; }
+    if (backing) { backing.disconnect(); backing = null; }
     if (source) {
         source.stop();
         source.disconnect();
@@ -47,7 +49,10 @@ button.onclick = async () => {
         source = context.createBufferSource();
         source.buffer = buffer;
         source.loop = true;
-        source.connect(gain);
+        backing = context.createGain();
+        backing.gain.value = 0.72;
+        source.connect(backing);
+        backing.connect(gain);
         effectBus = context.createDynamicsCompressor();
         effectBus.connect(gain);
         source.start();
@@ -78,9 +83,20 @@ if (/^[\w-]{16}$/.test(key)) {
         }
         setLevel(value);
         button.disabled = loading;
+        if (!autoTried) {
+            autoTried = true;
+            // Some browsers allow playback immediately after opening the local tab.
+            context ??= new AudioContext();
+            if (context.state === "running" && !loading && !source) button.click();
+        }
     };
     events.addEventListener("attack", event => {
-        if (source && effectBus && volume > 0) playTurn(context, effectBus, JSON.parse(event.data));
+        if (!source || !effectBus || !volume) return;
+        const now = context.currentTime;
+        backing.gain.cancelScheduledValues(now);
+        backing.gain.setTargetAtTime(0.38, now, 0.035);
+        backing.gain.setTargetAtTime(0.72, now + 0.65, 0.17);
+        playTurn(context, effectBus, JSON.parse(event.data));
     });
     events.onerror = offline;
 } else {

@@ -1,5 +1,6 @@
 WALD  /  Frostzauber und Heilung
 
+Zuerst cat AUFGABE.txt. Nach der Abgabe liegt Frost unter den Wurzeln.
 ls wurzeln
 mv wurzeln/frost ~/rucksack/
 ls -a

@@ -7,6 +7,9 @@ class GameTests(unittest.TestCase):
     def setUp(self):
         self.s=fresh("Winterheld",now=100)
 
+    def solved(self,*quests):
+        self.s["rewards"].extend("quest:"+name for name in quests)
+
     def action(self,action,args=(),now=110,**kw):
         return act(self.s,action,args,now=now,**kw)
 
@@ -16,6 +19,7 @@ class GameTests(unittest.TestCase):
         return result
 
     def test_repeating_only_the_starter_spell_loses(self):
+        self.solved("wunschzettel")
         self.action("bag",["funke"])
         self.visit("zitadelle")
         for i in range(25):
@@ -28,6 +32,7 @@ class GameTests(unittest.TestCase):
         self.assertGreater(self.s["boss_hp"],0)
 
     def test_village_and_forest_gear_can_win_without_advanced_commands(self):
+        self.solved("wunschzettel","waldzeichen")
         self.visit("wald")
         self.action("bag",["funke","frost"])
         self.visit("zitadelle")
@@ -42,6 +47,7 @@ class GameTests(unittest.TestCase):
         self.assertLess(self.s["hp"],50)
 
     def test_switching_attacks_breaks_guard_but_healing_does_not(self):
+        self.solved("wunschzettel")
         self.action("bag",["funke","kakao"])
         self.visit("zitadelle")
         del self.s["last_attack"]  # A fight saved before the balance update.
@@ -54,6 +60,7 @@ class GameTests(unittest.TestCase):
         self.assertIsNone(self.s["last_attack"])
 
     def test_half_health_breaks_protection_only_once(self):
+        self.solved("wunschzettel","waldzeichen","geschenkband")
         self.action("bag",["funke","frost","schild"])
         self.visit("zitadelle")
         self.s.update(boss_hp=142,shield=2,frozen=1)
@@ -64,6 +71,7 @@ class GameTests(unittest.TestCase):
         self.assertEqual(self.s["hp"],89)
 
     def test_loop_wins_and_stops(self):
+        self.solved("wunschzettel")
         self.action("collect",["funke.spell"])
         self.visit("zitadelle")
         for i in range(6): result=self.action("cast",["funke"],now=111+i*.1)
@@ -82,6 +90,7 @@ class GameTests(unittest.TestCase):
         self.assertEqual(self.s["method"],"driver")
 
     def test_all_spells_and_classic_fight(self):
+        self.solved("wunschzettel","waldzeichen","geschenkband","passwort")
         for area,file in [("dorf","funke.spell"),("wald","frost.spell"),("werkstatt","schild.spell"),("archiv","stern.spell")]:
             self.visit(area)
             self.action("collect",[file])
@@ -93,6 +102,7 @@ class GameTests(unittest.TestCase):
         self.assertEqual(self.s["method"],"spell")
 
     def test_no_farming(self):
+        self.solved("waldzeichen")
         self.visit("wald")
         self.action("heal",["beeren"])
         self.action("collect",["frost.spell"])
@@ -149,6 +159,21 @@ class GameTests(unittest.TestCase):
             self.assertFalse(act(state,"name",[name])["ok"])
         self.assertTrue(act(fresh(),"name",["Schnee-Elf_23"])["ok"])
 
+    def test_quests_unlock_only_their_own_loot(self):
+        all_items=["funke","ping","frost","schild","stern","beeren"]
+        self.action("bag",all_items)
+        self.assertEqual(self.s["bag"],["beeren"])
+        self.assertFalse(self.action("collect",["funke.spell"])["ok"])
+        self.action("deliver",["dorf"],content="falsch")
+        self.action("bag",all_items)
+        self.assertEqual(self.s["bag"],["beeren"])
+        self.action("deliver",["dorf"],content="Mila: Stern\nNoah: Schlitten")
+        self.action("bag",all_items)
+        self.assertEqual(self.s["bag"],["beeren","funke","ping"])
+        self.action("reset")
+        self.action("bag",all_items)
+        self.assertEqual(self.s["bag"],["beeren"])
+
     def test_quests_reward_once_and_mistake_hurts(self):
         self.action("submit",content="wrong")
         self.assertEqual(self.s["hp"],95)
@@ -159,6 +184,7 @@ class GameTests(unittest.TestCase):
         self.assertEqual(self.s["score"],150)
 
     def test_spell_charges_and_invalid_spell_counter(self):
+        self.solved("waldzeichen")
         self.visit("wald")
         self.action("collect",["frost.spell"])
         self.visit("zitadelle")

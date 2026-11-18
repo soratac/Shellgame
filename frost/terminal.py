@@ -104,7 +104,7 @@ def frame(screen):
                 r,g,b=(int(value[i:i+2],16) for i in (0,2,4))
                 return 16+36*round(r/255*5)+6*round(g/255*5)+round(b/255*5) if curses.COLORS>=256 else 7
             except (ValueError,TypeError): return -1
-        pair=16+len(attrs)
+        pair=21+len(attrs)
         if pair>=min(240,curses.COLOR_PAIRS): pair=0
         else:
             try: curses.init_pair(pair,color(char.fg),color(char.bg))

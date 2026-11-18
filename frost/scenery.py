@@ -52,55 +52,25 @@ def courtyard_point(w,h,p):
 @lru_cache(maxsize=1)
 def courtyard_mesh():
     mesh=[]
-    # A single paved court extends right under both fighters. Raised borders and
-    # smaller distant flagstones give the near and far sides a common vanishing point.
-    for iz in range(11):
-        z=-3.95+iz*1.1
-        for ix in range(-6,6):
-            x=ix*1.6+(iz%2)*.8
-            color=(11,3,11,11)[(ix*3+iz)%4]
-            mesh+=quad((x,0,z),(x+1.55,0,z),(x+1.55,0,z+1.06),(x,0,z+1.06),color)
-    # A split double ring inlaid in the ice.
-    for radius,color in ((2.65,14),(2.42,12)):
-        for i in range(32):
-            a,b=i*math.tau/32,(i+.88)*math.tau/32
-            def ring(t,r): return (r*math.cos(t),.045,.4+r*math.sin(t))
-            mesh+=quad(ring(a,radius),ring(b,radius),ring(b,radius+.095),ring(a,radius+.095),color)
+    # Snowbanks and lanterns frame a quiet clearing. Leave the centre open for spells.
     for side in (-1,1):
-        mesh+=cube(side*5.1,.40,2,.45,.80,8,11)
-        for z in (-1.8,1.7,5.1):
-            x=side*(4.6+.2*z)
-            mesh+=cube(x,.80,z,.55,1.6,.68,12)+cone(x,1.6,z,.52,1.0,13)
-            mesh+=cube(x,1.16,z-.36,.20,.35,.08,5)
-    mesh+=cube(0,1.02,6.6,15,2.04,.55,11)
-    for x in range(-7,8):
-        mesh+=cube(x,2.18,6.6,.52,.37,.58,12)
-    for x in (-2.15,2.15):
-        mesh+=cube(x,1.65,6.0,1.05,3.3,.98,13)+cone(x,3.30,6.0,.85,1.35,2)
-        mesh+=cube(x,2.05,5.43,.24,.52,.09,5)
-    mesh+=cube(0,1.04,6.2,1.75,2.08,.64,8)
-    for x in (-1.02,1.02): mesh+=cube(x,1.16,5.82,.26,2.32,.34,12)
-    mesh+=cone(0,2.23,5.97,1.44,.82,13)
-    for x,height in ((-9,5.3),(-5,4),(1,4.7),(5,5.8),(10,4.3)):
-        mesh+=cone(x,-.8,10,3.0,height,3)+cone(x,height*.71-.8,10,.94,height*.31,12)
+        for x,z,height in ((4.2,4.9,2.9),(6.8,7.1,3.4)):
+            mesh+=cone(side*x,0,z,1.1,height,17)
+            mesh+=cone(side*x,height*.49,z,.64,height*.56,20)
+        x=side*3.25
+        mesh+=cube(x,.68,3.4,.12,1.36,.16,7)
+        mesh+=cube(x,1.44,3.4,.35,.39,.31,5)
+        mesh+=cone(x,1.62,3.4,.32,.26,20)
     return mesh
 
 
 @lru_cache(maxsize=12)
 def courtyard(w,h):
     c=project_mesh(w,h,0,courtyard_mesh(),project=lambda p:courtyard_point(w,h,p))
-    def carve(a,b,color):
-        x,y,_=courtyard_point(w,h,a)
-        xx,yy,_=courtyard_point(w,h,b)
-        c.line(round(x),round(y),round(xx),round(yy),"╌",color)
-    for i in range(6):
-        angle=i*math.tau/6
-        dx,dz=math.cos(angle),math.sin(angle)
-        for reach in (1.1,1.55):
-            center=(reach*dx,.07,.45+reach*dz)
-            for side in (-1,1):
-                carve(center,((reach+.30)*dx-side*.27*dz,.07,.45+(reach+.30)*dz+side*.27*dx),14)
-        carve((0,.07,.45),(1.96*dx,.07,.45+1.96*dz),12)
+    for side in (-1,1):
+        for z in (-2.6,-.7,1.8):
+            x,y,_=courtyard_point(w,h,(side*2.8,0,z))
+            c.put(round(x),round(y),"▁▁",8)
     return c.cells
 
 
@@ -112,27 +82,10 @@ def backdrop(cells):
 
 def winter_arena(w,h,tick):
     c=backdrop(courtyard(w,h))
-    for x in range(0,w,2):
-        y=round(h*(.11+.055*math.sin(x*.075+tick*.49)))
-        if 0<=y<h and c.cells[y][x][0]==" ":
-            c.put(x,y,"∿",9 if (x//10)%3 else 14)
-    for i in range(max(4,w//7)):
-        x=(i*17+int(tick*(1+i%2)))%w
-        y=(i*13+int(tick*(1+i%3)))%h
-        c.put(x,y,"·" if i%5 else "✧",12 if i%5 else 1)
-    # A glint travels around the inlay in floor coordinates.
-    for i in range(3):
-        angle=tick*.48+i*math.tau/3
-        x,y,_=courtyard_point(w,h,(2.68*math.cos(angle),.07,.4+2.68*math.sin(angle)))
-        c.put(round(x),round(y),"✧",2)
-    # Braziers, and their reflections on the courtyard floor.
-    for side in (-1,1):
-        for z in (-.75,3.4):
-            x=side*(3.0+.18*z)
-            px,py,_=courtyard_point(w,h,(x,.57,z))
-            cx,cy=round(px),round(py)
-            c.put(cx,cy,"▴" if int(tick*5+z)%3 else "♨",5)
-            c.put(cx-1,cy+1,"╲▂╱",15)
+    for i in range(max(3,w//18)):
+        x=(i*19+int(tick*.65))%w
+        y=(i*13+int(tick*(1+i%2)))%h
+        if c.cells[y][x][0]==" ": c.put(x,y,"·",8 if i%3 else 20)
     return c
 
 
@@ -164,15 +117,14 @@ def atlas_mesh():
         for i in (0,2):
             v,u=top[i:i+2]
             mesh+=quad(v,u,(u[0],-.43,u[2]),(v[0],-.43,v[2]),15)
-        mesh+=cube((x+xx)/2,-.74,(z+zz)/2,.33,1.05,.34,12)
-        for t in (.32,.5,.68):
-            px,pz=x+t*(xx-x),z+t*(zz-z)
-            mesh+=cube(px+dx,.02,pz+dz,.09,.48,.09,7)
-            mesh+=cube(px+dx,.29,pz+dz,.13,.16,.13,5)
+        mesh+=cube((x+xx)/2,-.74,(z+zz)/2,.33,1.05,.34,18)
+        px,pz=(x+xx)/2,(z+zz)/2
+        mesh+=cube(px+dx,.02,pz+dz,.09,.48,.09,7)
+        mesh+=cube(px+dx,.29,pz+dz,.13,.16,.13,5)
     for name,pos in POSITIONS.items():
         x,z=island_center(pos)
-        mesh+=beast_segment((x,-1.34,z),(x,-.28,z),(.79,.57),(1.47,1.13),11)
-        mesh+=beast_segment((x,-.28,z),(x,0,z),(1.47,1.13),(1.36,1.04),12)
+        mesh+=beast_segment((x,-1.34,z),(x,-.28,z),(.79,.57),(1.47,1.13),18)
+        mesh+=beast_segment((x,-.28,z),(x,0,z),(1.47,1.13),(1.36,1.04),20)
         mesh+=translated(landmark_mesh(name),x,.56,z,.81)
         if name=="dorf":
             mesh+=translated(landmark_mesh(name),x-.85,.26,z+.18,.48)
@@ -190,10 +142,10 @@ def atlas(w,h):
 
 def atlas_frame(w,h,tick):
     c=backdrop(atlas(w,h))
-    for i in range(max(4,w//5)):
+    for i in range(max(3,w//22)):
         x=(i*23+int(tick*.8))%w
         y=(i*7+int(math.sin(tick*.8+i)))%h
-        if c.cells[y][x][0]==" ": c.put(x,y,"≈" if y>h//3 else "·",11 if y>h//3 else 12)
+        if c.cells[y][x][0]==" ": c.put(x,y,"·",8)
     x,y=atlas_point(w,h,POSITIONS["werkstatt"])
     for i in range(3):
         phase=(tick*.6+i/3)%1

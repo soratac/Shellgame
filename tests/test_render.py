@@ -12,6 +12,17 @@ class RenderTests(unittest.TestCase):
             self.assertTrue(any(char in "░▒▓█" for row in first.cells for char,_ in row))
             self.assertNotEqual(first.cells,second.cells)
 
+    def test_life_gauge_loses_health_with_warm_trail_and_no_brackets(self):
+        from frost.render import health_gauge
+        hit=health_gauge(35,100,18,95,.42,2)
+        settled=health_gauge(35,100,18,95,2,2)
+        text="".join(ch for ch,_ in hit.cells[0])
+        self.assertIn("35/100",text)
+        self.assertIn("▓",text)
+        self.assertNotIn("❨",text)
+        self.assertNotIn("▓",[ch for ch,_ in settled.cells[0]])
+        self.assertTrue(all(color not in (2,11,12,14) for row in hit.cells for ch,color in row if ch!=" "))
+
     def test_world_character_all_areas(self):
         for area,position in POSITIONS.items():
             state=fresh("Elf")

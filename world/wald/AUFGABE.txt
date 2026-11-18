@@ -1,0 +1,4 @@
+DAS ZEICHEN DER TANNEN
+
+Suche mit ls -a die Lichtung. Kopiere ihr Rindenzeichen nach abgabe/zeichen.txt.
+Danach kannst du wurzeln/frost mit mv mitnehmen.

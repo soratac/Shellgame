@@ -29,6 +29,19 @@ def sync_files():
     from .items import ITEMS, DELIVERIES, MOVE_ITEMS, script
     bag = Path.home() / "rucksack"
     found = []
+    state=None
+    for place, filename in DELIVERIES.items():
+        try:
+            with (Path.home()/"welt"/place/"abgabe"/filename).open(encoding="utf-8", errors="replace") as f:
+                content = f.read(8192)
+        except OSError:
+            continue
+        result=request("deliver", [place], content=content)
+        state=result["state"]
+        if result.get("message"): print(result["message"])
+    from .world import sync_rewards
+    sync_rewards(state if state is not None else request()["state"])
+
     for name in ITEMS:
         try:
             with (bag/name).open("r", encoding="utf-8") as f:
@@ -38,13 +51,6 @@ def sync_files():
         except (OSError, UnicodeError):
             pass
     request("bag", found)
-    for place, filename in DELIVERIES.items():
-        try:
-            with (Path.home()/"welt"/place/"abgabe"/filename).open(encoding="utf-8", errors="replace") as f:
-                content = f.read(8192)
-        except OSError:
-            continue
-        request("deliver", [place], content=content)
 
 
 def check_travel():
@@ -126,6 +132,9 @@ def main():
         request("observe", cwd=area())
         sync_files()
     result = request(action, args, **kwargs)
+    if action == "submit" and result["ok"]:
+        from .world import sync_rewards
+        sync_rewards(result["state"])
     if action == "use" and args:
         from .items import ITEMS
         item=args[0]

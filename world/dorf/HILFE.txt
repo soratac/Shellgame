@@ -1,6 +1,7 @@
 RETTET WEIHNACHTEN
 
-1  mv funke ping ~/rucksack/
+1  cat AUFGABE.txt → Wunschzettel retten
+   mv funke ping ~/rucksack/
 2  karte  →  folge der Spur mit cd ~/welt/ORT
 3  nmap grinch  →  ssh GEFUNDENE-IP
 

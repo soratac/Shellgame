@@ -120,4 +120,5 @@ _frost_live_begin() {
 PS0='$(_frost_live_begin)'
 PROMPT_COMMAND=_frost_prompt
 builtin cd "$HOME/welt/dorf"
-printf '\n  Ausgeführte Befehle sind im Live-Scoreboard sichtbar.\n\n'
+printf '\n  Dorfaufgabe: cat AUFGABE.txt · Deine Befehle sind im Live-Scoreboard sichtbar.\n'
+command frost music link

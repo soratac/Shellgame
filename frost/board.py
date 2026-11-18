@@ -121,6 +121,9 @@ class Board:
                 if event.get(key) in allowed: values[key]=event[key]
             for key,limit in [("boss_before",240),("hp_before",100)]:
                 if isinstance(event.get(key),int) and 0<=event[key]<=limit: values[key]=event[key]
+            sounds=event.get("sounds")
+            if isinstance(sounds,list) and all(isinstance(v,str) and v in music_http.SOUNDS for v in sounds):
+                values["sounds"]=sounds[:2]
             selected["events"]=[values]
         selected["area"]=data.get("area") if data.get("area") in {"dorf","wald","werkstatt","archiv","zitadelle"} else "unterwegs"
         selected["method"]=selected["method"] if selected["method"] in {"loop","staff","spell","driver"} else None

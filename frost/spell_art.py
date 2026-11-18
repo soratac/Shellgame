@@ -97,7 +97,7 @@ def spell_motion(c,event,age,start,end):
     spell=event.get("spell")
     if kind=="attack": spell="staff"
     if kind=="ping": spell="ping"
-    height=max(4,min(12,c.h*.52))
+    height=max(5,min(19,c.h*.78,c.w*.31))
     sx,sy=start; ex,ey=end
     if event["hurt"]<0:
         t=min(1,age/1.32)
@@ -114,8 +114,38 @@ def spell_motion(c,event,age,start,end):
         size=height*(.75+.25*math.sin(t*math.pi))
         if age>.54: size*=1+(age-.54)*1.35
         apparition(c,spell,x,y,size,age)
+        if age>=.46:
+            bloom=min(1,(age-.46)/.36)
+            radius=height*(.25+.72*bloom)
+            mark,color={"funke":("✹",15),"frost":("❄",1),"stern":("★",5),
+                        "ping":("◦",2),"staff":("╱",20)}[spell]
+            for i in range(10):
+                a=i*math.tau/10
+                dx,dy=math.cos(a)*radius*1.65,math.sin(a)*radius*.7
+                tx,ty=round(ex+dx),round(ey+dy)
+                if spell in ("frost","staff","funke"):
+                    c.line(round(ex+dx*.59),round(ey+dy*.59),tx,ty,"╲" if dx*dy>0 else "╱",color)
+                c.put(tx,ty,mark,color)
+    if kind in ("disable","unload") and age<.78:
+        symbol="⚙" if kind=="disable" else "◇"
+        r=height*(.22+age*.75)
+        for i in range(8):
+            angle=i*math.tau/8+age*2
+            c.put(round(ex+r*1.65*math.cos(angle)),round(ey+r*.64*math.sin(angle)),symbol,5 if i%2 else 20)
+    if "loop" in event.get("sounds",[]) and age<1.2:
+        for i in range(15):
+            t=age*5+i*math.tau/15
+            c.put(round(ex+height*math.sin(t)),round(ey+.45*height*math.sin(2*t)),"✦",5 if i%3 else 20)
+    if .55<age<1.15:
+        sounds=event.get("sounds",[])
+        if "parry" in sounds:
+            apparition(c,"schild",sx+3,sy-2,height*.88,age)
+        if "ice_lock" in sounds:
+            for side in (-1,1):
+                x=ex+side*round(height*.65)
+                apparition(c,"frost",x,ey+1,height*.71,age)
     if event["hurt"]>0 and .55<age<1.35:
         t=min(1,(age-.55)/.52)
-        counter="gale" if "gale" in event.get("sounds",[]) or event["hurt"]>=12 else "claw"
+        counter=("gale" if "gale" in event["sounds"] else "claw") if "sounds" in event else ("gale" if event["hurt"]>=12 else "claw")
         apparition(c,counter,ex+(sx-ex)*t,ey+(sy-ey)*t,
                    height*(.57+.57*t),age)

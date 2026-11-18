@@ -11,11 +11,14 @@ Gib mit `&&` verkettete Befehle einzeln ein. Frostbyte verwirft die gesamte Kett
 Im Dorf starten:
 
 ```bash
-ls
+cat AUFGABE.txt
+cp post/wunschzettel.txt abgabe/gerettet.txt
 mv funke ping kakao ~/rucksack/
 cd ../wald
+cp .lichtung/rindenzeichen abgabe/zeichen.txt
 mv wurzeln/frost ~/rucksack/
 cd ../werkstatt
+cat AUFGABE.txt       # Maschine reparieren und abgeben
 mv schild ~/rucksack/
 karte                 # Folge der markierten Spur mit cd ~/welt/ORT
 nmap grinch
@@ -42,11 +45,11 @@ Mit `tipp` erhältst du bis zu drei Hinweise pro Runde. Jeder erscheint acht Sek
 
 ## Weihnachtsmusik
 
-Gib in der Spiel-Shell `musik` ein, öffne den persönlichen Link auf deinem Gerät und drücke **▶ Musik starten**. Der Browser spielt „Schneefunken“, einen eigens für Frostbyte komponierten Glockenspiel-Chiptune. Lass den Tab beim Spielen offen. Über denselben Lautstärkeregler hörst du auch Treffer, Zauber und die Angriffe des Grinch. Das Echo sendet vier kurze Töne, Frost klingt wie splitterndes Eis, und die schwere Sturmböe kündigt sich mit einem tiefen Grollen an.
+Beim SSH-Login erscheint dein persönlicher Ton-Link. Öffne ihn auf deinem Gerät und drücke **▶ Musik starten**, falls dein Browser auf einen Klick wartet. Mit `musik link` zeigst du ihn erneut an. Der Browser spielt „Schneefunken“, einen eigens für Frostbyte komponierten Glockenspiel-Chiptune. Lass den Tab beim Spielen offen. Über denselben Lautstärkeregler hörst du auch Treffer, Zauber und die Angriffe des Grinch. Das Echo sendet vier kurze Töne, Frost klingt wie splitterndes Eis, und die schwere Sturmböe kündigt sich mit einem tiefen Grollen an.
 
 Unten rechts kannst du **♪ Musik** für den Browserlink, **[−] / [+]** für die Lautstärke und die **Prozentanzeige** zum Stummschalten anklicken. In Terminals mit Mausunterstützung lässt sich Text meist mit Umschalt und Ziehen markieren. Im geöffneten Musikregler ändern **← / →** die Lautstärke in Zehnerschritten, **M** schaltet stumm und wieder laut. **Enter** bringt dich zurück zur Eingabe. Direkt an der Bash funktionieren auch `musik 30` und `musik mute`. Beim Trennen der Spielsitzung endet die Wiedergabe.
 
-**Über den Jumphost:** Starte auf deinem eigenen Rechner im geklonten Repository `python3 scripts/spielmusik.py -J jump spiel@10.0.0.60`. Das öffnet das Spiel und den Musik-Tab über dieselbe SSH-Verbindung. Dafür werden Python 3.9+, OpenSSH und ein lokaler Browser benötigt. `jump` steht für deinen SSH-Alias. Das gilt auch bei gesperrten zusätzlichen Ports.
+**Über den Jumphost:** Starte auf deinem eigenen Rechner im geklonten Repository `python3 scripts/spielmusik.py -J jump spiel@10.0.0.60`. Der lokale Musik-Tab ist schon bei der Charakterwahl bereit. Lautstärke und Kampfeffekte laufen über dieselbe SSH-Verbindung. Dafür werden Python 3.9+, OpenSSH und ein lokaler Browser benötigt. `jump` steht für deinen SSH-Alias. Das gilt auch bei gesperrten zusätzlichen Ports.
 
 Beim gewöhnlichen SSH-Einstieg muss der Browser den Musikport des Spielservers erreichen (Standard **8094/tcp**). Der Link verwendet `GAME_HOST` und `MUSIC_PORT` aus der Compose-Umgebung. Für eine andere vom Browser erreichbare Adresse setze `MUSIC_URL` in `.env`.
 
@@ -61,6 +64,8 @@ Beim gewöhnlichen SSH-Einstieg muss der Browser den Musikport des Spielservers 
 | `~/welt/zitadelle` | Grinch mit 240 Leben |
 
 Beispiel: `cp post/wunschzettel.txt abgabe/gerettet.txt` löst die Dorfaufgabe automatisch. In jedem Aufgabenordner steht in `AUFGABE.txt` ein kurzer Hinweis. Die Werkstatt erwartet `abgabe/maschine.conf`, das Archiv `abgabe/passwort.txt`. Der Inhalt zählt; `cp`, `mv`, `echo > …` und Pipes sind möglich. Eine unveränderte falsche Abgabe kostet nur einmal Leben, nicht bei jedem Prompt.
+
+Dorf, Wald, Werkstatt und Archiv haben je eine `AUFGABE.txt`. Erst die richtige Abgabe lässt die Zauberdateien des Ortes erscheinen. Im Dorf werden Funke und Echo gemeinsam freigeschaltet. Heilmittel sind frei sammelbar.
 
 ## Kämpfen und heilen
 

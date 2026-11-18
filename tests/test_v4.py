@@ -8,6 +8,7 @@ class ProgressionTests(unittest.TestCase):
     def fight(self,places):
         s=fresh('Elf',now=0)
         for place in places: act(s,'observe',cwd=place,now=1)
+        s["rewards"].append("quest:wunschzettel")
         act(s,'bag',['funke','kakao','frost','schild'])
         act(s,'observe',cwd='zitadelle'); act(s,'enter_boss')
         act(s,'unload',['blizzard']); act(s,'unload',['frost_armor'])
@@ -25,6 +26,7 @@ class ProgressionTests(unittest.TestCase):
         self.assertIn(BOSS_IP,act(s,'scan')['message'])
         self.assertFalse(act(s,'ping',[BOSS_IP])['ok'])
         self.assertFalse(act(s,'connect',['127.0.0.1'])['ok'])
+        s["rewards"].append("quest:wunschzettel")
         act(s,'bag',['ping'])
         self.assertTrue(act(s,'connect',[BOSS_IP])['ok'])
         hp=s['hp']
@@ -67,6 +69,7 @@ class ProgressionTests(unittest.TestCase):
 
     def test_village_loop_remains_shortcut(self):
         s=fresh('Elf',now=0)
+        s["rewards"].append("quest:wunschzettel")
         act(s,'observe',cwd='dorf'); act(s,'bag',['funke'])
         act(s,'observe',cwd='zitadelle'); act(s,'enter_boss')
         for i in range(6): act(s,'use',['funke'],now=10+i*.1)
@@ -82,7 +85,7 @@ class ProgressionTests(unittest.TestCase):
         self.assertTrue(s['avatar_set'])
 
     def test_events_retain_actual_damage_and_bounded_history(self):
-        s=fresh('Elf'); act(s,'bag',['funke'])
+        s=fresh('Elf'); s["rewards"].append("quest:wunschzettel"); act(s,'bag',['funke'])
         act(s,'observe',cwd='zitadelle'); act(s,'enter_boss')
         act(s,'use',['funke'],now=10)
         event=s['events'][-1]
@@ -105,7 +108,7 @@ class ProgressionTests(unittest.TestCase):
         self.assertEqual(s["hints_left"],2)
 
     def test_animated_combat_has_both_bars_and_damage_numbers(self):
-        s=fresh('Elf'); act(s,'bag',['funke'])
+        s=fresh('Elf'); s["rewards"].append("quest:wunschzettel"); act(s,'bag',['funke'])
         act(s,'observe',cwd='zitadelle'); act(s,'enter_boss')
         act(s,'use',['funke'],now=10)
         with patch('frost.render.time.time',return_value=10.95):

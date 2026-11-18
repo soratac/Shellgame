@@ -3,7 +3,7 @@ import re
 import time
 import hashlib
 from .trail import BOSS_IP, discovered, hiding_place
-from .items import pickup, ITEMS, bag_count
+from .items import pickup, ITEMS, bag_count, DELIVERIES, SPELL_QUEST, unlocked
 from .avatar import DEFAULT, OPTIONS, appearance
 from .records import migrate, bests as merge_bests
 
@@ -19,6 +19,7 @@ SPELL_FILES = {
     "schild.spell": ("werkstatt", "schild"), "stern.spell": ("archiv", "stern"),
 }
 HELP = """ls / tree ~/welt       Umschauen
+cat AUFGABE.txt         Zauber freischalten
 mv DATEI ~/rucksack/    Mitnehmen
 cd ~/welt/wald         Weitergehen
 ~/rucksack/funke        Angreifen
@@ -42,7 +43,7 @@ def fresh(name="", now=None, bests=None):
                 spells={}, rewards=[], status="playing", method=None, shield=0, frozen=0,
                 storm_service=True, combat_turn=0, last_attack=None, armor=True, blizzard=True, loop_hits=[], bests=merge_bests(bests), bag=[], deliveries={},
                 hints_left=HINT_LIMIT, hint_until=0, hint_text="", grinch_found=False, boss_started=False, battle_items=[], avatar=dict(DEFAULT), avatar_set=False, events=[], event_seq=0,
-                message="Nimm den Funken mit: mv funke ~/rucksack/")
+                message="Rette den Wunschzettel: cat AUFGABE.txt")
 
 
 def reward(s, key, points):
@@ -137,6 +138,7 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
             if s["status"]!="playing": hint="Mit restart beginnt die nächste Runde."
             elif s["boss_started"]: hint="Angreifen: angreifen" if s["hp"]>40 or "kakao" not in s["bag"] else "Heilen: ~/rucksack/kakao"
             elif discovered(s): hint=f"Verbinden: ssh {BOSS_IP}"
+            elif s["area"]=="dorf" and not unlocked(s,"funke"): hint="Dorfaufgabe: cat AUFGABE.txt"
             elif not s["bag"] and s["area"]=="dorf": hint="Funken holen: mv funke ~/rucksack/"
             elif s["area"]==place: hint="Grinch orten: nmap grinch"
             else: hint=f"Spur: cd ~/welt/{place}"
@@ -183,7 +185,7 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
             message = "Das Tor ist geschlossen. Im Kampf gibt es keine neuen Funde oder Aufgaben."
         result["ok"] = False
     elif action == "bag":
-        allowed = set(ITEMS)
+        allowed = {item for item in ITEMS if unlocked(s,item)}
         if s["boss_started"]:
             allowed &= set(s["battle_items"])
         s["bag"] = sorted(set(args) & allowed)
@@ -204,7 +206,7 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
         return _act(s, "heal" if item in ("kakao", "beeren") else "cast", [item], now=now)
     elif action == "deliver":
         place = args[0] if args else ""
-        if place not in ("dorf", "werkstatt", "archiv"):
+        if place not in DELIVERIES:
             return {"ok": False, "message": "Unbekannte Abgabe.", "stop": False}
         digest = hashlib.sha256(content.encode()).hexdigest()
         if s["deliveries"].get(place) == digest:
@@ -238,6 +240,9 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
         if not found or found[0] != s["area"]:
             result["ok"] = False
             message = "Hier liegt dieser Zauber nicht. Nutze ls oder find."
+        elif not unlocked(s,found[1]):
+            result["ok"] = False
+            message = "Löse zuerst die Ortsaufgabe in AUFGABE.txt."
         elif reward(s, "spell:" + found[1], 80):
             s["spells"][found[1]] = {"funke": -1, "frost": 3, "stern": 2, "schild": 2}[found[1]]
             message = f"Zauber {found[1]} gelernt! +80 Punkte. Nutze zauber {found[1]}."
@@ -259,7 +264,7 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
         else:
             message = "Schon aufgebraucht."
     elif action == "submit":
-        solutions = {"dorf": ("Mila: Stern\nNoah: Schlitten", "wunschzettel"),
+        solutions = {"wald": ("TANNENGRUEN", "waldzeichen"), "dorf": ("Mila: Stern\nNoah: Schlitten", "wunschzettel"),
                      "werkstatt": ("band=an\nlicht=an\nziel=weihnachten", "geschenkband"),
                      "archiv": ("AURORA", "passwort")}
         solution = solutions.get(cwd or s["area"])

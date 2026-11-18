@@ -36,18 +36,18 @@ function playTurn(ctx, bus, sounds) {
     }
 
     sounds.forEach((name, index) => {
-        const at = ctx.currentTime + 0.015 + index * 0.48;
+        const at = ctx.currentTime + 0.015 + index * 0.55;
         const notes = (pitches, step, length, wave, level) =>
             pitches.forEach((hz,i) => tone(at+i*step,wave,hz,hz,length,level));
         switch (name) {
             case "staff":
-                rush(at, 900, 2800, .13, .65); tone(at+.10,"triangle",145,52,.16,.65); break;
+                rush(at, 900, 2800, .13, .65); tone(at+.10,"triangle",145,52,.16,.65); rush(at+.22,1600,360,.12,.45); break;
             case "funke":
-                rush(at, 3600, 460, .28, .72); tone(at,"sawtooth",620,125,.23,.32); break;
+                rush(at, 3600, 460, .28, .72); tone(at,"sawtooth",620,125,.23,.32); tone(at+.36,"triangle",134,42,.22,.68); break;
             case "frost":
-                notes([2217,1865,2489,1245],.053,.22,"sine",.36); break;
+                notes([2217,1865,2489,1245],.053,.22,"sine",.36); rush(at+.35,5700,1400,.26,.58); break;
             case "stern":
-                notes([523,659,784,1047,1568],.055,.30,"triangle",.37); break;
+                notes([523,659,784,1047,1568],.055,.30,"triangle",.37); tone(at+.36,"sine",1047,2093,.43,.38); break;
             case "schild":
                 tone(at,"sine",184,180,.55,.55); tone(at,"sine",493,440,.38,.40); break;
             case "ping":
