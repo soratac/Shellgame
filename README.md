@@ -34,13 +34,15 @@ Die goldene Spur ✧ zeigt den aktuellen Aufenthaltsort des Grinch. Er wechselt 
 | Einen anderen Ort besuchen | `cd ~/welt/wald` |
 | Eine Aufgabe abgeben | Fertige Datei nach `abgabe/` kopieren |
 
+Mit `tipp` erhältst du bis zu drei Hinweise pro Runde. Jeder erscheint acht Sekunden über der Spielwelt. `restart` füllt den Vorrat wieder auf.
+
 **Tab** vervollständigt, **Tab Tab** zeigt die Auswahl, **Strg+C** bricht ab. Die unteren Eingabezeilen bleiben automatisch aktiv. Normale Befehle, Editoren, Pipes, Umleitungen und Schleifen funktionieren weiterhin. Spielgegenstände sind echte ausführbare Shell-Dateien; `cp` und `mv` werden nicht umdefiniert.
 
 ## Weihnachtsmusik
 
 Gib in der Spiel-Shell `musik` ein, öffne den persönlichen Link auf deinem Gerät und drücke **▶ Musik starten**. Der Browser spielt „Schneefunken“, einen eigens für Frostbyte komponierten Glockenspiel-Chiptune. Lass den Tab beim Spielen offen. Über denselben Lautstärkeregler hörst du auch Treffer, Zauber und die Angriffe des Grinch. Das Echo sendet vier kurze Töne, Frost klingt wie splitterndes Eis, und die schwere Sturmböe kündigt sich mit einem tiefen Grollen an.
 
-Im Musikregler unten rechts ändern **← / →** die Lautstärke in Zehnerschritten, **M** schaltet stumm und wieder laut. **Enter** bringt dich zurück zur Eingabe. Direkt an der Bash funktionieren auch `musik 30` und `musik mute`. Beim Trennen der Spielsitzung endet die Wiedergabe.
+Unten rechts kannst du **♪ Musik** für den Browserlink, **[−] / [+]** für die Lautstärke und die **Prozentanzeige** zum Stummschalten anklicken. In Terminals mit Mausunterstützung lässt sich Text meist mit Umschalt und Ziehen markieren. Im geöffneten Musikregler ändern **← / →** die Lautstärke in Zehnerschritten, **M** schaltet stumm und wieder laut. **Enter** bringt dich zurück zur Eingabe. Direkt an der Bash funktionieren auch `musik 30` und `musik mute`. Beim Trennen der Spielsitzung endet die Wiedergabe.
 
 **Über den Jumphost:** Starte auf deinem eigenen Rechner im geklonten Repository `python3 scripts/spielmusik.py -J jump spiel@10.0.0.60`. Das öffnet das Spiel und den Musik-Tab über dieselbe SSH-Verbindung. Dafür werden Python 3.9+, OpenSSH und ein lokaler Browser benötigt. `jump` steht für deinen SSH-Alias. Das gilt auch bei gesperrten zusätzlichen Ports.
 

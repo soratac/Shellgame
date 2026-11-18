@@ -24,6 +24,7 @@ _frost_action() {
     return "$rc"
 }
 musik() { command frost music "$@"; }
+tipp() { command frost hint; }
 hilfe() { command frost help; }
 status() { command frost status; }
 karte() { command frost map; }

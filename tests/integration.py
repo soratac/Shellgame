@@ -76,7 +76,8 @@ def main():
         while time.monotonic()<end:
             value=state(slot)
             if predicate(value): return value
-            time.sleep(.15)
+            sessions[0].drain(.15)
+        capture("state-timeout")
         raise AssertionError(f"State timeout: {value}")
     def scores():
         with urllib.request.urlopen(f"http://127.0.0.1:{ports['api']}/api/scores",timeout=3) as r: return json.load(r)["players"]
@@ -125,6 +126,8 @@ def main():
             print(f"PASS: {args.players} concurrent interactive gateway players plus a separate live scoreboard viewer",flush=True)
             return
         s=sessions[0]
+        s.send("\x1b[<0;100;42M\x1b[<0;100;42m")
+        s.expect("http://127.0.0.1:")
         s.send("musik\r")
         s.expect("Enter zurück")
         link = re.search(rb"http://127\.0\.0\.1:\d+/#([\w-]{16})", s.output)
@@ -156,6 +159,22 @@ def main():
             s.send("m")
             assert volume_event(stream)==50
             s.send("\r")
+            # Click the shell footer at 120×42 while Bash has unfinished input.
+            s.send("printf 'MOUSE_%s\\n' ")
+            def click(x):
+                s.send(f"\x1b[<0;{x};42M\x1b[<0;{x};42m")
+            click(116)
+            assert volume_event(stream)==60
+            click(106)
+            assert volume_event(stream)==50
+            click(111)
+            assert volume_event(stream)==0
+            click(111)
+            assert volume_event(stream)==50
+            s.send("OK\r")
+            s.expect("MOUSE_OK")
+        s.send("tipp\r")
+        wait_state(lambda v:v.get("hints_left")==2)
         with urllib.request.urlopen(audio_url+"/winter.wav") as track:
             assert track.read(4)==b"RIFF" and int(track.headers["Content-Length"])>100000
         print("PASS: personal audio link, real mixer arrows, mute/unmute and loop audio", flush=True)

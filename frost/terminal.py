@@ -16,7 +16,8 @@ import time
 import tty
 
 from .client import request
-from .music import indicator
+from .music import indicator, mixer_action, music_link
+from .mouse import MouseInput
 from .music_http import recent_sounds
 from .render import colors, paint, put, box, POSITIONS
 
@@ -113,6 +114,24 @@ def frame(screen):
         if char.reverse: result|=curses.A_REVERSE
         attrs[key]=result
         return result
+    mouse=MouseInput()
+    tracking=False
+    notice=""
+    notice_until=0
+    def click(x,y):
+        nonlocal music,notice,notice_until
+        if y!=rows-1: return
+        action=mixer_action(music,cols,x)
+        if not action: return
+        try:
+            if action=="open":
+                notice=music_link()
+                notice_until=time.monotonic()+18
+            else:
+                music=request("music",[action])["music"]
+        except (OSError,ValueError,KeyError):
+            notice="Musik gerade nicht erreichbar."
+            notice_until=time.monotonic()+4
     try:
         while True:
             physical=os.get_terminal_size(0)
@@ -124,6 +143,10 @@ def frame(screen):
                 terminal.resize(lines=sh,columns=sw)
                 fcntl.ioctl(master,termios.TIOCSWINSZ,struct.pack('HHHH',sh,sw,0,0))
                 previous_size=size
+            wanted=not zoom and terminal.alternate is None and cols>=len(indicator(music))+4
+            if wanted!=tracking:
+                os.write(1,b"\x1b[?1000h\x1b[?1006h" if wanted else b"\x1b[?1000l\x1b[?1006l")
+                tracking=wanted
             ready,_,_=select.select([master,0,listener],[],[],.04)
             if listener in ready:
                 with listener.accept()[0] as conn:
@@ -143,11 +166,14 @@ def frame(screen):
             if 0 in ready:
                 data=os.read(0,8192)
                 if not data: break
+                if tracking: data=mouse.feed(data,click)
+                elif mouse.pending: data=mouse.flush()+data
                 if (1<<5) in terminal.mode:
                     for key in (b'A',b'B',b'C',b'D',b'H',b'F'):
                         data=data.replace(b'\x1b['+key,b'\x1bO'+key)
                 os.write(master,data)
             now=time.monotonic()
+            if mouse.pending and now-mouse.since>.12: os.write(master,mouse.flush())
             if (not zoom or local_sfx) and now-fetched>.15:
                 try:
                     snapshot=request()
@@ -180,6 +206,8 @@ def frame(screen):
                 progress=min(1,(now-travel_start)/.9)
                 position=tuple(origin[i]+(target[i]-origin[i])*progress for i in (0,1))
                 paint(hud,state,now,position,walking=progress<1)
+                if now<notice_until:
+                    put(screen,top-1,1,notice,5,True)
                 box(screen,top,0,rows-top,cols-1,2)
                 label=indicator(music)
                 if cols>=len(label)+4:
@@ -199,6 +227,8 @@ def frame(screen):
             except curses.error: pass
             screen.refresh(); painted=now
     finally:
+        if tracking:
+            with contextlib.suppress(OSError): os.write(1,b"\x1b[?1000l\x1b[?1006l")
         with contextlib.suppress(OSError, ValueError):
             request("music", ["close"])
         listener.close(); Path(CONTROL).unlink(missing_ok=True); os.close(master)

@@ -19,7 +19,7 @@ class ProgressionTests(unittest.TestCase):
         s=fresh('Raoul', now=1)
         self.assertFalse(act(s,'connect',[BOSS_IP])['ok'])
         act(s,'observe',cwd='dorf')
-        self.assertIn(hiding_place(s),act(s,'scan')['message'])
+        self.assertNotIn(hiding_place(s),act(s,'scan')['message'])
         self.assertFalse(act(s,'connect',[BOSS_IP])['ok'])
         act(s,'observe',cwd=hiding_place(s))
         self.assertIn(BOSS_IP,act(s,'scan')['message'])
@@ -89,6 +89,20 @@ class ProgressionTests(unittest.TestCase):
         self.assertEqual((event['damage'],event['hurt']),(22,7))
         for i in range(60): act(s,'attack',now=100+i*3)
         self.assertLessEqual(len(s['events']),24)
+
+    def test_hints_have_a_per_run_budget_and_expire(self):
+        s=fresh("Elf",now=0)
+        for left in (2,1,0):
+            act(s,"hint",now=10)
+            self.assertEqual(s["hints_left"],left)
+        self.assertEqual(s["hint_until"],18)
+        self.assertIn("verbraucht",act(s,"hint",now=20)["message"])
+        self.assertEqual(s["hint_until"],18)
+        act(s,"reset",now=22)
+        self.assertEqual(s["hints_left"],3)
+        del s["hints_left"]
+        act(s,"hint",now=24)
+        self.assertEqual(s["hints_left"],2)
 
     def test_animated_combat_has_both_bars_and_damage_numbers(self):
         s=fresh('Elf'); act(s,'bag',['funke'])

@@ -38,11 +38,33 @@ class Mixer:
             return {"key": self.key, "volume": 0 if self.muted else self.level}
 
 
+def mixer_buttons(mixer):
+    label="stumm" if mixer["muted"] else f"{mixer['level']}%"
+    return (("♪ Musik","open"), ("[−]","-"), (f"[{label}]","mute"), ("[+]","+"))
+
+
 def indicator(mixer):
-    level = mixer["level"]
-    fill = 0 if mixer["muted"] else round(level / 20)
-    value = "stumm" if mixer["muted"] else f"{level}%"
-    return f" ♪ musik {'━' * fill}{'─' * (5-fill)} {value} "
+    return " ".join(label for label,_ in mixer_buttons(mixer))
+
+
+def mixer_action(mixer, cols, x):
+    start=cols-3-len(indicator(mixer))
+    if start<1: return None
+    for label,action in mixer_buttons(mixer):
+        if start<=x<start+len(label): return action
+        start+=len(label)+1
+
+
+def music_link():
+    from .client import request
+    url = os.environ.get("FROST_LOCAL_MUSIC")
+    if not url:
+        base = os.environ.get("SCORE_URL", "http://scoreboard:8080")
+        with urllib.request.urlopen(base + "/api/music-url", timeout=3) as response:
+            address = response.read(2048).decode().strip()
+        session = request("music", ["open"])
+        url = f"{address}/#{session['key']}"
+    return url
 
 
 def controls(args):
@@ -51,13 +73,7 @@ def controls(args):
         result = request("music", args)
         print(indicator(result["music"]) if result["ok"] else result["message"])
         return 0 if result["ok"] else 1
-    url = os.environ.get("FROST_LOCAL_MUSIC")
-    if not url:
-        base = os.environ.get("SCORE_URL", "http://scoreboard:8080")
-        with urllib.request.urlopen(base + "/api/music-url", timeout=3) as response:
-            address = response.read(2048).decode().strip()
-        session = request("music", ["open"])
-        url = f"{address}/#{session['key']}"
+    url = music_link()
     print(f"Im Browser öffnen und ▶ drücken:\n{url}", flush=True)
     if not sys.stdin.isatty():
         return 0

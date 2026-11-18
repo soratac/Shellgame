@@ -28,9 +28,12 @@ Folge der Spur auf der Karte. Am Fundort zeigt nmap grinch seine IP.
 
 ls -a zeigt Verstecke. Einzigartige Funde mit mv bergen.
 systemctl status zeigt Bossdienste. restart beginnt eine neue Runde.
-Tab hilft beim Tippen. aussehen aendert deinen Charakter.
+tipp gibt einen von drei Hinweisen pro Runde. Tab hilft beim Tippen. aussehen aendert deinen Charakter.
 neustart | neustart alles (eigene Rekorde)
 """
+
+
+HINT_LIMIT = 3
 
 
 def fresh(name="", now=None, bests=None):
@@ -38,7 +41,7 @@ def fresh(name="", now=None, bests=None):
                 ended=None, hp=100, boss_hp=240, score=0, area="dorf", visited=[],
                 spells={}, rewards=[], status="playing", method=None, shield=0, frozen=0,
                 storm_service=True, combat_turn=0, armor=True, blizzard=True, loop_hits=[], bests=merge_bests(bests), bag=[], deliveries={},
-                grinch_found=False, boss_started=False, battle_items=[], avatar=dict(DEFAULT), avatar_set=False, events=[], event_seq=0,
+                hints_left=HINT_LIMIT, hint_until=0, hint_text="", grinch_found=False, boss_started=False, battle_items=[], avatar=dict(DEFAULT), avatar_set=False, events=[], event_seq=0,
                 message="Nimm den Funken mit: mv funke ~/rucksack/")
 
 
@@ -123,6 +126,20 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
         s.update(fresh(s["name"], now=now, bests={} if args == ["alles"] else s["bests"]))
         s.update(avatar=avatar, avatar_set=avatar_set)
         message = "Neuer Lauf. Auf ins Dorf!"
+    elif action == "hint":
+        left=s.get("hints_left",HINT_LIMIT)
+        if left==0:
+            message="Alle drei Tipps dieser Runde sind verbraucht."
+        else:
+            place=hiding_place(s,now)
+            if s["status"]!="playing": hint="Mit restart beginnt die nächste Runde."
+            elif s["boss_started"]: hint="Angreifen: angreifen" if s["hp"]>40 or "kakao" not in s["bag"] else "Heilen: ~/rucksack/kakao"
+            elif discovered(s): hint=f"Verbinden: ssh {BOSS_IP}"
+            elif not s["bag"] and s["area"]=="dorf": hint="Funken holen: mv funke ~/rucksack/"
+            elif s["area"]==place: hint="Grinch orten: nmap grinch"
+            else: hint=f"Spur: cd ~/welt/{place}"
+            s.update(hints_left=left-1,hint_until=now+8,hint_text=hint)
+            message=f"{hint}  ({left-1} Tipps übrig)"
     elif action == "services":
         message = "eissturm.service   " + ("enabled" if s["storm_service"] else "disabled")
     elif action in ("status", "map", "inventory", "help", "modules"):
@@ -145,7 +162,7 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
             reward(s,"echo:gefunden",40)
             message = f"Grinch gefunden · {BOSS_IP}  →  ssh {BOSS_IP}"
         else:
-            message = f"Spur in {place}: cd ~/welt/{place}  →  nmap grinch"
+            message = "Kein Grinch-Signal an diesem Ort."
     elif action == "connect":
         if args != [BOSS_IP] or not discovered(s):
             return {"ok": False, "message": "Suche zuerst die Spur auf der Karte.", "stop": False}
