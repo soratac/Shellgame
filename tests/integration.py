@@ -286,17 +286,12 @@ def main():
                   text=True,capture_output=True).stdout.strip()
         s.send(f"cd ~/welt/{place}\r")
         wait_state(lambda v:v["area"]==place)
+        s.send("ssh grinch\r")
+        s.expect("Suche zuerst die Spur")
+        assert not state()["boss_started"]
         s.send("nmap grinch\r"); wait_state(lambda v:v["grinch_found"])
         s.send("ssh grinch\r")
-        s.expect("BOSSKAMP STARTEN?")
-        capture("boss-hints")
-        s.send("n\r")
-        s.drain(.4)
-        assert not state()["boss_started"] and state()["area"]==place
-        s.send("ssh grinch\r")
-        s.expect("BOSSKAMP STARTEN?")
-        s.send("j\r")
-        wait_state(lambda v:v["boss_started"])
+        wait_state(lambda v:v["boss_started"] and v["area"]=="zitadelle")
         s.send("systemctl disable eissturm.service\r")
         wait_state(lambda v:not v["storm_service"])
         with urllib.request.urlopen(stream_url, timeout=6) as stream:
@@ -363,7 +358,7 @@ def main():
         assert hero["avatar"]=={"hair":"blond","shirt":"blau","gender":"weiblich","style":"Locken"},hero
         assert hero["connected"] and "mode" not in hero and "best" in hero["bests"],hero
         print("PASS: live scoreboard contains chosen avatar, real presence and one shared best time",flush=True)
-        print("PASS: tree, boss hints/confirmation, no retreat, framed shell and separate live score login",flush=True)
+        print("PASS: tree, direct SSH boss entry, no retreat, framed shell and separate live score login",flush=True)
         s.close(); sessions.remove(s)
         deadline=time.monotonic()+7
         while time.monotonic()<deadline:

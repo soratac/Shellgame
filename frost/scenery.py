@@ -1,4 +1,4 @@
-"""The ice courtyard and the winter trail map, rendered in terminal cells."""
+"""Winter trail map with five landmarks."""
 from functools import lru_cache
 
 from .geometry import Canvas, cube, cone, overlay, project_mesh
@@ -32,52 +32,6 @@ def landmark_mesh(place):
     return mesh
 
 
-def courtyard_point(w,h,p):
-    x,y,z=p
-    depth=z+6
-    return (w*(.49+.69*x/depth), h*(.19+(2.25-y)*1.04/depth), depth)
-
-
-@lru_cache(maxsize=1)
-def courtyard_mesh():
-    mesh=[]
-    # Snowbanks and lanterns frame a quiet clearing. Leave the centre open for spells.
-    for side in (-1,1):
-        for x,z,height in ((4.2,4.9,2.9),(6.8,7.1,3.4)):
-            mesh+=cone(side*x,0,z,1.1,height,17)
-            mesh+=cone(side*x,height*.49,z,.64,height*.56,20)
-        x=side*3.25
-        mesh+=cube(x,.68,3.4,.12,1.36,.16,7)
-        mesh+=cube(x,1.44,3.4,.35,.39,.31,5)
-        mesh+=cone(x,1.62,3.4,.32,.26,20)
-    return mesh
-
-
-@lru_cache(maxsize=12)
-def courtyard(w,h):
-    c=project_mesh(w,h,0,courtyard_mesh(),project=lambda p:courtyard_point(w,h,p))
-    for side in (-1,1):
-        for z in (-2.6,-.7,1.8):
-            x,y,_=courtyard_point(w,h,(side*2.8,0,z))
-            c.put(round(x),round(y),"▁▁",8)
-    return c.cells
-
-
-def backdrop(cells):
-    c=Canvas(len(cells[0]),len(cells))
-    c.cells=[row.copy() for row in cells]
-    return c
-
-
-def winter_arena(w,h,tick):
-    c=backdrop(courtyard(w,h))
-    for i in range(max(3,w//18)):
-        x=(i*19+int(tick*.65))%w
-        y=(i*13+int(tick*(1+i%2)))%h
-        if c.cells[y][x][0]==" ": c.put(x,y,"·",8 if i%3 else 20)
-    return c
-
-
 def atlas_point(w,h,pos):
     # Reserve room below each landmark for its name, including at small HUD sizes.
     return (round(4+pos[0]*max(0,w-9)),round(1+pos[1]*max(0,h-5)))
@@ -90,7 +44,10 @@ def atlas(w,h):
     for a,b in PATHS:
         x,y=centers[a]
         xx,yy=centers[b]
-        c.line(x,y,xx,yy,"·",8)
+        # Leave some air around the landmarks and between the trail markers.
+        steps=max(abs(xx-x),abs(yy-y))
+        for step in range(3,steps-2,3):
+            c.put(round(x+(xx-x)*step/steps),round(y+(yy-y)*step/steps),"·",8)
     height=max(3,min(7,h//4))
     for name,(x,y) in centers.items():
         if h>=14 and w>=46:
@@ -102,4 +59,6 @@ def atlas(w,h):
 
 
 def atlas_frame(w,h):
-    return backdrop(atlas(w,h))
+    c=Canvas(w,h)
+    c.cells=[row.copy() for row in atlas(w,h)]
+    return c

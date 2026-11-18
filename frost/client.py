@@ -82,7 +82,6 @@ def main():
         return 0 if result["ok"] else 1
     if action == "boss-ssh":
         from .trail import BOSS_IP, discovered
-        from .dialogs import confirm_boss
         import subprocess
         state = request()["state"]
         if state["status"] != "playing" or state["boss_started"]:
@@ -90,8 +89,6 @@ def main():
             return 1
         if not discovered(state):
             print("Suche zuerst die Spur auf der Karte.")
-            return 1
-        if not confirm_boss(state):
             return 1
         sync_files()
         handshake = subprocess.run(["/usr/bin/ssh", "-F", "/etc/frost/boss_client", BOSS_IP],

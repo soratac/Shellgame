@@ -3,12 +3,11 @@ import curses
 from .render import colors, put, box
 
 
-def floating(screen, title, lines, choice=False):
+def floating(screen, title, lines):
     colors()
     try: curses.curs_set(0)
     except curses.error: pass
     screen.keypad(True)
-    selected=False
     while True:
         screen.erase()
         h,w=screen.getmaxyx()
@@ -20,32 +19,15 @@ def floating(screen, title, lines, choice=False):
         put(screen,y+1,x+3,title[:width-6],5,True)
         for i,line in enumerate(lines[:max(0,height-6)]):
             put(screen,y+3+i,x+3,line[:width-6],1)
-        if choice:
-            put(screen,y+height-2,x+3,"[ JA, KAEMPFEN ]" if selected else "  JA, KAEMPFEN  ",4 if selected else 3,selected)
-            put(screen,y+height-2,x+24,"[ NEIN, ZURUECK ]" if not selected else "  NEIN, ZURUECK  ",2 if not selected else 3,not selected)
-        else:
-            put(screen,y+height-2,x+3,"[ ENTER - WEITER ]",2,True)
+        put(screen,y+height-2,x+3,"[ ENTER - WEITER ]",2,True)
         screen.refresh()
         key=screen.getch()
-        if key in (10,13,curses.KEY_ENTER): return selected if choice else True
+        if key in (10,13,curses.KEY_ENTER): return True
         if key==27: return False
-        if choice:
-            if key in (ord("j"),ord("J"),curses.KEY_LEFT): selected=True
-            if key in (ord("n"),ord("N"),curses.KEY_RIGHT): selected=False
-            if key==9: selected=not selected
 
 
-def show(title,lines,choice=False):
+def show(title,lines):
     from .terminal import fullscreen
     with fullscreen():
-        try: return curses.wrapper(floating,title,lines,choice)
+        try: return curses.wrapper(floating,title,lines)
         except KeyboardInterrupt: return False
-
-
-def confirm_boss(state):
-    return show("BOSSKAMP STARTEN?",[
-        f"Du {state['hp']}/100   ·   Grinch {state['boss_hp']}/240",
-        "Wechsle Stab und Zauber. Bei 120 LP bricht Grinch deinen Schutz.",
-        "Angriff: angreifen    Heilung: ~/rucksack/kakao",
-        "Nach dem Verbinden bleibt das Tor zu. J / N + Enter",
-    ],choice=True)

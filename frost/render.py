@@ -13,7 +13,7 @@ from .avatar import HAIR, SHIRTS
 from .items import BAG_ICONS, bag_count
 
 from .spell_art import apparition, spell_motion
-from .scenery import POSITIONS, atlas_frame, atlas_point, winter_arena
+from .scenery import POSITIONS, atlas_frame, atlas_point
 
 
 def static_map(s):
@@ -85,7 +85,7 @@ def health_gauge(value, maximum, size, previous, age, tick):
 
 
 def combat_frame(w,h,s,tick):
-    c=winter_arena(w,h,tick)
+    c=Canvas(w,h)
     event=(s.get("events") or [None])[-1]
     age=time.time()-event["at"] if event else 99
     active=event is not None and 0<=age<1.5
@@ -105,9 +105,6 @@ def combat_frame(w,h,s,tick):
     monster_w=max(6,w*3//5)
     monster_h=max(5,h-2)
     monster_x=bx-(monster_w-bw)//2
-    # Flattened contact shadows anchor the sprites to the same paved surface.
-    for cx,cy,r in ((w//4,h-2,max(2,w//12)),(3*w//4,monster_h-1,max(3,w//10))):
-        c.put(cx-r,cy,"╶"+"▄"*(r*2-1)+"╴",18)
     overlay(c,boss_frame(monster_w,monster_h,tick,event=event,age=age),
             monster_x+int(b_hit),0,6 if b_hit else None)
     overlay(c, hero_frame(bw,bheight,tick,s.get("avatar"),back=True),hx-int(p_hit),h-bheight,6 if p_hit else None)

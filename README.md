@@ -26,7 +26,7 @@ ssh grinch
 ~/rucksack/funke
 ```
 
-Die goldene Spur ✧ zeigt den aktuellen Aufenthaltsort des Grinch. Er wechselt jede Minute zwischen Wald, Werkstatt und Archiv. Gehe zum markierten Ort und gib `nmap grinch` ein. Der Spielscanner zeigt seine IP. Sie bleibt bis zum Neustart bekannt. Mit `ssh IP` oder `ssh grinch` öffnest du das Kampffenster. **J, dann Enter** startet den Kampf, **N, dann Enter** lässt dich draußen. Die weiteren Orte und ihre Gegenstände sind freiwillig. Nach Kampfbeginn bleibt das Tor geschlossen. Wechsle zwischen Stab und Zaubern und nutze Frost oder Schild gegen die Gegenangriffe. Beim Sieg erscheint automatisch ein eigener Bildschirm mit Punkten und Zeit. **Enter** bringt dich zur Shell zurück.
+Die goldene Spur ✧ zeigt den aktuellen Aufenthaltsort des Grinch. Er wechselt jede Minute zwischen Wald, Werkstatt und Archiv. Gehe zum markierten Ort und gib `nmap grinch` ein. Der Spielscanner zeigt seine IP. Sie bleibt bis zum Neustart bekannt. Mit `ssh grinch` oder `ssh 127.12.24.1` beginnt der Kampf sofort. Die weiteren Orte und ihre Gegenstände sind freiwillig. Nach Kampfbeginn bleibt das Tor geschlossen. Wechsle zwischen Stab und Zaubern und nutze Frost oder Schild gegen die Gegenangriffe. Beim Sieg erscheint automatisch ein eigener Bildschirm mit Punkten und Zeit. **Enter** bringt dich zur Shell zurück.
 
 | Was möchtest du tun? | Linux-Befehl |
 |---|---|
@@ -230,6 +230,6 @@ python3 tests/integration.py --players 23 --load-only
 python3 tests/dynamic_integration.py
 ```
 
-Der Integrationstest erstellt das **separate Projekt `frostbyte-check`** mit freien lokalen Ports, eigenen Volumes und zwei Spielercontainern. Dort prüft er automatische Platzvergabe, direkten Charaktereinstieg, volle Belegung, echte SSH-Logins, Tab-Vervollständigung, `tree`, `cp`, Aufgabenabgabe, Boss-Abfrage und Rückwegsperre, ausführbare Gegenstände, Bosskampf, Gewinnbildschirm, separaten Scoreboard-Zugang und den vollständigen Reset samt Sicherung. Der zusätzliche Lasttest hält 23 Spielersitzungen und einen Zuschauer über das Gateway gleichzeitig offen. Nur im Test teilen sich die Container ein Bridge-Netz, um neben den produktiven Netzen nicht den Docker-Adresspool zu erschöpfen. Anschließend entfernt er nur dieses Testprojekt. Bestehende Spielerplätze werden nicht verwendet.
+Der Integrationstest erstellt das **separate Projekt `frostbyte-check`** mit freien lokalen Ports, eigenen Volumes und zwei Spielercontainern. Dort prüft er automatische Platzvergabe, direkten Charaktereinstieg, volle Belegung, echte SSH-Logins, Tab-Vervollständigung, `tree`, `cp`, Aufgabenabgabe, direkten Kampfeinstieg und Rückwegsperre, ausführbare Gegenstände, Bosskampf, Gewinnbildschirm, separaten Scoreboard-Zugang und den vollständigen Reset samt Sicherung. Der zusätzliche Lasttest hält 23 Spielersitzungen und einen Zuschauer über das Gateway gleichzeitig offen. Nur im Test teilen sich die Container ein Bridge-Netz, um neben den produktiven Netzen nicht den Docker-Adresspool zu erschöpfen. Anschließend entfernt er nur dieses Testprojekt. Bestehende Spielerplätze werden nicht verwendet.
 
 Der dynamische Test verwendet ausschließlich `frost-dynamic-check`: 25 neue Spieler ohne vorab angelegte Plätze, getrennte Netze, Anhalten nach Abmeldung, neuer Einstieg nach Dienstneustart und kompletter Reset mit Sicherung.

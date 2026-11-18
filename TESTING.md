@@ -29,11 +29,11 @@
 - Produktivupdate mit Offline-Sicherung `backups/shell-game-20261118T094628.347739Z/`: Namen und Bestzeiten aller 23 Plätze mit der Sicherung verglichen; alle 25 Container gesund. RAM-/Swap-/CPU-/PID-Grenzen aller produktiven Container geprüft.
 - Persistente Home-/State-Quotas: Installer vorbereitet und Vorschau geprüft. Die tatsächliche Einrichtung und Prüfung der ext4-Mounts erfordert noch den Root-Schritt `sudo python3 scripts/install_quotas.py`; bis dahin sind diese Volumes nicht quotiert.
 
-## Gemeinsamer Einstieg und Boss-Abfrage
+## Gemeinsamer Einstieg und Bosskampf
 
 - **23 gleichzeitig bedienbare SSH-Spielersitzungen über denselben Gateway-Port plus ein separater Live-Scoreboard-Zuschauer** im isolierten Testprojekt geprüft. Jeder Spieler erhielt einen eigenen Container. Alle 23 Shells beantworteten einen Testbefehl, die Gateway-Datenbank meldete 23 aktive Plätze.
 - Automatische Vergabe ist zusätzlich mit 23 parallelen Anforderungen getestet; ein 24. Spieler wird abgewiesen. Fortsetzen-Codes bleiben über Neustarts erhalten, aktive Plätze können nicht doppelt geöffnet werden, alte Verbindungen können keine neueren Reservierungen freigeben.
-- Reale SSH-Tests prüfen das Startfenster, `tree`, Boss-Hinweise, Ablehnen und Bestätigen des Kampfes, gesperrten Rückweg (auch nach `builtin cd`) und die Sperre für nachträglich eingesammelte Zauber. Vor Bestätigung gibt es keinen Kampf oder Fehlbefehlsschaden.
+- Der SSH-Spieltest prüft das Startfenster und `tree`. Vor dem Fund verweist `ssh grinch` auf die Spur. Nach dem Scan beginnt der Kampf mit einem einzigen SSH-Befehl. Der Test prüft auch die Torsperre bei `builtin cd` und die Sperre für nachträglich eingesammelte Zauber.
 - Die zwei getrennten Host-Weiterleitungsschlüssel erreichen das produktive Gateway bzw. Scoreboard. Die SSH-Match-Konfiguration wurde mit `sshd -t` und `sshd -T` geprüft: neue Spielbenutzer verwenden Passwort plus erzwungenen Spielzugang; die bestehende öffentliche-Schlüssel-Anmeldung des Administrators bleibt erhalten.
 - Der produktive Port-22-Einstieg wurde am 15. November vom Jumphost erfolgreich mit `scripts/check_entry.py --host 10.0.0.60 --via jump` geprüft: Spieler-Lobby und Live-Scoreboard ohne Portangabe, ohne einen Spielerplatz zu belegen.
 
