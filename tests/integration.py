@@ -311,7 +311,7 @@ def main():
             hero=next(r for r in json.loads(raw)["players"] if r["slot"]=="player01")
             if hero.get("command_active") and hero["command_label"]=="sleep 4; echo 'two  words'": break
             time.sleep(.1)
-        assert hero["command_label"]=="sleep 4; echo 'two  words'" and hero["command_history"]==cmds[::-1],hero
+        assert hero["command_label"]=="sleep 4; echo 'two  words'" and hero["command_history"]==cmds[::-1][:3],hero
         board.send("\r"); board.expect("Befehlsverlauf")
         assert "funke" in hero["bag"]
         s.drain(3.1)

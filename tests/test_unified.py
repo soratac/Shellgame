@@ -37,7 +37,7 @@ class UnifiedTests(unittest.TestCase):
             self.assertNotEqual((p/'shadow').read_text(),shadow)
             self.assertEqual((p/'password').stat().st_mode & 0o777,0o600)
 
-    def test_exact_command_and_last_five_completed(self):
+    def test_exact_command_and_last_three_completed(self):
         from frost.activity import Activity, screen_command
         log=Activity()
         for cmd in ("ls", "pwd", "ls -la", "echo 'a  b' | cat", "pwd", "pwd"):
@@ -45,7 +45,7 @@ class UnifiedTests(unittest.TestCase):
             log.finish()
         log.begin("sleep 3 && printf 'done!'")
         self.assertEqual(log.snapshot()["command_label"],"sleep 3 && printf 'done!'")
-        self.assertEqual(log.snapshot()["command_history"],["pwd","pwd","echo 'a  b' | cat","ls -la","pwd"])
+        self.assertEqual(log.snapshot()["command_history"],["pwd","pwd","echo 'a  b' | cat"])
         self.assertNotIn(chr(27),screen_command("echo "+chr(27)+"[2J"))
 
     def test_live_activity_is_separate_from_persisted_scores(self):
@@ -56,11 +56,30 @@ class UnifiedTests(unittest.TestCase):
                       command_history=["echo 'one  two' | wc -c"])
             b.update("a",data)
             self.assertEqual(b.rows(live=True)[0]["command_history"],data["command_history"])
+            legacy=["pwd","pwd","ls -a","cd dorf","echo alt"]
+            b.update("a",dict(data,command_history=legacy))
+            self.assertEqual(b.rows(live=True)[0]["command_history"],legacy[:3])
             self.assertNotIn("command_history",b.rows()[0])
             b.update("a",dict(data,connected=False))
             self.assertEqual(b.rows(live=True),[])
             b.db.close()
         self.assertEqual("".join(wrap_command("echo 'one  two' | wc -c",6)),"echo 'one  two' | wc -c")
+
+    def test_board_shows_active_command_and_three_completed_in_order(self):
+        from frost.board import paint_history,paint_list
+        row=dict(public(fresh("Elf")),slot="1",updated=100,connected=True,
+                 command_active=True,command_label="sleep 5",
+                 command_history=["ls -a","pwd","pwd","ignored older entry"])
+        screen=type("Screen",(),{"getmaxyx":lambda self:(24,80),"erase":lambda self:None})()
+        for painter,args in [(paint_board,([row],102)),(paint_list,([row],0)),(paint_history,(row,0))]:
+            with self.subTest(view=painter.__name__), patch("frost.board.put") as put,patch("frost.board.box"):
+                painter(screen,*args)
+                text="\n".join(call.args[3] for call in put.call_args_list)
+                self.assertEqual(text.count("pwd"),2)
+                self.assertIn("sleep 5",text)
+                self.assertIn("ls -a",text)
+                self.assertNotIn("ignored older entry",text)
+                self.assertLess(text.index("ls -a"),text.index("pwd"))
 
     def test_avatar_presence_events_and_old_rows(self):
         with tempfile.TemporaryDirectory() as folder:

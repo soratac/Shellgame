@@ -2,9 +2,11 @@
 from collections import deque
 
 MAX_COMMAND = 16 * 1024
-HISTORY_SIZE = 5
+HISTORY_SIZE = 3
+# Older player containers can still send five completed commands.
+WIRE_HISTORY_SIZE = 5
 # JSON can escape one Unicode character as a pair of six-byte surrogates.
-MAX_PAYLOAD = 12 * MAX_COMMAND * (HISTORY_SIZE + 1) + 64 * 1024
+MAX_PAYLOAD = 12 * MAX_COMMAND * (WIRE_HISTORY_SIZE + 1) + 64 * 1024
 
 
 def bounded_command(text):

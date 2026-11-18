@@ -45,7 +45,7 @@ def show(title,lines,choice=False):
 def confirm_boss(state):
     return show("BOSSKAMP STARTEN?",[
         f"Du {state['hp']}/100   ·   Grinch {state['boss_hp']}/240",
-        "",
+        "Wechsle Stab und Zauber. Bei 120 LP bricht Grinch deinen Schutz.",
         "Angriff: angreifen    Heilung: ~/rucksack/kakao",
         "Nach dem Verbinden bleibt das Tor zu. J / N + Enter",
     ],choice=True)

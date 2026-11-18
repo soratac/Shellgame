@@ -15,15 +15,53 @@ class GameTests(unittest.TestCase):
         if area=="zitadelle": self.action("enter_boss")
         return result
 
-    def test_basic_spell_route_is_winnable(self):
-        self.action("collect",["funke.spell"])
-        for area in ("dorf","wald","werkstatt"): self.visit(area)
+    def test_repeating_only_the_starter_spell_loses(self):
+        self.action("bag",["funke"])
         self.visit("zitadelle")
-        for i in range(11): self.action("cast",["funke"],now=115+i*3)
+        for i in range(25):
+            result=self.action("use",["funke"],now=120+i*3)
+            if i==1:
+                self.assertIn("Wechsle",result["message"])
+                self.assertEqual(self.s["boss_hp"],240-22-5)
+            if result["stop"]: break
+        self.assertEqual(self.s["status"],"lost")
+        self.assertGreater(self.s["boss_hp"],0)
+
+    def test_village_and_forest_gear_can_win_without_advanced_commands(self):
+        self.visit("wald")
+        self.action("bag",["funke","frost"])
+        self.visit("zitadelle")
+        moves=["funke","frost","stab","funke","stab","frost","funke","stab","frost","funke","stab"]
+        for i,move in enumerate(moves):
+            if move=="stab":
+                self.action("attack",now=120+i*3)
+            else:
+                self.action("use",[move],now=120+i*3)
         self.assertEqual(self.s["status"],"won")
         self.assertGreater(self.s["hp"],0)
-        self.assertEqual(self.s["method"],"spell")
-        self.assertIn("best",self.s["bests"])
+        self.assertLess(self.s["hp"],50)
+
+    def test_switching_attacks_breaks_guard_but_healing_does_not(self):
+        self.action("bag",["funke","kakao"])
+        self.visit("zitadelle")
+        del self.s["last_attack"]  # A fight saved before the balance update.
+        for i,(action,item,damage) in enumerate([("use","funke",22),("use","kakao",0),
+                                                ("cast","funke",5),("attack",None,16),("use","funke",22)]):
+            before=self.s["boss_hp"]
+            self.action(action,[item] if item else [],now=120+i*3)
+            self.assertEqual(before-self.s["boss_hp"],damage)
+        self.action("reset")
+        self.assertIsNone(self.s["last_attack"])
+
+    def test_half_health_breaks_protection_only_once(self):
+        self.action("bag",["funke","frost","schild"])
+        self.visit("zitadelle")
+        self.s.update(boss_hp=142,shield=2,frozen=1)
+        self.action("use",["funke"])
+        self.assertEqual((self.s["boss_hp"],self.s["shield"],self.s["frozen"],self.s["hp"]),(120,0,0,89))
+        self.action("use",["schild"])
+        self.action("use",["frost"])
+        self.assertEqual(self.s["hp"],89)
 
     def test_loop_wins_and_stops(self):
         self.action("collect",["funke.spell"])
@@ -48,10 +86,11 @@ class GameTests(unittest.TestCase):
             self.visit(area)
             self.action("collect",[file])
         self.visit("zitadelle")
-        for i,spell in enumerate(["schild","frost","stern","stern","frost","funke","funke","funke"]):
+        for i,spell in enumerate(["schild","frost","stern","funke","frost","stern","funke","frost"]):
             self.action("cast",[spell],now=120+i*4)
         self.assertEqual(self.s["status"],"won")
-        self.assertGreater(self.s["hp"],70)
+        self.assertGreater(self.s["hp"],0)
+        self.assertEqual(self.s["method"],"spell")
 
     def test_no_farming(self):
         self.visit("wald")

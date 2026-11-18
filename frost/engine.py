@@ -40,7 +40,7 @@ def fresh(name="", now=None, bests=None):
     return dict(version=5, name=name, started=now if now is not None else time.time(),
                 ended=None, hp=100, boss_hp=240, score=0, area="dorf", visited=[],
                 spells={}, rewards=[], status="playing", method=None, shield=0, frozen=0,
-                storm_service=True, combat_turn=0, armor=True, blizzard=True, loop_hits=[], bests=merge_bests(bests), bag=[], deliveries={},
+                storm_service=True, combat_turn=0, last_attack=None, armor=True, blizzard=True, loop_hits=[], bests=merge_bests(bests), bag=[], deliveries={},
                 hints_left=HINT_LIMIT, hint_until=0, hint_text="", grinch_found=False, boss_started=False, battle_items=[], avatar=dict(DEFAULT), avatar_set=False, events=[], event_seq=0,
                 message="Nimm den Funken mit: mv funke ~/rucksack/")
 
@@ -76,6 +76,8 @@ def counter(s, damage=7):
         return " Dein Schild faengt den Angriff ab.", "parry"
     s["combat_turn"] += 1
     heavy = damage == 7 and s["storm_service"] and s["combat_turn"] % 3 == 0
+    if damage == 7 and s["boss_hp"] <= 120:
+        damage += 4
     if heavy: damage += 5
     damage = damage if s["blizzard"] else max(1, damage // 3)
     s["hp"] = max(0, s["hp"] - damage)
@@ -335,9 +337,16 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
                 message = f"{spell.upper()}!"
             if damage:
                 damage = max(1, damage - (8 if s["armor"] and action != "ping" else 0))
+                attack_name = {"cast": spell, "ping": "ping"}.get(action, "staff")
+                if s["armor"] and attack_name != "ping" and attack_name == s.get("last_attack"):
+                    damage = max(1, damage // 4)
+                    message += " Der Eispanzer wehrt Wiederholungen ab. Wechsle den Angriff!"
+                s["last_attack"] = attack_name
                 damage = min(damage, s["boss_hp"])
                 s["boss_hp"] -= damage
-                attack_name = {"cast": spell, "ping": "ping"}.get(action, "staff")
+                if 0 < s["boss_hp"] <= 120 < s["boss_hp"] + damage:
+                    s["shield"] = s["frozen"] = 0
+                    message += " Der Grinch gerät in Wut und sprengt deinen Schutz!"
                 reward(s, "combat:" + attack_name, 30)
                 message += f" -{damage} Boss-HP."
             if s["boss_hp"] == 0:

@@ -15,7 +15,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from .render import colors, put, box, fit, Canvas, bar, boss_frame, hero_frame, overlay
-from .activity import HISTORY_SIZE, MAX_PAYLOAD, bounded_command, screen_command
+from .activity import HISTORY_SIZE, WIRE_HISTORY_SIZE, MAX_PAYLOAD, bounded_command, screen_command
 from . import music_http
 from .items import ITEMS
 from .render import combat_frame, world_frame, POSITIONS, attack_effect
@@ -99,10 +99,10 @@ class Board:
             raise ValueError("invalid spectator data")
         selected["bag"] = [item for item in ITEMS if item in bag]
         history=data.get("command_history", [])
-        if not isinstance(history,list) or len(history)>HISTORY_SIZE or not all(isinstance(cmd,str) for cmd in history):
+        if not isinstance(history,list) or len(history)>WIRE_HISTORY_SIZE or not all(isinstance(cmd,str) for cmd in history):
             raise ValueError("invalid command history")
         activity={"command_label":bounded_command(label),"command_active":data.get("command_active") is True,
-                  "command_history":[bounded_command(cmd) for cmd in history]}
+                  "command_history":[bounded_command(cmd) for cmd in history[:HISTORY_SIZE]]}
         selected["grinch_found"] = data.get("grinch_found") is True
         selected["boss_started"] = data.get("boss_started") is True
         selected["visited"] = [p for p in POSITIONS if p in data.get("visited",[])] if isinstance(data.get("visited",[]),list) else []
@@ -234,7 +234,12 @@ def tile(screen,row,y,x,h,w,now):
     if row["status"]=="won": place="SIEG"
     elif row["status"]=="lost": place="Niederlage"
     line(first+1,f"{place}  ♥{row['hp']}" + (f"  ◆{row['boss_hp']}" if fighting else ""),edge)
-    scene_h=h-(4 if compact else 6)
+    # Reserve the command strip before sizing the preview. Dense overview
+    # cards keep one line; the selected player always has a full history.
+    recent = history_entries(row)
+    available = h-(3 if compact else 5)
+    command_rows = min(HISTORY_SIZE+1, max(1, available-3))
+    scene_h = max(0, available-command_rows)
     if scene_h>0:
         # Render the same scene and moves as the player's HUD using public game state.
         state=dict(row,visited=row.get("visited",[]))
@@ -265,17 +270,16 @@ def tile(screen,row,y,x,h,w,now):
             for cx,(ch,color) in enumerate(cells):
                 if ch!=" ": put(screen,top+cy,left+cx,ch,color)
     bag=", ".join(row.get("bag",[])) or "leer"
-    prefix="Rucksack " if inner>=30 else "Bag "
-    # A long bag scrolls even on compact cards.
-    room=max(1,inner-len(prefix))
-    if len(bag)>room:
-        loop=bag+"   "; offset=int(now*2)%len(loop)
-        bag=(loop+loop)[offset:offset+room]
+    prefix="Rucksack " if inner>=30 else "▣ "
     last=h-1 if compact else h-2
-    line(last-1,prefix+bag,5)
-    history=row.get("command_history") or []
-    label=screen_command(row.get("command_label") or (history[0] if history else "bereit"))
-    line(last,("▶ " if live and row.get("command_active") else "$ ")+label,2)
+    bag_row=last-command_rows
+    line(bag_row,prefix+bag,3)
+    if recent:
+        for n,(label,cmd) in enumerate(recent[:command_rows],1):
+            active=label=="Jetzt"
+            line(bag_row+n,("▶ " if active else label+" ")+screen_command(cmd),2 if active else 1,active)
+    else:
+        line(bag_row+1,"Bereit",3)
 
 
 def paint_board(screen,rows,now,page=0):
@@ -307,8 +311,10 @@ def paint_board(screen,rows,now,page=0):
 
 
 def history_entries(row):
-    entries=[("Jetzt",row.get("command_label") or "bereit")]
-    entries.extend((str(i),cmd) for i,cmd in enumerate(row.get("command_history",[]),1))
+    entries=[]
+    if row.get("command_active") and row.get("command_label"):
+        entries.append(("Jetzt",row["command_label"]))
+    entries.extend((str(i),cmd) for i,cmd in enumerate(row.get("command_history",[])[:HISTORY_SIZE],1))
     return entries
 
 
@@ -339,22 +345,33 @@ def paint_list(screen,live,focus):
     if w<30 or h<12:
         put(screen,3,1,"Terminal vergrößern",3)
         return
-    # Leave six command lines below the roster. Keep selection visible on resize.
-    capacity=max(1,h-12)
+    # Separate ranking and selection details, including a full backpack row.
+    capacity=max(1,h-11)
     start=focus//capacity*capacity
-    name_w=min(22,max(9,w//4))
-    head=fit("Spieler",name_w)+" Punkte   Ort         Befehl"
-    put(screen,3,1,head,3)
-    for y,row in enumerate(live[start:start+capacity],4):
-        cmd=row.get("command_label") or next(iter(row.get("command_history",[])),"bereit")
-        line=fit(row["name"],name_w)+f" {row['score']:6}   "+fit(row["area"],12)+screen_command(cmd)
-        chosen=row["slot"]==live[focus]["slot"]
-        put(screen,y,1,line,5 if chosen else 1,chosen)
+    name_w=min(22,max(8,w//4))
+    wide=w>=56
+    def roster_line(rank,name,points,place,activity):
+        base=f"{rank:>3}  "+fit(name,name_w)+" "+fit(points,6,right=True)
+        return base+("   "+fit(place,11)+" "+activity if wide else "  "+place)
+    put(screen,3,1,roster_line("#","Spieler","Punkte","Ort","Aktuell"),3)
+    for index,row in enumerate(live[start:start+capacity],start):
+        active=row.get("command_label","") if row.get("command_active") else ""
+        place={"won":"Sieg","lost":"Niederlage"}.get(row["status"],row["area"])
+        put(screen,4+index-start,1,roster_line(index+1,row["name"],row["score"],place,screen_command(active)),
+            5 if index==focus else 1,index==focus)
     y=4+min(len(live),capacity)
     row=live[focus]
-    put(screen,y,1,row["name"]+" · Befehle",2,True)
-    for i,(label,cmd) in enumerate(history_entries(row),1):
-        put(screen,y+i,1,f"{label:>5}  "+screen_command(cmd),2 if i==1 else 1)
+    bag=", ".join(row.get("bag",[])) or "leer"
+    put(screen,y,1,row["name"]+" · Rucksack: "+bag,5)
+    if not wide and row.get("command_active"):
+        y+=1
+        put(screen,y,1,"▶ "+screen_command(row.get("command_label","")),2)
+    put(screen,y+1,1,"Letzte 3 Befehle",2,True)
+    entries=row.get("command_history",[])[:HISTORY_SIZE]
+    if not entries:
+        put(screen,y+2,1,"Noch keine Befehle",3)
+    for i,cmd in enumerate(entries,1):
+        put(screen,y+i+1,1,f"{i:>2}  "+screen_command(cmd))
 
 
 def paint_history(screen,row,offset):
@@ -366,6 +383,7 @@ def paint_history(screen,row,offset):
         prefix=f"{label:>5}  "
         for i,line in enumerate(wrap_command(cmd,max(1,w-len(prefix)-3))):
             lines.append((prefix if i==0 else " "*len(prefix))+line)
+    if not lines: lines.append("Noch keine Befehle")
     height=max(1,h-3)
     offset=max(0,min(offset,len(lines)-height))
     put(screen,1,1,"↑↓ scrollen · Enter zurück",3)
