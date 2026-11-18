@@ -1,7 +1,19 @@
 """Small shared character sprites for the editor, map and combat."""
 HAIR = {'braun': 7, 'blond': 5, 'schwarz': 8, 'rot': 6, 'blau': 2}
 SHIRTS = {'rot': 6, 'gruen': 4, 'blau': 2, 'lila': 9, 'weiss': 1}
-DEFAULT = {'hair': 'braun', 'shirt': 'gruen'}
+STYLES = ("kurz", "Locken", "Zopf", "Irokese")
+GENDERS = ("männlich", "weiblich")
+OPTIONS = {"hair": HAIR, "shirt": SHIRTS, "gender": GENDERS, "style": STYLES}
+DEFAULT = {"hair":"braun", "shirt":"gruen", "gender":GENDERS[0], "style":STYLES[0]}
+
+
+def appearance(values):
+    if not isinstance(values, dict):
+        raise ValueError("Ungültiger Charakter")
+    merged = {key: values.get(key, DEFAULT[key]) for key in OPTIONS}
+    if any(value not in OPTIONS[key] for key, value in merged.items()):
+        raise ValueError("Ungültige Charakterauswahl")
+    return merged
 
 
 def sprite(canvas, x, y, avatar=None, facing=1, pose=0, hit=False):

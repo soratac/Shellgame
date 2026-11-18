@@ -7,7 +7,7 @@ Adresse entdeckt? ssh IP startet das Duell.
 ping -c 4 IP       Echo-Zauber
 ~/rucksack/kakao   Heilung
 
-Drei Orte brechen das Siegel.
+nmap grinch am markierten Ort verrät die IP.
 
 systemctl status zeigt die Dienste des Grinch.
 systemctl disable eissturm.service verhindert seinen schweren dritten Angriff.

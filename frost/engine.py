@@ -3,8 +3,8 @@ import re
 import time
 import hashlib
 from .trail import BOSS_IP, discovered, hiding_place
-from .items import pickup, ITEMS
-from .avatar import DEFAULT, HAIR, SHIRTS
+from .items import pickup, ITEMS, bag_count
+from .avatar import DEFAULT, OPTIONS, appearance
 from .records import migrate, bests as merge_bests
 
 AREAS = {
@@ -24,7 +24,7 @@ cd ~/welt/wald         Weitergehen
 ~/rucksack/funke        Angreifen
 ~/rucksack/kakao        Heilen
 
-Folge der Spur auf der Karte. Mitgenommenes Echo: ping grinch am Fundort.
+Folge der Spur auf der Karte. Am Fundort zeigt nmap grinch seine IP.
 
 ls -a zeigt Verstecke. Einzigartige Funde mit mv bergen.
 systemctl status zeigt Bossdienste. restart beginnt eine neue Runde.
@@ -107,9 +107,13 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
         s.update(fresh(name, now=now))
         message = f"Willkommen, {name}! Weihnachten braucht dich."
     elif action == "avatar":
-        if len(args)!=2 or args[0] not in HAIR or args[1] not in SHIRTS:
-            return {"ok":False,"message":"Waehle Haar- und Shirtfarbe.","stop":False}
-        s.update(avatar={"hair":args[0],"shirt":args[1]}, avatar_set=True)
+        try:
+            if len(args) not in (2, 4):
+                raise ValueError("Wähle deinen Charakter.")
+            avatar = appearance({**s["avatar"], **dict(zip(OPTIONS, args))})
+        except ValueError as error:
+            return {"ok":False, "message":str(error), "stop":False}
+        s.update(avatar=avatar, avatar_set=True)
         message="Dein Winterheld ist bereit."
     elif action == "reset":
         if args not in ([], ["normal"], ["alles"]):
@@ -124,7 +128,7 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
         if action == "help":
             message = HELP
         elif action == "inventory":
-            message = "Zauber: " + (", ".join(f"{k} ({'unendlich' if v == -1 else v})" for k, v in s["spells"].items()) or "noch keine; lies HILFE.txt im Dorf")
+            message = "Rucksack\n" + ("\n".join(f"  {k:10} {bag_count(k,s)}" for k in s["bag"]) or "  leer")
         elif action == "modules":
             message = "Module          Status      Welt: simulierte Treiber\n" + "\n".join(
                 f"{module:16}{'geladen' if s[key] else 'entfernt'}" for module, key in [("frost_armor", "armor"), ("blizzard", "blizzard")])
@@ -134,15 +138,13 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
         message = "" if action in ("observe", "bag", "deliver") else "Lauf beendet. Neuer Versuch: neustart"
         result["stop"] = action in ("cast", "attack", "unload", "use", "ping")
     elif action == "scan":
-        if "ping" not in s["bag"]:
-            result["ok"]=False
-            message="Echo im Dorf mitnehmen: mv ~/welt/dorf/ping ~/rucksack/"
-        elif s["area"]==hiding_place(s) or discovered(s):
-            s["grinch_found"]=True
+        place = hiding_place(s, now)
+        if s["area"] == place or discovered(s):
+            s["grinch_found"] = True
             reward(s,"echo:gefunden",40)
-            message=f"Antwort von grinch ({BOSS_IP}). ssh grinch"
+            message = f"Grinch gefunden · {BOSS_IP}  →  ssh {BOSS_IP}"
         else:
-            message="Schwaches Echo aus dem Bereich "+hiding_place(s)+"."
+            message = f"Spur in {place}: cd ~/welt/{place}  →  nmap grinch"
     elif action == "connect":
         if args != [BOSS_IP] or not discovered(s):
             return {"ok": False, "message": "Suche zuerst die Spur auf der Karte.", "stop": False}
@@ -177,7 +179,8 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
         if item not in s["bag"]:
             return {"ok": False, "message": f"Mit {pickup(item)} mitnehmen: {ITEMS.get(item, ('DATEI',))[0]} → ~/rucksack/", "stop": False}
         if item=="ping":
-            return _act(s,"ping",[BOSS_IP],now=now) if s["boss_started"] else _act(s,"scan",now=now)
+            if s["boss_started"]: return _act(s,"ping",[BOSS_IP],now=now)
+            return dict(result, message="Echo bereit. Suche die Grinch-Spur mit nmap grinch.")
         return _act(s, "heal" if item in ("kakao", "beeren") else "cast", [item], now=now)
     elif action == "deliver":
         place = args[0] if args else ""
@@ -306,13 +309,8 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
                 message = f"{spell.upper()}!"
             if damage:
                 damage = max(1, damage - (8 if s["armor"] and action != "ping" else 0))
-                # The loop bypass above remains available from the village. Ordinary
-                # spells, staff and driver tactics need three explored non-boss places.
-                floor = 0 if route_ready(s) else 1
-                damage = min(damage, max(0, s["boss_hp"]-floor))
-                s["boss_hp"] = max(floor, s["boss_hp"] - damage)
-                if not route_ready(s):
-                    message += " Frostsiegel: Erkunde drei Orte."
+                damage = min(damage, s["boss_hp"])
+                s["boss_hp"] -= damage
                 attack_name = {"cast": spell, "ping": "ping"}.get(action, "staff")
                 reward(s, "combat:" + attack_name, 30)
                 message += f" -{damage} Boss-HP."
@@ -336,10 +334,6 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
 
 def route_count(s):
     return len(set(s.get("visited",[])) & {"dorf","wald","werkstatt","archiv"})
-
-
-def route_ready(s):
-    return route_count(s)>=3
 
 
 def act(s, action, args=(), **kwargs):

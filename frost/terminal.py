@@ -171,7 +171,7 @@ def frame(screen):
                 hud=screen.derwin(top,cols,0,0)
                 progress=min(1,(now-travel_start)/.9)
                 position=tuple(origin[i]+(target[i]-origin[i])*progress for i in (0,1))
-                paint(hud,state,now,position)
+                paint(hud,state,now,position,walking=progress<1)
                 box(screen,top,0,rows-top,cols-1,2)
                 label=indicator(music)
                 if cols>=len(label)+4:

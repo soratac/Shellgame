@@ -43,11 +43,9 @@ def show(title,lines,choice=False):
 
 
 def confirm_boss(state):
-    from .engine import route_count
-    count=route_count(state)
     return show("BOSSKAMP STARTEN?",[
         f"Du {state['hp']}/100   ·   Grinch {state['boss_hp']}/240",
         "",
-        f"Frostsiegel: {min(3,count)}/3 Orte erkundet.",
+        "Angriff: angreifen    Heilung: ~/rucksack/kakao",
         "Nach dem Verbinden bleibt das Tor zu. J / N + Enter",
     ],choice=True)

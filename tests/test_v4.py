@@ -18,9 +18,6 @@ class ProgressionTests(unittest.TestCase):
         from frost.trail import hiding_place, BOSS_IP
         s=fresh('Raoul', now=1)
         self.assertFalse(act(s,'connect',[BOSS_IP])['ok'])
-        act(s,'observe',cwd=hiding_place(s))
-        self.assertFalse(act(s,'scan')['ok'])
-        act(s,'bag',['ping'])
         act(s,'observe',cwd='dorf')
         self.assertIn(hiding_place(s),act(s,'scan')['message'])
         self.assertFalse(act(s,'connect',[BOSS_IP])['ok'])
@@ -28,11 +25,21 @@ class ProgressionTests(unittest.TestCase):
         self.assertIn(BOSS_IP,act(s,'scan')['message'])
         self.assertFalse(act(s,'ping',[BOSS_IP])['ok'])
         self.assertFalse(act(s,'connect',['127.0.0.1'])['ok'])
+        act(s,'bag',['ping'])
         self.assertTrue(act(s,'connect',[BOSS_IP])['ok'])
         hp=s['hp']
         self.assertTrue(act(s,'ping',[BOSS_IP])['ok'])
         self.assertEqual((s['area'],s['boss_hp'],s['hp']),('zitadelle',236,hp-7))
         self.assertEqual(s['events'][-1]['kind'],'ping')
+
+    def test_mobile_trail_and_persistent_discovery(self):
+        from frost.trail import BOSS_IP, hiding_place
+        s=fresh("Elf",now=100)
+        places=[hiding_place(s,now=t) for t in (101,161,221)]
+        self.assertEqual(len(set(places)),3)
+        act(s,"observe",cwd=places[1],now=161)
+        self.assertIn(BOSS_IP,act(s,"scan",now=161)["message"])
+        self.assertTrue(act(s,"connect",[BOSS_IP],now=381)["ok"])
 
     def test_storm_service_changes_counterattack_and_resets(self):
         for disabled,expected in [(False,74),(True,72)]:
@@ -47,10 +54,10 @@ class ProgressionTests(unittest.TestCase):
             act(s,"reset")
             self.assertTrue(s["storm_service"])
 
-    def test_two_places_cannot_win_even_without_drivers(self):
+    def test_two_places_allow_victory(self):
         s=self.fight(['dorf','wald'])
-        self.assertEqual(s['boss_hp'],1)
-        self.assertEqual(s['status'],'playing')
+        self.assertEqual(s['boss_hp'],0)
+        self.assertEqual(s['status'],'won')
         self.assertEqual(route_count(s),2)
 
     def test_three_places_allow_normal_win(self):
@@ -71,7 +78,7 @@ class ProgressionTests(unittest.TestCase):
         self.assertFalse(act(s,'avatar',['bad','red'])['ok'])
         self.assertTrue(act(s,'avatar',['blond','lila'])['ok'])
         act(s,'reset',['normal'])
-        self.assertEqual(s['avatar'],{'hair':'blond','shirt':'lila'})
+        self.assertEqual(s['avatar'],{'hair':'blond','shirt':'lila','gender':'männlich','style':'kurz'})
         self.assertTrue(s['avatar_set'])
 
     def test_events_retain_actual_damage_and_bounded_history(self):

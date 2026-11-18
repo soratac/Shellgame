@@ -8,23 +8,25 @@ import unicodedata
 
 from .client import request
 from .trail import BOSS_IP, hiding_place, discovered
-from .engine import AREAS, route_count
+from .engine import AREAS
 from .avatar import HAIR, SHIRTS
+from .items import BAG_ICONS, bag_count
 
-POSITIONS = {"dorf": (.18, .18), "wald": (.80, .18), "werkstatt": (.18, .76),
-             "archiv": (.80, .76), "zitadelle": (.49, .47)}
+POSITIONS = {"zitadelle": (.50,.05), "wald": (.13,.39), "archiv": (.86,.39),
+             "dorf": (.28,.90), "werkstatt": (.71,.90)}
+PATHS = (("dorf","wald"), ("dorf","werkstatt"), ("werkstatt","archiv"),
+         ("wald","zitadelle"), ("archiv","zitadelle"))
 
 
 def static_map(s):
     def tag(name):
-        return ("@ " if s["area"] == name else "  ") + name + "/"
-    return ("\n   *  N O R D P O L  *\n\n"
-            f"  [{tag('dorf'):20}]----------[{tag('wald'):20}]\n"
-            "             \\                      /\n"
-            f"                 [{tag('zitadelle')}]\n"
-            "             /                      \\\n"
-            f"  [{tag('werkstatt'):20}]----------[{tag('archiv'):20}]\n\n"
-            "  @ = du  |  cd ~/welt/ORT  |  " + trail_hint(s) + "\n")
+        return ("@ " if s["area"] == name else "") + name + "/"
+    return ("\n"+tag("zitadelle").center(44)+"\n"
+            + "           ╱                   ╲\n"
+            + f"  {tag('wald'):<23} {tag('archiv')}\n"
+            + "        ╲                     ╱\n"
+            + f"       {tag('dorf')} ───── {tag('werkstatt')}\n\n"
+            + "  @ = du   ✧ " + trail_hint(s) + "\n")
 
 
 class Canvas:
@@ -69,23 +71,35 @@ def landmark(place,w,h):
     return project_mesh(w,h,-.48,mesh)
 
 
-def world_frame(w,h,s,position,tick):
+def world_frame(w,h,s,position,tick,walking=False):
     c=Canvas(w,h)
     def point(pos):
         return round(5+pos[0]*max(1,w-12)),round(1+pos[1]*max(1,h-5))
     coords={name:point(pos) for name,pos in POSITIONS.items()}
-    for key,pos in coords.items():
-        if key!="zitadelle": c.line(*pos,*coords["zitadelle"],"·",3)
-    wh=max(3,min(8,h//3))
+    for a,b in PATHS:
+        c.line(*coords[a],*coords[b],"·",3)
+    wh=max(3,min(7,h//4))
+    marked=None if discovered(s) else hiding_place(s)
     for name,(x,y) in coords.items():
-        overlay(c,landmark(name,14,wh),x-7,y-wh//2)
-        label=name+(" ✧" if name==hiding_place(s) and not discovered(s) else "")
-        c.put(x-len(name)//2,min(h-1,y+wh//2),label,2 if name==s["area"] else 1)
+        if h<12:
+            roof,front,tint={"dorf":("⌂ ⌂","▥ ▥",7), "werkstatt":("▥╱▔╲","▥▦▥",6),
+                "archiv":("╱▔▔╲","╫╫╫╫",9), "wald":("▲ ▲","╱▲╲",4),
+                "zitadelle":("╥╤╥","▥╫▥",2)}[name]
+            c.put(x-2,y-1,roof,tint)
+            c.put(x-2,y,front,tint)
+        else:
+            overlay(c,landmark(name,14,wh),x-7,y-wh//2)
+        if name==marked:
+            # A moving pair of golden footprints leads to the current search area.
+            c.put(x+3,y-1,"✧" if int(tick*3)%2 else "✦",5)
+        label=name+(" ✧" if name==marked else "")
+        c.put(max(0,min(w-len(label)-2,x-len(label)//2-1)),min(h-1,y+wh//2)," "+label+" ",
+              5 if name==marked else 2 if name==s["area"] else 1)
     x,y=point(position)
-    hh=max(4,min(10,h//2))
-    left=max(0,min(w-13,x-15 if x<w*.35 else x+3))
+    hh=max(4,min(9,h//2))
+    left=max(0,min(w-13,x+3 if x<w*.5 else x-15))
     top=max(0,min(h-hh-1,y-hh//2))
-    overlay(c,hero_frame(13,hh,tick,s.get("avatar")),left,top)
+    overlay(c,hero_frame(13,hh,tick,s.get("avatar"),walking=walking),left,top)
     c.put(left+5,top+hh,"DU",5)
     event=(s.get("events") or [None])[-1]
     if event:
@@ -102,15 +116,42 @@ def smooth_life(value,before,progress):
     return before+(value-before)*t*t*(3-2*t)
 
 
-def life_meter(value,maximum,size):
+def life_meter(value,maximum,size,trail=None):
     fill=round(max(0,min(1,value/maximum))*size*8)
     full,part=divmod(fill,8)
     track="█"*full+("▏▎▍▌▋▊▉"[part-1] if part else "")
-    return "❨"+track+"░"*(size-len(track))+"❩ "+f"{round(value)}/{maximum}"
+    ghost=max(0,min(size,round((trail or 0)*size/maximum))-len(track))
+    return "❨"+track+"▒"*ghost+"░"*(size-len(track)-ghost)+"❩ "+f"{round(value)}/{maximum}"
+
+
+def winter_arena(c,tick):
+    w,h=c.w,c.h
+    horizon=max(2,h//2)
+    # Aurora over a distant crenellated wall and two floating ice platforms.
+    for x in range(1,w-1,2):
+        y=round(h*.21+math.sin(x*.10+tick*.5)*h*.08)
+        c.put(x,y,"╌",9 if (x//10)%3==0 else 3)
+    if h>=10 and w>=40:
+        # Ice watchtowers and their lit arrow slits behind the duelling floor.
+        for x in (w//12, w//2-3, w-8):
+            c.put(x,horizon-2,"╥╤╥",3)
+            c.put(x,horizon-1,"│▯│",3)
+            c.put(x+1,horizon-1,"▯",5)
+            c.put(x,horizon,"╵ ╵",3)
+    for x in range(0,w,5):
+        c.put(x,horizon+int(abs(math.sin(x*.17))*2),"╱╲",3)
+    for i in range(max(4,w//6)):
+        x=(i*17+int(tick*(1+i%2)))%w
+        y=(i*13+int(tick*(1+i%3)))%max(1,h-2)
+        c.put(x,y,"·" if i%4 else "✧",3)
+    for cx,cy,r in ((w//4,h-2,w//6),(3*w//4,max(3,h*2//3),w//7)):
+        c.put(cx-r,cy,"╭"+"─"*(2*r-1)+"╮",2)
+        c.put(cx-r+2,cy+1,"╲"+"▔"*max(0,2*r-5)+"╱",3)
 
 
 def combat_frame(w,h,s,tick):
     c=Canvas(w,h)
+    winter_arena(c,tick)
     event=(s.get("events") or [None])[-1]
     age=time.time()-event["at"] if event else 99
     active=event is not None and 0<=age<1.5
@@ -120,12 +161,6 @@ def combat_frame(w,h,s,tick):
         bhp=smooth_life(bhp,event["boss_before"],(age-.13)/.72)
     right=w//2+2
     meter=max(3,min(28,w//2-12))
-    c.put(1,0,"GRINCH",4)
-    c.put(1,1,life_meter(bhp,240,meter),6 if active and event["damage"] and age<.75 else 4)
-    label=s["name"][:18]
-    player_hp=life_meter(hp,100,meter)
-    c.put(w-len(label),h-2,label,5)
-    c.put(w-len(player_hp),h-1,player_hp,2 if active and event["hurt"]<0 else 6 if active and event["hurt"]>0 and age>.55 else 4)
     elapsed = max(0,time.time()-s.get("boss_entered_at",0))
     slide = max(0,1-elapsed/.65)
     bw,bheight = w//2-2,max(4,h-4)
@@ -137,6 +172,13 @@ def combat_frame(w,h,s,tick):
     overlay(c, hero_frame(bw,bheight,tick,s.get("avatar"),back=True),hx-int(p_hit),h-bheight,6 if p_hit else None)
     start,end = (w//4+3,h-3),(3*w//4-2,max(2,bheight//2))
     if active: attack_effect(c,event,age,start,end)
+    boss_bar=life_meter(bhp,240,meter,event["boss_before"] if active else None)
+    player_bar=life_meter(hp,100,meter,event["hp_before"] if active else None)
+    label=s["name"][:18]
+    c.put(1,0,"♥ GRINCH",4)
+    c.put(1,1,boss_bar,6 if b_hit else 4)
+    c.put(w-len(label)-2,h-2,"♥ "+label,5)
+    c.put(w-len(player_bar),h-1,player_bar,2 if active and event["hurt"]<0 else 6 if p_hit or hp<25 else 4)
     return c
 
 
@@ -165,7 +207,28 @@ def attack_effect(c,event,age,start,end):
                 radius=round(phase*4)
                 c.put(start[0]-radius,start[1],"(",2)
                 c.put(start[0]+radius,start[1],")",2)
+        # A widening impact ring keeps hits readable at small terminal sizes.
+        def burst(center, progress, mark, color):
+            if not 0 <= progress < 1: return
+            rx=2+round(progress*min(8,c.w/7))
+            ry=1+round(progress*min(3,c.h/6))
+            for i in range(8):
+                angle=i*math.pi/4
+                c.put(center[0]+round(math.cos(angle)*rx),
+                      center[1]+round(math.sin(angle)*ry),mark,color)
+        if spell=="schild":
+            burst(start,min(.97,age/.65),"◇",2)
+        if event["hurt"]<0:
+            for i in range(5):
+                t=(age*.8+i*.18)%1
+                c.put(start[0]+round(math.sin(t*5+i)*5),start[1]-round(t*5),"♥",4 if i%2 else 5)
         if event["damage"]>0:
+            mark,color={"frost":("❄",2),"stern":("★",5),"ping":("◉",2)}.get(spell,("✦",6))
+            burst(end,(age-.32)/.68,mark,color)
+            if spell=="funke":
+                for i in range(4): shot((age-i*.055)/.44,"━✦",5 if i%2 else 6,-round(2*math.sin(phase*math.pi)))
+            if spell=="stern" and age<.50:
+                for i in range(4): c.put(end[0]-5+i*3,round(phase*(end[1]+2))-i%2,"╲★",5)
             if kind=="ping" or spell=="ping":
                 for i in range(4): shot((age-i*.13)/.38,"◉",2)
             elif spell=="frost":
@@ -179,6 +242,7 @@ def attack_effect(c,event,age,start,end):
                 shot(age/.44,"✦»",6,-round(2*math.sin(phase*math.pi)))
             if age>.25: c.put(end[0]+2,max(0,end[1]-2),f"-{event['damage']}",5)
         if event["hurt"]>0:
+            burst(start,(age-.84)/.62,"❄" if event["hurt"]>=12 else "✴",6)
             strong=event["hurt"]>=12
             for dy in ((-1,0,1) if strong else (0,)):
                 shot(1-(age-.6)/.35,"❄" if strong else "«✹",2 if strong else 6,dy)
@@ -234,32 +298,47 @@ def overlay(canvas, layer, left, top, flash=None):
             if char != " ": canvas.put(left+x,top+y,char,flash or color)
 
 
-@lru_cache(maxsize=32)
-def hero_mesh(hair,shirt):
+@lru_cache(maxsize=96)
+def hero_mesh(hair,shirt,gender,style,step):
     # Boots, mitts, backpack and a pointed winter cap give the silhouette depth.
-    mesh = cube(0,-.22,0,1.05,.93,.60,shirt)
+    shoulder=.95 if gender=="weiblich" else 1.12
+    mesh = cube(0,-.22,0,shoulder,.93,.60,shirt)
+    if gender=="weiblich":
+        mesh+=cube(0,-.61,0,1.15,.22,.70,shirt)+cube(.36,.08,-.31,.27,.56,.14,5)
     mesh += cube(0,.66,-.04,.81,.78,.72,10)
     mesh += cube(0,.98,0,.91,.27,.80,hair)
     mesh += cube(0,.67,.32,.85,.55,.24,hair)
-    for x,y,z,size in [(-.33,1.10,-.04,.40),(-.12,1.24,-.12,.47),(.17,1.17,.04,.46),(.36,.96,-.17,.30)]:
-        mesh+=cone(x,y-.18,z,size*.66,size,hair)
-    mesh+=cube(-.22,.87,-.40,.41,.21,.18,hair)
-    for side in (-1,1): mesh+=cube(side*.40,.76,-.09,.17,.42,.54,hair)
+    if style=="Zopf":
+        for i in range(4):
+            mesh+=cube(.28,.84-.22*i,.44+.07*i,.36-.03*i,.34,.36,hair)
+        mesh+=cube(.28,.24,.68,.30,.12,.32,5)
+    elif style=="Locken":
+        for i in range(9):
+            angle=i*math.tau/9
+            mesh+=cube(.44*math.cos(angle),.95+.08*(i%2),.39*math.sin(angle),.42,.42,.40,hair)
+        mesh+=cube(0,1.23,0,.66,.28,.60,hair)
+    elif style=="Irokese":
+        for i in range(4): mesh+=cone(0,1.06,-.33+i*.22,.23,.59-.06*i,hair)
+    else:
+        mesh+=cone(-.21,1.04,-.13,.34,.31,hair)+cube(.23,.90,-.37,.35,.23,.20,hair)
     mesh += cube(0,.20,-.04,1.06,.16,.73,5)
     mesh += cube(0,-.18,.43,.62,.73,.42,7)
     mesh += cube(0,-.04,.66,.55,.13,.07,5)
     for side in (-1,1):
-        mesh += cube(side*.64,-.17,0,.25,.70,.40,shirt)
-        mesh += cube(side*.64,-.56,-.06,.27,.23,.38,10)
-        mesh += cube(side*.29,-.90,0,.39,.52,.44,8)
-        mesh += cube(side*.29,-1.20,-.10,.43,.22,.66,7)
+        swing=side*step*.25
+        mesh += cube(side*.61,-.17,swing,.25,.70,.40,shirt)
+        mesh += cube(side*.61,-.56,swing-.06,.27,.23,.38,10)
+        mesh += cube(side*.29,-.90,-swing,.39,.52,.44,8)
+        mesh += cube(side*.29,-1.20+max(0,swing*.4),-swing-.10,.43,.22,.66,7)
         mesh += cube(side*.21,.72,-.42,.11,.12,.07,8)
     return mesh
 
 
-def hero_frame(w,h,tick,avatar,back=False):
+def hero_frame(w,h,tick,avatar,back=False,walking=False):
     avatar=avatar or {}
-    mesh=hero_mesh(HAIR.get(avatar.get("hair"),7), SHIRTS.get(avatar.get("shirt"),4))
+    mesh=hero_mesh(HAIR.get(avatar.get("hair"),7), SHIRTS.get(avatar.get("shirt"),4),
+                   avatar.get("gender","männlich"),avatar.get("style","kurz"),
+                   round(math.sin(tick*7)) if walking else 0)
     angle=(2.5 if back else -.38)+math.sin(tick*1.6)*.15
     return project_mesh(w,h,angle,mesh)
 
@@ -347,14 +426,15 @@ def box(screen, y, x, height, width, color=3):
 
 def trail_hint(s):
     if discovered(s): return f"grinch · {BOSS_IP} · ssh grinch"
-    if "ping" not in s["bag"]: return "Echo: mv ~/welt/dorf/ping ~/rucksack/"
-    return f"Spur: {hiding_place(s)} · ping grinch"
+    place=hiding_place(s)
+    if s["area"]==place: return "Hier ist die Spur!  nmap grinch"
+    return f"Grinch-Spur → cd ~/welt/{place}"
 
 
 def next_hint(s):
     if s["status"]!="playing": return "Neue Runde: restart"
     if s["boss_started"]: return ""
-    if not s["bag"] and s["area"]=="dorf": return "mv funke ping ~/rucksack/"
+    if not s["bag"] and s["area"]=="dorf": return "Funken holen → mv funke ~/rucksack/"
     return trail_hint(s)
 
 
@@ -363,7 +443,7 @@ def bar(value, maximum, size=16):
     return "━"*n + "·"*(size-n)
 
 
-def paint(screen,state,tick,position=None):
+def paint(screen,state,tick,position=None,walking=False):
     h,w=screen.getmaxyx()
     screen.erase()
     if not state:
@@ -377,28 +457,59 @@ def paint(screen,state,tick,position=None):
     put(screen,0,(w-len(score))//2,score,5,True)
     put(screen,0,w-len(timer)-2,timer,1)
     fight=state.get("boss_started")
-    bag_w=min(19,max(11,w//6))
+    bag_w=min(22,max(13,w//5))
     # Keep the right edge free for the fighter's life meter.
     sx=bag_w+2
     scene_w=w-sx-1
     scene_h=h-3
     inventory=state.get("bag_display",state.get("bag",[]))
-    put(screen,2,1,"Rucksack",5,True)
-    visible=max(1,h-4)
-    offset=int(tick//2)%len(inventory) if len(inventory)>visible else 0
-    for i,item in enumerate((inventory[offset:]+inventory[:offset])[:visible] or ["leer"]):
-        put(screen,3+i,1,fit(item,bag_w-1),1)
+    put(screen,2,1,fit("Rucksack",bag_w-4)+f"{len(inventory):2}",5,True)
+    visible=max(1,h-5)
+    pages=max(1,math.ceil(len(inventory)/visible))
+    page=int(tick//4)%pages
+    for y in range(2,h): put(screen,y,bag_w+1,"│",3)
+    if not inventory: put(screen,4,2,"leer",3)
+    for i,item in enumerate(inventory[page*visible:(page+1)*visible]):
+        icon,color=BAG_ICONS.get(item,("·",1))
+        count=bag_count(item,state)
+        put(screen,4+i,1,icon,color,True)
+        put(screen,4+i,3,fit(item,bag_w-len(count)-3),1)
+        put(screen,4+i,bag_w-len(count),count,color)
+    if pages>1: put(screen,h-1,2,f"{page+1}/{pages}",3)
     if fight:
+        event=(state.get("events") or [None])[-1]
+        age=time.time()-event["at"] if event else 9
+        hint="✦ DEIN ZUG   angreifen"
+        color=5
+        if 0<=age<1.5:
+            spell=event.get("spell","")
+            titles={"funke":"FUNKENSTURM", "frost":"FROSTWELLE", "stern":"STERNENREGEN",
+                    "schild":"EISSCHILD", "beeren":"BEERENHEILUNG", "kakao":"WÄRMEZAUBER"}
+            kind=event.get("kind")
+            if event["hurt"]>0 and age>.66:
+                hint=f"❄ GEGENANGRIFF   −{event['hurt']} LP"; color=6
+            elif event["hurt"]<0:
+                hint=f"♥ {titles.get(spell,'HEILUNG')}   +{-event['hurt']} LP"; color=4
+            elif event["damage"] or spell in titles:
+                title=titles.get(spell,"ECHOWELLE" if kind=="ping" else "ZUCKERSTABSCHLAG")
+                hint="✦ "+title+(f"   −{event['damage']} LP" if event["damage"] else ""); color=2
+        put(screen,1,sx,hint,color,True)
         scene=combat_frame(scene_w,scene_h,state,tick)
     else:
-        scene=world_frame(scene_w,scene_h,state,position or POSITIONS.get(state["area"],POSITIONS["dorf"]),tick)
+        scene=world_frame(scene_w,scene_h,state,position or POSITIONS.get(state["area"],POSITIONS["dorf"]),tick,walking)
         hp=state["hp"]
         event=(state.get("events") or [None])[-1]
         age=time.time()-event["at"] if event else 9
         if 0<=age<1.4: hp=smooth_life(hp,event["hp_before"],age/.78)
         health=life_meter(hp,100,min(15,w//7))
         put(screen,1,w-len(health)-1,health,2 if event and age<1 and event["hurt"]<0 else 4)
-        put(screen,1,1,fit(next_hint(state),w-len(health)-4),3)
+        hint=next_hint(state)
+        space=w-len(health)-4
+        if len(hint)+2>space:
+            if discovered(state): hint=f"ssh {BOSS_IP}"
+            elif not state["bag"] and state["area"]=="dorf": hint="mv funke ~/rucksack/"
+            else: hint="nmap grinch" if state["area"]==hiding_place(state) else f"cd ~/welt/{hiding_place(state)}"
+        put(screen,1,1,fit("✦ "+hint,space),5,True)
     for y,row in enumerate(scene.cells):
         for x,(char,color) in enumerate(row):
             if char!=" ": put(screen,y+2,x+sx,char,color)

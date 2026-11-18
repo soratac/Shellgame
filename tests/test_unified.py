@@ -70,7 +70,7 @@ class UnifiedTests(unittest.TestCase):
                         events=[{'at':100,'damage':22,'hurt':7}],bests={'normal:classic':40,'speedrun:loop':8})
             board.update('player01',data)
             row=board.rows()[0]
-            self.assertEqual(row['avatar'],data['avatar'])
+            self.assertEqual(row['avatar'],dict(data['avatar'],gender='männlich',style='kurz'))
             self.assertEqual(row['bests'],{'best':8})
             self.assertEqual(row['events'],data['events'])
             self.assertTrue(online(row,row['updated']+2))

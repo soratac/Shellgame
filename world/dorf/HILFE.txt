@@ -2,6 +2,6 @@ RETTET WEIHNACHTEN
 
 1  mv funke ping ~/rucksack/
 2  karte  →  folge der Spur mit cd ~/welt/ORT
-3  ping grinch  →  ssh grinch
+3  nmap grinch  →  ssh GEFUNDENE-IP
 
 ls -a zeigt Verstecke. restart beginnt eine neue Runde.

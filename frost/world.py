@@ -25,10 +25,21 @@ def main():
     target.mkdir(exist_ok=True)
     bag.mkdir(exist_ok=True)
     previous_version=marker.read_text().strip() if marker.exists() else ""
-    migrating = previous_version != "8"
+    migrating = previous_version != "9"
     if migrating or reset:
         source = Path("/opt/frost/world")
         legacy = json.loads(Path(__file__).with_name("legacy_world.json").read_text())
+        if previous_version == "8" and not reset:
+            # Update just bundled hints in place, including the carried echo.
+            # A player may already have moved or edited any of these files.
+            for relative in ("dorf/ping", "dorf/HILFE.txt", "zitadelle/BOSS.txt"):
+                paths = [target/relative]
+                if relative == "dorf/ping": paths.append(bag/"ping")
+                for path in paths:
+                    if path.is_file() and not path.is_symlink() and hashlib.sha256(path.read_bytes()).hexdigest() in legacy[relative]:
+                        shutil.copy2(source/relative,path)
+            marker.write_text("9\n")
+            return
         for relative, digest in legacy.items():
             path = target/relative
             if path.is_file() and not path.is_symlink() and hashlib.sha256(path.read_bytes()).hexdigest() in ([digest] if isinstance(digest,str) else digest):
@@ -53,13 +64,14 @@ def main():
             for name in old_bag:
                 if name not in ITEMS: continue
                 carried = bag/name
-                if carried.is_file() and not carried.is_symlink() and carried.read_bytes() in (script(name).encode(),script(name,legacy=True).encode()):
+                if carried.is_file() and not carried.is_symlink() and (carried.read_bytes() in (script(name).encode(),script(name,legacy=True).encode()) or
+                    (name=="ping" and hashlib.sha256(carried.read_bytes()).hexdigest() in legacy["dorf/ping"])):
                     carried.write_text(script(name))
                     if name in ("schild","stern"):
                         source_item=target/ITEMS[name][0]
                         if source_item.is_file() and source_item.read_bytes()==script(name).encode():
                             source_item.unlink()
-        marker.write_text("8\n")
+        marker.write_text("9\n")
 
 
 if __name__=="__main__": main()

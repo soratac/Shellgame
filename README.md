@@ -4,7 +4,7 @@ Ein Weihnachtsabenteuer in einer echten Linux-Shell: automatisch erzeugte, getre
 
 ## Spielen
 
-Der gemeinsame Einstieg öffnet direkt den Frostbyte-Charaktereditor. Hier Name, Haarfarbe und Shirtfarbe wählen. **Tab** wechselt das Feld, **Pfeile** ändern die Farbe, **Enter** startet. Mit `aussehen` kannst du die Farben später ändern. Sie bleiben bei `neustart` erhalten.
+Der gemeinsame Einstieg öffnet direkt den Frostbyte-Charaktereditor. Hier Name, Geschlecht, Haartyp, Haarfarbe und Shirtfarbe wählen. **↑/↓** oder **Tab** wechselt das Feld, **←/→** ändert die Auswahl, **Enter** startet. Mit `aussehen` kannst du das Aussehen später ändern. Sie bleiben bei `neustart` erhalten.
 
 Im Dorf starten:
 
@@ -16,12 +16,12 @@ mv wurzeln/frost ~/rucksack/
 cd ../werkstatt
 mv schild ~/rucksack/
 karte                 # Folge der markierten Spur mit cd ~/welt/ORT
-ping grinch
+nmap grinch
 ssh grinch
 ~/rucksack/funke
 ```
 
-Die Karte markiert mit ✧ den Ort der Spur. Nimm im Dorf das Echo mit `mv ping ~/rucksack/` mit. Am markierten Ort liefert `ping grinch` die Boss-IP. Mit `ssh grinch` öffnest du das Kampffenster und verbindest dich nach Bestätigung per SSH mit dem Grinch in deinem Spielercontainer. **J, dann Enter** startet den Kampf; **N, dann Enter** lässt dich draußen. Nach dem Start bleibt das Tor geschlossen. Für einen normalen Sieg musst du vorher mindestens **drei Orte außerhalb der Zitadelle** besuchen. Sonst hält das Frostsiegel den Boss bei mindestens 1 HP – auch nach Entfernen seiner Treiber. Den letzten Befehl wiederholen, bis der Grinch besiegt ist. Beim Sieg erscheint automatisch ein eigener Bildschirm mit Punkten und Zeit. **Enter** bringt dich zur Shell zurück.
+Die goldene Spur ✧ zeigt den aktuellen Aufenthaltsort des Grinch. Er wechselt jede Minute zwischen Wald, Werkstatt und Archiv. Gehe zum markierten Ort und gib `nmap grinch` ein. Der Spielscanner zeigt seine IP. Sie bleibt bis zum Neustart bekannt. Mit `ssh IP` oder `ssh grinch` öffnest du das Kampffenster. **J, dann Enter** startet den Kampf, **N, dann Enter** lässt dich draußen. Die weiteren Orte und ihre Gegenstände sind freiwillig. Nach Kampfbeginn bleibt das Tor geschlossen. Den letzten Befehl wiederholen, bis der Grinch besiegt ist. Beim Sieg erscheint automatisch ein eigener Bildschirm mit Punkten und Zeit. **Enter** bringt dich zur Shell zurück.
 
 | Was möchtest du tun? | Linux-Befehl |
 |---|---|

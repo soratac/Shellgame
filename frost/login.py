@@ -3,6 +3,7 @@ import fcntl
 import os
 import re
 import subprocess
+import time
 import sys
 from pathlib import Path
 
@@ -11,36 +12,44 @@ from .render import colors, put
 
 
 def name_dialog(screen):
-    from .avatar import HAIR, SHIRTS, DEFAULT
+    from .avatar import OPTIONS, appearance
     from .render import box, hero_frame
     colors()
     screen.keypad(True)
     state=request()["state"]
     existing=bool(state["name"])
     name=state["name"]
-    avatar=dict(state.get("avatar",DEFAULT))
+    avatar=appearance(state.get("avatar",{}))
+    fields=[("Name",None),("Geschlecht","gender"),("Haartyp","style"),("Haarfarbe","hair"),("Shirtfarbe","shirt")]
+    screen.timeout(160)
     field=1 if existing else 0
     error=""
     while True:
         screen.erase()
         h,w=screen.getmaxyx()
-        width=min(66,w-2); left=max(0,(w-width)//2); top=max(0,(h-17)//2)
-        box(screen,top,left,17,width,2)
+        width=min(70,w-2); left=max(0,(w-width)//2); height=min(21,h); top=(h-height)//2
+        box(screen,top,left,height,width,2)
         logo=("█▀▀ █▀█ █▀█ █▀▀ ▀█▀ █▀▄ █ █ ▀█▀ █▀▀",
               "█▀  █▀▄ █ █ ▀▀█  █  █▀▄ ▀█▀  █  █▀ ",
               "▀   ▀ ▀ ▀▀▀ ▀▀▀  ▀  ▀▀   ▀   ▀  ▀▀▀")
         for row,line in enumerate(logo):
             put(screen,top+1+row,left+max(1,(width-len(line))//2),line if width>=40 else ("FROSTBYTE" if row==1 else ""),[1,2,3][row],True)
-        put(screen,top+5,left+3,"❄ GEMEINSAMER EINSTIEG · CHARAKTER",2,True)
-        labels=["Name   "+(name or "_")+ ("_" if field==0 and name else ""),
-                "Haare  < "+avatar["hair"]+" >", "Shirt  < "+avatar["shirt"]+" >"]
-        for i,label in enumerate(labels):
-            put(screen,top+7+i*2,left+3,("› " if field==i else "  ")+label,2 if field==i else 1,field==i)
-        preview=hero_frame(20,8,0,avatar)
-        for y,row in enumerate(preview.cells):
-            for x,(char,color) in enumerate(row):
-                if char!=" ": put(screen,top+6+y,left+width-22+x,char,color)
-        put(screen,top+15,left+3,error or "Tab  Feld    ← →  Farbe    Enter  Spielen",6 if error else 3)
+        base=top+(6 if height>=17 else 4)
+        put(screen,base-1,left+3,"❄ CHARAKTER",2,True)
+        spacing=2 if height>=19 else 1
+        visible=max(1,(height-(base-top)-3+spacing-1)//spacing)
+        first_visible=max(0,field-visible+1)
+        for i,(label,part) in enumerate(fields[first_visible:first_visible+visible],first_visible):
+            value = f"‹ {avatar[part]} ›" if part else name+("_" if field==0 else "")
+            put(screen,base+1+(i-first_visible)*spacing,left+2,("› " if i==field else "  ")+f"{label:11}"+value,
+                5 if i==field else 1,i==field)
+        if width>=45:
+            pw=min(30,width-32); ph=min(14,max(5,height-6))
+            preview=hero_frame(pw,ph,time.monotonic(),avatar,walking=True)
+            for y,row in enumerate(preview.cells):
+                for x,(char,color) in enumerate(row):
+                    if char!=" ": put(screen,top+4+y,left+width-pw-1+x,char,color)
+        put(screen,top+height-2,left+3,error or "↵ Spielen",6 if error else 2)
         screen.refresh()
         try: key=screen.get_wch()
         except curses.error: continue
@@ -49,10 +58,14 @@ def name_dialog(screen):
                 result=request("name",[name])
                 if not result["ok"]:
                     error="Name: 2–20 Buchstaben oder Zahlen."; field=0; continue
-            request("avatar",[avatar["hair"],avatar["shirt"]]); return
-        elif key=="\t": field=(field+1)%3; field=1 if existing and field==0 else field
-        elif key in (curses.KEY_LEFT,curses.KEY_RIGHT) and field in (1,2):
-            options=list(HAIR if field==1 else SHIRTS); part="hair" if field==1 else "shirt"
+            request("avatar",[avatar[k] for k in OPTIONS]); return
+        elif key in ("\t", curses.KEY_DOWN, curses.KEY_UP, curses.KEY_BTAB):
+            first=1 if existing else 0
+            step=-1 if key in (curses.KEY_UP,curses.KEY_BTAB) else 1
+            field=first+(field-first+step)%(len(fields)-first)
+        elif key in (curses.KEY_LEFT,curses.KEY_RIGHT) and field:
+            part=fields[field][1]
+            options=list(OPTIONS[part])
             avatar[part]=options[(options.index(avatar[part])+(1 if key==curses.KEY_RIGHT else -1))%len(options)]
         elif key in ("\x03","\x1b"): raise KeyboardInterrupt
         elif field==0 and not existing:

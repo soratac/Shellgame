@@ -58,7 +58,7 @@ def main():
     keys=list(Path('/etc/ssh').glob('ssh_host_*_key.pub'))
     if not keys: raise SystemExit('Host SSH public keys unavailable')
     payload=dict(host=args.host,hostkeys=''.join(args.host+' '+p.read_text().strip()+'\n' for p in keys),
-                 accounts=[('spiel',(ROOT/'secrets/gateway/password').read_text().strip(),'GEMEINSAMER EINSTIEG'),
+                 accounts=[('spiel',(ROOT/'secrets/gateway/password').read_text().strip(),'CHARAKTER'),
                            ('score',(ROOT/'secrets/scoreboard/password').read_text().strip(),'LIVE-SCOREBOARD')])
     if args.via:
         import shlex

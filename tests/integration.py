@@ -98,9 +98,9 @@ def main():
             name="雪Elf" if slot=="player02" else "TestElf"+slot[-2:]
             session=Session("gateway",ports["gateway"],folder,music=slot=="player02" and not args.load_only)
             sessions.append(session)
-            session.expect("GEMEINSAMER EINSTIEG",timeout=45)
+            session.expect("CHARAKTER",timeout=45)
             assert b"FORTSETZEN-CODE" not in session.output
-            session.send(name+"\t\x1bOC\t\x1bOC\r")
+            session.send(name+"\t\x1bOC\t\x1bOC\t\x1bOC\t\x1bOC\r")
             session.expect("Rucksack")
             session.drain(.5)
             if args.load_only:
@@ -203,12 +203,12 @@ def main():
         s.send("test ! -e ~/rucksack/beeren && printf 'HEAL_%s\\n' CONSUMED\r")
         s.expect("HEAL_CONSUMED")
         # Visit the marked hiding place rather than assuming a fixed arena.
-        from hashlib import sha256
-        hero=state()
-        place=("wald","werkstatt","archiv")[sha256(f"{hero['name']}:{hero['started']}".encode()).digest()[0]%3]
+        place=run("exec","-T","player01","python3","-c",
+                  "from frost.client import request; from frost.trail import hiding_place; print(hiding_place(request()['state']))",
+                  text=True,capture_output=True).stdout.strip()
         s.send(f"cd ~/welt/{place}\r")
         wait_state(lambda v:v["area"]==place)
-        s.send("ping grinch\r"); wait_state(lambda v:v["grinch_found"])
+        s.send("nmap grinch\r"); wait_state(lambda v:v["grinch_found"])
         s.send("ssh grinch\r")
         s.expect("BOSSKAMP STARTEN?")
         capture("boss-hints")
@@ -246,7 +246,7 @@ def main():
         s.expect("LOOP_FINISHED")
         print("PASS: real cp, Tab/Tab-Tab, automatic quest, carried heal, executable loop, full-screen victory, usable Bash",flush=True)
         run("exec","-T","player01","sh","-c","! command -v tmux && test ! -e /usr/bin/tmux")
-        assert state()["avatar"]=={"hair":"blond","shirt":"blau"},state()["avatar"]
+        assert state()["avatar"]=={"hair":"blond","shirt":"blau","gender":"weiblich","style":"Locken"},state()["avatar"]
         print("PASS: avatar customization persists; tmux is absent",flush=True)
         board=Session("scoreboard",ports["gateway"],folder,user="score")
         sessions.append(board)
@@ -271,7 +271,7 @@ def main():
         s.drain(3.1)
         payload=scores()
         hero=next(r for r in payload if r["slot"]=="player01")
-        assert hero["avatar"]=={"hair":"blond","shirt":"blau"},hero
+        assert hero["avatar"]=={"hair":"blond","shirt":"blau","gender":"weiblich","style":"Locken"},hero
         assert hero["connected"] and "mode" not in hero and "best" in hero["bests"],hero
         print("PASS: live scoreboard contains chosen avatar, real presence and one shared best time",flush=True)
         print("PASS: tree, boss hints/confirmation, no retreat, framed shell and separate live score login",flush=True)
@@ -322,7 +322,7 @@ def main():
             assert json.load(archive.extractfile(member))["name"]=="TestElf01"
         new=Session("gateway",ports["gateway"],folder)
         sessions.append(new)
-        new.expect("GEMEINSAMER EINSTIEG")
+        new.expect("CHARAKTER")
         print("PASS: global reset backup, all names/scores/homes cleared, host keys preserved, fresh login modal",flush=True)
     finally:
         drain_stop.set()

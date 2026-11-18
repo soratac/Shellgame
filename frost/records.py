@@ -1,5 +1,6 @@
 """One shared best time, including records saved by older game versions."""
 import math
+from .avatar import appearance
 
 LEGACY_KEYS={'normal:classic','normal:loop','speedrun:classic','speedrun:loop','best'}
 
@@ -11,6 +12,7 @@ def bests(records):
 
 
 def migrate(state):
+    state["avatar"] = appearance(state.get("avatar", {}))
     state.pop('mode',None)
     state['bests']=bests(state.get('bests'))
     state['version']=5

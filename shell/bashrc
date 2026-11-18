@@ -45,9 +45,13 @@ ssh() {
         *) command ssh "$@" ;;
     esac
 }
+nmap() {
+    if [[ $# == 1 && $1 == grinch ]]; then _frost_action scan
+    else printf 'Spielkarte durchsuchen: nmap grinch\n'; fi
+}
 ping() {
     case "$*" in
-        grinch) _frost_action scan ;;
+        grinch) printf 'Folge der Spur: karte, dann nmap grinch.\n' ;;
         '-c 4 127.12.24.1'|'127.12.24.1') _frost_action ping 127.12.24.1 ;;
         *) printf 'Echo-Zauber: ping -c 4 BOSS-IP\n' ;;
     esac

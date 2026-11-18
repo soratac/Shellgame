@@ -1,5 +1,5 @@
 #!/bin/sh
-# Echo: mit ping grinch nach dem Grinch rufen.
+# Echo: im Kampf vier kleine Treffer mit ping -c 4 IP.
 # Mitnehmen: mv ping ~/rucksack/
 # Benutzen: ~/rucksack/ping
 exec /usr/local/bin/frost use ping

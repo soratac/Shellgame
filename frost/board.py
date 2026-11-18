@@ -19,7 +19,7 @@ from .activity import HISTORY_SIZE, MAX_PAYLOAD, bounded_command, screen_command
 from . import music_http
 from .items import ITEMS
 from .render import combat_frame, world_frame, POSITIONS, attack_effect
-from .avatar import DEFAULT, HAIR, SHIRTS, sprite
+from .avatar import DEFAULT, appearance
 from .records import bests as merge_bests, LEGACY_KEYS
 
 
@@ -90,9 +90,7 @@ class Board:
         selected={k:data.get(k) for k in ("name","hp","boss_hp","score","elapsed","started","status","method")}
         selected["bests"]=merge_bests(bests)
         avatar=data.get("avatar",DEFAULT)
-        if not isinstance(avatar,dict) or avatar.get("hair") not in HAIR or avatar.get("shirt") not in SHIRTS:
-            raise ValueError("invalid avatar")
-        selected["avatar"]={"hair":avatar["hair"],"shirt":avatar["shirt"]}
+        selected["avatar"]=appearance(avatar)
         if not isinstance(data.get("connected",False),bool): raise ValueError("invalid presence")
         selected["connected"]=data.get("connected",False)
         bag = data.get("bag", [])

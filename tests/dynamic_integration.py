@@ -59,7 +59,7 @@ def main():
         assert managed()==[]
         for i in range(count):
             s=Session('gateway',ports['gateway'],folder);sessions.append(s)
-            s.expect('GEMEINSAMER EINSTIEG',timeout=60)
+            s.expect('CHARAKTER',timeout=60)
             assert b'FORTSETZEN-CODE' not in s.output
             s.send(f'DynamicElf{i:02}\r');s.expect('Rucksack')
             s.send("printf 'DYNAMIC_%s\\n' OK\r");s.expect('DYNAMIC_OK')
@@ -84,7 +84,7 @@ def main():
         assert len({next(iter(r['NetworkSettings']['Networks'])) for r in rows})==count
         # An abandoned name prompt must leave neither a slot nor a container.
         abandoned=Session('gateway',ports['gateway'],folder);sessions.append(abandoned)
-        abandoned.expect('GEMEINSAMER EINSTIEG',timeout=60)
+        abandoned.expect('CHARAKTER',timeout=60)
         abandoned.close();sessions.remove(abandoned)
         deadline=time.monotonic()+12
         while time.monotonic()<deadline and len(managed())!=count: time.sleep(.2)
@@ -96,7 +96,7 @@ def main():
         subprocess.run(backup_only,check=True)
         print('PASS: abandoned joins cleaned up; unprivileged controller access denied; forced service recreation preserves players',flush=True)
         s=Session('gateway',ports['gateway'],folder);sessions.append(s)
-        s.expect('GEMEINSAMER EINSTIEG',timeout=60)
+        s.expect('CHARAKTER',timeout=60)
         assert len(managed())==count+1
         assert any(r['Id']==before and r['State']=='exited' for r in managed())
         board=Session('scoreboard',ports['gateway'],folder,user='score');sessions.append(board);board.expect('LIVE-SCOREBOARD')
