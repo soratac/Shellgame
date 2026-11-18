@@ -1,4 +1,4 @@
-KRAMPUS
+GRINCH
 
 Die Spur auf der Karte verrät seinen Standort.
 Adresse entdeckt? ssh IP startet das Duell.
@@ -8,3 +8,6 @@ ping -c 4 IP       Echo-Zauber
 ~/rucksack/kakao   Heilung
 
 Drei Orte brechen das Siegel. Der Funken-Loop ist die Abkuerzung.
+
+systemctl status zeigt die Dienste des Grinch.
+systemctl disable eissturm.service verhindert seinen schweren dritten Angriff.

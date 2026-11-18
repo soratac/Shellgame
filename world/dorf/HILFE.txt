@@ -6,3 +6,6 @@ RETTET WEIHNACHTEN
 
 Im Kampf: ~/rucksack/funke oder ping -c 4 IP
 Tab vervollstaendigt. Mehr: hilfe
+
+Vorlagen kopieren (cp), Einzelstücke bewegen (mv). ls -a zeigt Verstecke.
+restart startet deine Runde neu.

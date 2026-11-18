@@ -1,5 +1,5 @@
 #!/bin/sh
 # Blockt drei Treffer. 2 Ladungen.
-# Mitnehmen: cp schild ~/rucksack/
+# Mitnehmen: mv schild ~/rucksack/
 # Benutzen: ~/rucksack/schild
 exec /usr/local/bin/frost use schild

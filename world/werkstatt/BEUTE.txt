@@ -1,0 +1,2 @@
+
+Den Schild gibt es nur einmal: mv schild ~/rucksack/

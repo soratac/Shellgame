@@ -19,6 +19,7 @@ SOCKET = os.environ.get("FROST_SOCKET", "/run/frost/game.sock")
 LOCK = threading.RLock()
 DIRTY = threading.Event()
 STATE = None
+ACTIVITY = {"command_label": "", "command_active": False}
 
 
 def save():
@@ -48,6 +49,7 @@ def publish_forever():
         with LOCK:
             snapshot = public(STATE)
             snapshot["connected"] = connected()
+            snapshot.update(ACTIVITY)
         if not token or not snapshot["name"]:
             continue
         try:
@@ -80,6 +82,14 @@ class Handler(socketserver.StreamRequestHandler):
             with LOCK:
                 peer = self.connection.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, struct.calcsize("3i"))
                 uid = struct.unpack("3i", peer)[1]
+                if action == "activity":
+                    from .activity import public_command
+                    ACTIVITY.update(command_label=public_command(args[0]) if args else "", command_active=True)
+                    DIRTY.set()
+                    self.wfile.write(b'{"ok":true}\n')
+                    return
+                if action == "observe" and "command" in data and data["command"]:
+                    ACTIVITY["command_active"] = False
                 if action == "admin-reset":
                     if uid != 0 or args != [STATE["name"]]:
                         result = {"ok": False, "message": "Administrator identity/name check failed.", "stop": False}

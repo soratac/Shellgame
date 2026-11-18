@@ -26,13 +26,14 @@ def area():
 
 
 def sync_files():
-    from .items import ITEMS, DELIVERIES, script
+    from .items import ITEMS, DELIVERIES, MOVE_ITEMS, script
     bag = Path.home() / "rucksack"
     found = []
     for name in ITEMS:
         try:
             with (bag/name).open("r", encoding="utf-8") as f:
-                if f.read(2048) == script(name):
+                source = Path.home()/"welt"/ITEMS[name][0]
+                if f.read(2048) == script(name) and source.exists() == (name not in MOVE_ITEMS):
                     found.append(name)
         except (OSError, UnicodeError):
             pass
@@ -61,10 +62,14 @@ def check_travel():
 def main():
     args = sys.argv[1:]
     action = args.pop(0) if args else "status"
+    if action == "activity":
+        from .activity import public_command
+        request("activity", [public_command(sys.stdin.read(1024))])
+        return 0
     if action == "boss-arrive":
         from .trail import BOSS_IP
         result = request("connect", [BOSS_IP])
-        print("KRAMPUS" if result["ok"] else result["message"])
+        print("GRINCH" if result["ok"] else result["message"])
         return 0 if result["ok"] else 1
     if action == "boss-ssh":
         from .trail import BOSS_IP, discovered
@@ -82,10 +87,10 @@ def main():
         sync_files()
         handshake = subprocess.run(["/usr/bin/ssh", "-F", "/etc/frost/boss_client", BOSS_IP],
                                    stdout=subprocess.PIPE, text=True)
-        if handshake.returncode or handshake.stdout.strip() != "KRAMPUS":
-            print("Krampus antwortet nicht.")
+        if handshake.returncode or handshake.stdout.strip() != "GRINCH":
+            print("Grinch antwortet nicht.")
             return 1
-        print("Mit Krampus verbunden. Das Tor ist zu.")
+        print("Mit Grinch verbunden. Das Tor ist zu.")
         return 0
     if action == "travel": return check_travel()
     if action == "finish":

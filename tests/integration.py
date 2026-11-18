@@ -155,7 +155,7 @@ def main():
         s.send("tree -L 2 ~/welt\r")
         s.expect("wurzeln")
         wait_state(lambda v:"shell:tree" in v["rewards"])
-        s.send("neustart\r")
+        s.send("restart game\r")
         s.expect("Neuer Lauf")
         s.drain(.3)
         s.send("cp fun\t ~/rucksack/\r")
@@ -166,7 +166,12 @@ def main():
         s.drain(.3)
         s.send("cp kakao ~/rucksack/; cp post/wunschzettel.txt abgabe/gerettet.txt\r")
         wait_state(lambda v:"quest:wunschzettel" in v["rewards"])
-        s.send("cd ../wald; cp wurzeln/frost beeren ~/rucksack/; ~/rucksack/beeren\r")
+        s.send("cd ../werkstatt; cp schild ~/rucksack/\r")
+        wait_state(lambda v:v["area"]=="werkstatt")
+        assert "schild" not in state()["bag"]
+        s.send("mv -f schild ~/rucksack/; cd ../archiv; mv .depot/stern ~/rucksack/\r")
+        wait_state(lambda v:{"schild","stern"}<=set(v["bag"]))
+        s.send("cd ../wald; cp wurzeln/frost .lichtung/beeren ~/rucksack/; ~/rucksack/beeren\r")
         wait_state(lambda v:"heal:beeren" in v["rewards"] and v["hp"]==100)
         s.send("test ! -e ~/rucksack/beeren && printf 'HEAL_%s\\n' CONSUMED\r")
         s.expect("HEAL_CONSUMED")
@@ -186,6 +191,8 @@ def main():
         s.expect("BOSSKAMP STARTEN?")
         s.send("j\r")
         wait_state(lambda v:v["boss_started"])
+        s.send("systemctl disable eissturm.service\r")
+        wait_state(lambda v:not v["storm_service"])
         s.send("ping -c 4 127.12.24.1\r")
         wait_state(lambda v:v["boss_hp"]==236)
         s.send("cd ../dorf; printf 'LOCK_%s\\n' \"$PWD\"\r")
@@ -196,9 +203,9 @@ def main():
         s.send("printf 'BUILTIN_%s\\n' \"$PWD\"\r")
         s.expect("BUILTIN_/home/player/welt/zitadelle")
         capture("combat-arena")
-        s.send("cp ../archiv/stern ~/rucksack/\r")
+        s.send("cp ../wald/wurzeln/frost ~/rucksack/\r")
         s.drain(.5)
-        assert "stern" not in state()["bag"]
+        assert set(state()["bag"])<=set(state()["battle_items"])
         s.send("while true; do ~/rucksack/funke; done\r")
         s.expect("ENTER - ZUR SHELL",timeout=15)
         won=wait_state(lambda v:v["status"]=="won")
@@ -216,10 +223,15 @@ def main():
         board=Session("scoreboard",ports["gateway"],folder,user="score")
         sessions.append(board)
         board.expect("LIVE-SCOREBOARD")
-        board.send("2")
-        board.expect("BESTZEIT")
-        board.send("1")
-        board.expect("PUNKTE")
+        s.send("sleep 3\r")
+        deadline=time.monotonic()+3
+        while time.monotonic()<deadline:
+            hero=next(r for r in scores() if r["slot"]=="player01")
+            if hero.get("command_active") and hero["command_label"]=="sleep": break
+            time.sleep(.1)
+        assert hero.get("command_active") and hero["command_label"]=="sleep",hero
+        assert "funke" in hero["bag"]
+        s.drain(3.1)
         payload=scores()
         hero=next(r for r in payload if r["slot"]=="player01")
         assert hero["avatar"]=={"hair":"blond","shirt":"blau"},hero

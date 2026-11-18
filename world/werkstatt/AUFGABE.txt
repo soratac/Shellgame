@@ -6,4 +6,4 @@ licht=an
 ziel=weihnachten
 
 cp maschine.conf abgabe/   Abgeben; wird automatisch erkannt.
-cp schild ~/rucksack/      Schild mitnehmen. Weiter: cd ../archiv
+mv schild ~/rucksack/      Schild mitnehmen. Weiter: cd ../archiv

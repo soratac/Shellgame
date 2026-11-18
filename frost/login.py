@@ -27,6 +27,7 @@ def name_dialog(screen):
         box(screen,top,left,18,width,2)
         put(screen,top+1,left+3,"DEIN WINTERHELD",5,True)
         put(screen,top+3,left+3,"Wie heisst du, Winterheld?",1)
+        put(screen,top+2,left+3,"Der Grinch hat den Stern gestohlen. Hol ihn zurück!",3)
         labels=["Name   "+(name or "_")+ ("_" if field==0 and name else ""),
                 "Haare  < "+avatar["hair"]+" >", "Shirt  < "+avatar["shirt"]+" >"]
         for i,label in enumerate(labels):
@@ -34,7 +35,7 @@ def name_dialog(screen):
         preview=hero_frame(19,9,0,avatar)
         for y,row in enumerate(preview.cells):
             for x,(char,color) in enumerate(row):
-                put(screen,top+2+y,left+width-22+x,char,color)
+                if char!=" ": put(screen,top+3+y,left+width-22+x,char,color)
         put(screen,top+12,left+3,error or "Tab: Feld   Pfeile: Farbe   Enter: Spielen",6 if error else 3)
         put(screen,top+14,left+3,"1  Funke einpacken: cp funke ~/rucksack/",1)
         put(screen,top+15,left+3,"2  Spur auf der Karte finden → ssh zum Boss",2)

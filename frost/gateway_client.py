@@ -27,7 +27,7 @@ def lobby(screen):
         y=max(0,(h-11)//2)
         box(screen,y,x,11,width,2)
         put(screen,y+2,x+3,"FROSTBYTE / GEMEINSAMER EINSTIEG",5,True)
-        put(screen,y+4,x+3,"Rette den Weihnachtsstern vor Krampus.",1)
+        put(screen,y+4,x+3,"Der Grinch hat den Weihnachtsstern gestohlen. Hol ihn zurück!",1)
         put(screen,y+6,x+3,"Enter   Neues Spiel     R   Fortsetzen",2,True)
         put(screen,y+8,x+3,"Fortsetzen-Code: "+code if resume else "",1)
 

@@ -46,10 +46,11 @@ def confirm_boss(state):
     from .engine import route_count
     count=route_count(state)
     return show("BOSSKAMP STARTEN?",[
-        f"Du {state['hp']}/100   ·   Krampus {state['boss_hp']}/240",
+        f"Du {state['hp']}/100   ·   Grinch {state['boss_hp']}/240",
         "",
         "Zauber   ~/rucksack/funke",
         "Echo     ping -c 4 127.12.24.1   (4 × 1 Schaden)",
+        "Technik  systemctl status · disable eissturm.service",
         "Heilen   ~/rucksack/kakao",
         f"Orte {min(3,count)}/3 · " + ("Siegel offen" if count>=3 else "Nur der Funken-Loop durchbricht das Siegel"),
         "Nach dem Verbinden bleibt das Tor zu. J / N + Enter",

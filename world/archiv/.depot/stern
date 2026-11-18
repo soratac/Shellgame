@@ -1,5 +1,5 @@
 #!/bin/sh
 # 75 Schaden. 2 Ladungen.
-# Mitnehmen: cp stern ~/rucksack/
+# Mitnehmen: mv stern ~/rucksack/
 # Benutzen: ~/rucksack/stern
 exec /usr/local/bin/frost use stern

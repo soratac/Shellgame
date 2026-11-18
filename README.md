@@ -14,13 +14,13 @@ cp funke kakao ~/rucksack/
 cd ../wald
 cp wurzeln/frost ~/rucksack/
 cd ../werkstatt
-cp schild ~/rucksack/
+mv schild ~/rucksack/
 karte                 # Folge der markierten Spur mit cd ~/welt/ORT
 ssh 127.12.24.1
 ~/rucksack/funke
 ```
 
-Die Karte markiert mit ✧ den Ort der Spur. Wenn du ihn besuchst, erscheint die Boss-IP. Mit `ssh 127.12.24.1` öffnest du das Kampffenster und verbindest dich nach Bestätigung per SSH mit Krampus in deinem Spielercontainer. **J, dann Enter** startet den Kampf; **N, dann Enter** lässt dich draußen. Nach dem Start bleibt das Tor geschlossen. Für einen normalen Sieg musst du vorher mindestens **drei Orte außerhalb der Zitadelle** besuchen. Sonst hält das Frostsiegel den Boss bei mindestens 1 HP – auch nach Entfernen seiner Treiber. Der schnelle Funken-Loop umgeht das Siegel. Den letzten Befehl wiederholen, bis Krampus besiegt ist. Beim Sieg erscheint automatisch ein eigener Bildschirm mit Punkten und Zeit. **Enter** bringt dich zur Shell zurück.
+Die Karte markiert mit ✧ den Ort der Spur. Wenn du ihn besuchst, erscheint die Boss-IP. Mit `ssh 127.12.24.1` öffnest du das Kampffenster und verbindest dich nach Bestätigung per SSH mit dem Grinch in deinem Spielercontainer. **J, dann Enter** startet den Kampf; **N, dann Enter** lässt dich draußen. Nach dem Start bleibt das Tor geschlossen. Für einen normalen Sieg musst du vorher mindestens **drei Orte außerhalb der Zitadelle** besuchen. Sonst hält das Frostsiegel den Boss bei mindestens 1 HP – auch nach Entfernen seiner Treiber. Der schnelle Funken-Loop umgeht das Siegel. Den letzten Befehl wiederholen, bis der Grinch besiegt ist. Beim Sieg erscheint automatisch ein eigener Bildschirm mit Punkten und Zeit. **Enter** bringt dich zur Shell zurück.
 
 | Was möchtest du tun? | Linux-Befehl |
 |---|---|
@@ -40,10 +40,10 @@ Die Karte markiert mit ✧ den Ort der Spur. Wenn du ihn besuchst, erscheint die
 | Verzeichnis | Fund / Aufgabe |
 |---|---|
 | `~/welt/dorf` | `funke`, `kakao`; Wunschzettel retten |
-| `~/welt/wald` | `wurzeln/frost`, `beeren`; beim ersten Besuch −8 Leben |
+| `~/welt/wald` | `wurzeln/frost`, `.lichtung/beeren`; beim ersten Besuch −8 Leben |
 | `~/welt/werkstatt` | `schild`; Geschenkband einschalten |
-| `~/welt/archiv` | `stern`; Passwort finden, kurze Profi-Tipps |
-| `~/welt/zitadelle` | Krampus mit 240 Leben |
+| `~/welt/archiv` | `ls -a`, dann `mv .depot/stern ~/rucksack/`; Passwort finden, kurze Profi-Tipps |
+| `~/welt/zitadelle` | Grinch mit 240 Leben |
 
 Beispiel: `cp post/wunschzettel.txt abgabe/gerettet.txt` löst die Dorfaufgabe automatisch. In jedem Aufgabenordner steht in `AUFGABE.txt` ein kurzer Hinweis. Die Werkstatt erwartet `abgabe/maschine.conf`, das Archiv `abgabe/passwort.txt`. Der Inhalt zählt; `cp`, `mv`, `echo > …` und Pipes sind möglich. Eine unveränderte falsche Abgabe kostet nur einmal Leben, nicht bei jedem Prompt.
 
@@ -60,7 +60,7 @@ Beispiel: `cp post/wunschzettel.txt abgabe/gerettet.txt` löst die Dorfaufgabe a
 
 Aufgebrauchte Gegenstände verschwinden aus dem Rucksack. Erneutes Kopieren füllt keine verbrauchten Ladungen auf. Nur ein Gegenstand im Rucksack kann über seinen Dateibefehl benutzt werden. Bereits vor dem Update erlernte Zauber erscheinen beim ersten Login als Dateien im Rucksack.
 
-Dein 3D-Charakter steht links unten, der grüne Krampus rechts oben. `ping -c 4 127.12.24.1` wirkt als Echo-Zauber mit vier Treffern à 1 HP. Der Rucksack zeigt während der Erkundung und im Kampf die Dateien aus `~/rucksack`. Zauber fliegen zum Gegner, Gegenangriffe zurück; beide Lebensleisten bewegen sich und zeigen Treffer als Zahlen. Die Animation blockiert keine Befehle oder Loops. Der Kampf läuft rundenweise. Lesen und Nachdenken kosten keine Leben. Normale Gegenangriffe kosten 7 Leben; der Panzer vermindert deinen Schaden um 8. Fehlgeschlagene Shell-Befehle im Bossraum und falsche Kampfaktionen kosten zusätzlich Leben. Vor dem Kampf fragt ein schwebendes Fenster nach deiner Zustimmung und erklärt Angreifen und Heilen. Nach **Ja** gibt es keinen Rückweg; neue Funde und Aufgaben zählen erst im nächsten Lauf. Bereits mitgebrachte Gegenstände bleiben nutzbar. Mit `neustart` kannst du jederzeit eine neue Runde beginnen.
+Dein 3D-Charakter steht links unten, der grüne Grinch rechts oben. `ping -c 4 127.12.24.1` wirkt als Echo-Zauber mit vier Treffern à 1 HP. Der Rucksack zeigt während der Erkundung und im Kampf die Dateien aus `~/rucksack`. Zauber fliegen zum Gegner, Gegenangriffe zurück; beide Lebensleisten bewegen sich und zeigen Treffer als Zahlen. Die Animation blockiert keine Befehle oder Loops. Der Kampf läuft rundenweise. Lesen und Nachdenken kosten keine Leben. Normale Gegenangriffe kosten 7 Leben; der Panzer vermindert deinen Schaden um 8. Fehlgeschlagene Shell-Befehle im Bossraum und falsche Kampfaktionen kosten zusätzlich Leben. Vor dem Kampf fragt ein schwebendes Fenster nach deiner Zustimmung und erklärt Angreifen und Heilen. Nach **Ja** gibt es keinen Rückweg; neue Funde und Aufgaben zählen erst im nächsten Lauf. Bereits mitgebrachte Gegenstände bleiben nutzbar. Mit `neustart` kannst du jederzeit eine neue Runde beginnen.
 
 Punkte gibt es einmal je Ort (40), Zauberfund (80), Aufgabe (150), Heilquelle (25), unterstützter Shell-Befehlsart (10), Angriffsart (30), entferntem Treiber (120), Schleifentrick (200) und Sieg (500).
 
@@ -72,6 +72,8 @@ lsmod
 modprobe -r frost_armor
 modprobe -r blizzard
 ```
+
+Der Grinch setzt bei jedem dritten ungeschützten Zug eine stärkere Sturmböe ein. `systemctl status` zeigt den Spieldienst. Mit `systemctl disable eissturm.service` schaltest du ihn für die Runde ab (+100 Punkte). Funke, Kakao, Beeren und Frost werden kopiert. Schild und Stern müssen verschoben werden.
 
 Diese Befehle verändern nur das Spiel, keine Kernelmodule der VM.
 
@@ -96,6 +98,8 @@ neustart alles     # Auch die eigenen Bestzeiten löschen
 ```
 
 Diese Befehle setzen `~/welt` und `~/rucksack` zurück. Name und sonstige eigene Dateien bleiben erhalten. `neustart alles` betrifft nur deinen Spielerplatz.
+
+`restart` und `restart game` starten ebenfalls die eigene Runde neu.
 
 **Als Veranstalter auf developer / der VM:**
 
@@ -137,7 +141,7 @@ Der Gesamtreset gibt alle Plätze frei und erneuert die Codes; `reset_slot.py` g
 
 Die bisherigen direkten Zugänge bleiben als Alternative vorhanden: auf developer `ssh -t -p 2201 player@127.0.0.1` (Spieler 1) bzw. `ssh -t -p 2200 player@127.0.0.1` (Scoreboard). Ihre individuellen Passwörter stehen in `access.csv`. Spielerports: 2201–2223. Vom Jumphost war dieser Portbereich nicht erreichbar; der neue Einstieg verwendet den dort erreichbaren Host-Port 22.
 
-Das Board zeigt eine klare Rangliste mit einer farbigen Miniatur jedes Charakters. Auf breiten Terminals erscheint rechts der ausgewählte Charakter mit seinen Haar-/Shirtfarben, Lebensleisten, aktuellem Ort und animierten Treffern. **↑/↓** wählt einen Charakter, **←/→** blättert. **1** sortiert nach Punkten, **2** nach Bestzeit, **Q** beendet die Ansicht.
+Das Live-Scoreboard ordnet die aktiven Spieler nach Punkten in einem Raster an. Jede Kachel zeigt Spielszene, Leben, Punkte, eingesammelte Spielgegenstände und den letzten oder gerade laufenden Befehl (▶). Es überträgt bekannte Befehlsnamen und Spielargumente. Mit ←/→ blätterst du bei Platzmangel oder zu den zuletzt gespielten Charakteren.
 
 Alle Siege zählen gemeinsam, unabhängig vom Lösungsweg. Alte Kategorien werden zur jeweils schnellsten persönlichen Bestzeit zusammengeführt; Namen, Punkte und laufender Fortschritt bleiben erhalten. **ONLINE** bedeutet eine tatsächlich verbundene Spielsitzung; bei Abbruch oder Ausloggen wechselt der Status nach wenigen Sekunden. Ein nicht mehr erreichbarer Container gilt nach spätestens acht Sekunden ohne Update als offline.
 

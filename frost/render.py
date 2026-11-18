@@ -87,7 +87,7 @@ def combat_frame(w,h,s,tick):
         bhp=round(event["boss_before"]+(bhp-event["boss_before"])*max(0,min(1,(age-.15)/.5)))
     right = w//2 + 2
     meter = max(7,min(28,w//2-13))
-    c.put(1,0,"KRAMPUS",4)
+    c.put(1,0,"GRINCH",4)
     c.put(1,1,f"{bar(bhp,240,meter)} {bhp}/240",6 if active and event["damage"] and age<.55 else 4)
     c.put(right,h-2,s["name"][:18],5)
     c.put(right,h-1,f"{bar(hp,100,meter)} {hp}/100",6 if active and event["hurt"]>0 and age>.65 else 4)
@@ -101,22 +101,48 @@ def combat_frame(w,h,s,tick):
     overlay(c, boss_frame(bw,bheight,tick),bx+int(b_hit),0,6 if b_hit else None)
     overlay(c, hero_frame(bw,bheight,tick,s.get("avatar"),back=True),hx-int(p_hit),h-bheight,6 if p_hit else None)
     start,end = (w//4+3,h-3),(3*w//4-2,max(2,bheight//2))
-    def shot(progress,shape,color):
+    if active: attack_effect(c,event,age,start,end)
+    return c
+
+
+def attack_effect(c,event,age,start,end):
+    def shot(progress,shape,color,dy=0):
         if 0<=progress<=1:
             x=round(start[0]+(end[0]-start[0])*progress)
             y=round(start[1]+(end[1]-start[1])*progress)
-            c.put(x,y,shape,color)
-    if active:
+            c.put(x,y+dy,shape,color)
+    if event and 0<=age<1.5:
+        spell=event.get("spell","")
+        kind=event.get("kind","")
+        phase=min(1,age/.48)
+        if age<.65:
+            if spell=="schild":
+                for dy in (-1,0,1): c.put(start[0]+round(phase*3),start[1]+dy,"❘",2)
+            elif kind=="disable":
+                c.put(end[0]-2,end[1]-1,("● ON","◐","○ OFF")[min(2,int(age*6))],6)
+            elif kind=="unload":
+                c.put(end[0]-3,end[1],("▣─▣","▣╱▣","·  ·")[min(2,int(age*6))],3)
+            elif event["hurt"]<0:
+                c.put(start[0],start[1]-round(phase*3),"+ ♡",4)
         if event["damage"]>0:
-            if event["kind"]=="ping":
+            if kind=="ping":
                 for i in range(4): shot((age-i*.13)/.38,"◉",2)
-            else: shot(age/.4,"✦»",5)
+            elif spell=="frost":
+                for dy in (-1,0,1): shot(age/.47,"❄",2,round(dy*math.sin(phase*math.pi)))
+            elif spell=="stern":
+                c.put(end[0],max(0,end[1]-round((1-phase)*6)),"★",5)
+                if .3<age<.6: c.put(end[0]-2,end[1]+1,"· ✧ ·",1)
+            elif kind=="attack":
+                shot(age/.30,"╱━",1)
+            else:
+                shot(age/.44,"✦»",6,-round(2*math.sin(phase*math.pi)))
             if age>.25: c.put(end[0]+2,max(0,end[1]-2),f"-{event['damage']}",5)
         if event["hurt"]>0:
-            shot(1-(age-.6)/.35,"«✹",6)
+            strong=event["hurt"]>=12
+            for dy in ((-1,0,1) if strong else (0,)):
+                shot(1-(age-.6)/.35,"❄" if strong else "«✹",2 if strong else 6,dy)
             if age>.85: c.put(start[0]-4,max(2,start[1]-2),f"-{event['hurt']}",6)
         if event["hurt"]<0: c.put(start[0]-3,start[1]-1,f"+{-event['hurt']}",4)
-    return c
 
 
 def cube(cx, cy, cz, sx, sy, sz, color):
@@ -135,10 +161,15 @@ def cone(cx, cy, cz, radius, height, color):
 def boss_mesh():
     mesh = cube(0,-.65,0,1.7,1.2,.9,4)  # evergreen coat
     mesh += cube(0,.25,-.05,1.2,1.1,1.0,4)  # green face
-    mesh += cube(0,-.2,-.62,.65,.35,.16,1)  # silver beard
+    # Upturned mouth and full cheeks make the Grinch grin in profile too.
+    mesh += cube(0,.03,-.59,.55,.09,.12,8)
+    for sign in (-1,1):
+        mesh += cube(sign*.33,.12,-.60,.18,.12,.13,8)
+        mesh += cube(sign*.52,.22,-.45,.27,.27,.32,4)
+    mesh += cube(0,.26,-.65,.24,.19,.23,4)
     for x in (-.32,.32):
         mesh += cube(x,.42,-.59,.22,.13,.08,5)  # amber eyes
-        mesh += cone(x*2,.65,0,.23,.85,1)  # crystalline horns
+        mesh += cube(x,.56,-.58,.32,.09,.10,8)  # dark brows
     mesh += cone(0,.83,.03,.65,.85,6)  # Santa hat
     mesh += cube(0,.82,.03,1.25,.13,1.05,1)
     mesh += cube(0,1.68,.03,.18,.18,.18,1)
@@ -264,7 +295,7 @@ def box(screen, y, x, height, width, color=3):
 
 
 def trail_hint(s):
-    if discovered(s): return f"Krampus gefunden · ssh {BOSS_IP}"
+    if discovered(s): return f"Grinch gefunden · ssh {BOSS_IP}"
     return f"✧ Spur: cd ~/welt/{hiding_place(s)}"
 
 

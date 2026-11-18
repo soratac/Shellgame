@@ -59,6 +59,15 @@ neustart() {
     command frost reset "$mode"
     builtin cd "$HOME/welt/dorf"
 }
+restart() { if [[ $# == 0 || "$*" == game ]]; then neustart; else printf 'restart [game]\n'; fi; }
+systemctl() {
+    case "$1" in
+        list-unit-files|status|'') command frost services ;;
+        disable) _frost_action disable "${2%.service}" ;;
+        *) printf 'systemctl status | systemctl disable eissturm.service\n' ;;
+    esac
+}
+complete -W 'disable status list-unit-files eissturm.service' systemctl
 aussehen() { /usr/bin/python3 -c 'from frost.login import edit_avatar; edit_avatar()'; }
 complete -W 'funke frost stern schild' zauber
 complete -W 'kakao beeren' heilen
@@ -94,6 +103,12 @@ _frost_prompt() {
     command frost finish
     PS1='\[\e[38;5;45m\]\w\[\e[38;5;205m\] ❯ \[\e[0m\]'
 }
+_frost_live_begin() {
+    local line
+    line=$(HISTTIMEFORMAT= builtin history 1)
+    printf '%s' "${line#*[0-9]  }" | command frost activity
+}
+PS0='$(_frost_live_begin)'
 PROMPT_COMMAND=_frost_prompt
 builtin cd "$HOME/welt/dorf"
 printf '\n  ls umsehen · cp mitnehmen · cd gehen · hilfe\n\n'

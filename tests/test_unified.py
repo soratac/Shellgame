@@ -37,6 +37,12 @@ class UnifiedTests(unittest.TestCase):
             self.assertNotEqual((p/'shadow').read_text(),shadow)
             self.assertEqual((p/'password').stat().st_mode & 0o777,0o600)
 
+    def test_command_labels_include_game_items_but_no_private_arguments(self):
+        from frost.activity import public_command
+        for cmd,expected in [("cat my-password.txt","cat"),("mv .depot/stern ~/rucksack/","mv .depot/stern ~/rucksack/"),
+                             ("~/rucksack/funke","~/rucksack/funke"),("token=secret","Shell")]:
+            self.assertEqual(public_command(cmd),expected)
+
     def test_avatar_presence_events_and_old_rows(self):
         with tempfile.TemporaryDirectory() as folder:
             board=Board(str(Path(folder)/'score.db'),{'player01':'t'})
@@ -67,16 +73,16 @@ class UnifiedTests(unittest.TestCase):
         for h,w in [(24,80),(42,120),(48,160),(12,35)]:
             drawn=[]
             with patch('frost.board.put',side_effect=lambda screen,y,x,text,*args: drawn.append((y,x,str(text)))),patch('frost.board.box'):
-                pages=paint_board(Screen(h,w),rows,102,selected='player23')
+                pages=paint_board(Screen(h,w),rows,102)
             self.assertGreaterEqual(pages,1)
             if w>=44:
                 text=' '.join(v[2] for v in drawn)
-                self.assertIn('23 HELDEN',text)
+                self.assertIn('23 ONLINE',text)
                 self.assertIn('ONLINE',text)
                 self.assertNotIn('SPEEDRUN',text)
-                if w>=110:
-                    self.assertIn('Bestzeit:',text)
-                    self.assertTrue(any('█' in t for _,_,t in drawn))
+                self.assertNotIn('Bestzeit:',text)
+                self.assertEqual(pages,1)
+                self.assertTrue(all(r['name'] in text for r in rows))
             self.assertTrue(all(0<=y<h and 0<=x<w for y,x,_ in drawn))
 
 

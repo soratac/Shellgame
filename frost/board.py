@@ -14,10 +14,11 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from .render import colors, put, box, fit, Canvas, bar, boss_frame, hero_frame, overlay
+from .activity import public_command
+from .items import ITEMS
+from .render import combat_frame, world_frame, POSITIONS, attack_effect
 from .avatar import DEFAULT, HAIR, SHIRTS, sprite
 from .records import bests as merge_bests, LEGACY_KEYS
-
-VIEWS = ["PUNKTE", "BESTZEIT"]
 
 
 def ranking(rows, view=0):
@@ -90,6 +91,15 @@ class Board:
         selected["avatar"]={"hair":avatar["hair"],"shirt":avatar["shirt"]}
         if not isinstance(data.get("connected",False),bool): raise ValueError("invalid presence")
         selected["connected"]=data.get("connected",False)
+        bag = data.get("bag", [])
+        label = data.get("command_label","")
+        if not isinstance(bag,list) or not isinstance(label,str):
+            raise ValueError("invalid spectator data")
+        selected["bag"] = [item for item in ITEMS if item in bag]
+        selected["command_label"] = public_command(label[:100])
+        selected["command_active"] = data.get("command_active") is True
+        selected["boss_started"] = data.get("boss_started") is True
+        selected["visited"] = [p for p in POSITIONS if p in data.get("visited",[])] if isinstance(data.get("visited",[]),list) else []
         selected["events"]=[]
         events=data.get("events",[])
         if not isinstance(events,list): raise ValueError("invalid events")
@@ -100,6 +110,11 @@ class Board:
             if any(not isinstance(v,(int,float)) or isinstance(v,bool) or not math.isfinite(v) for v in values.values()):
                 raise ValueError("invalid animation")
             if not 0<=values["damage"]<=240 or not -100<=values["hurt"]<=100 or values["at"]<0: raise ValueError("invalid damage")
+            for key,allowed in [("kind",("use","cast","attack","disable","unload","heal","observe","ping")),
+                                ("spell",(*ITEMS,"stab","eissturm","frost_armor","blizzard"))]:
+                if event.get(key) in allowed: values[key]=event[key]
+            for key,limit in [("boss_before",240),("hp_before",100)]:
+                if isinstance(event.get(key),int) and 0<=event[key]<=limit: values[key]=event[key]
             selected["events"]=[values]
         selected["area"]=data.get("area") if data.get("area") in {"dorf","wald","werkstatt","archiv","zitadelle"} else "unterwegs"
         selected["method"]=selected["method"] if selected["method"] in {"loop","staff","spell","driver"} else None
@@ -158,107 +173,133 @@ def handler_for(board):
     return Handler
 
 
-def spotlight(screen,y,x,width,height,row,now):
-    box(screen,y,x,height,width,3)
-    put(screen,y+1,x+2,fit(row["name"],width-4),5,True)
+def grid_shape(count,w,h):
+    # Prefer a wide terminal viewport per player. Tight grids pack down to 16x6.
+    max_cols, max_rows = max(1,w//16), max(1,h//6)
+    if count>max_cols*max_rows:
+        max_cols, max_rows = max(1,w//12), max(1,h//4)
+    shown = min(max(count,1),max_cols*max_rows)
+    choices = []
+    for cols in range(1,max_cols+1):
+        rows = math.ceil(shown/cols)
+        if rows>max_rows: continue
+        aspect = (w/cols)/(h/rows)
+        cost = abs(math.log(aspect/2.8)) + (rows*cols-shown)/shown
+        choices.append((cost,cols,rows))
+    _, cols, rows = min(choices)
+    return cols,rows
+
+
+def tile(screen,row,y,x,h,w,now):
     live=online(row,now)
-    put(screen,y+2,x+2,"● ONLINE" if live else "○ OFFLINE",4 if live else 3)
-    canvas=Canvas(width-4,7)
-    event=(row.get("events") or [{}])[-1]
-    impact=live and 0<=now-event.get("at",0)<1.5
-    overlay(canvas,hero_frame(14,7,now if live else 0,row.get("avatar")),0,0,
-            6 if impact and event.get("hurt",0)>0 else None)
-    if row["area"]=="zitadelle":
-        boss=boss_frame(12,7,now)
-        for cy,line in enumerate(boss.cells):
-            for cx,(char,color) in enumerate(line):
-                if char!=" ": canvas.put(width-18+cx,cy,char,color)
-        if impact:
-            canvas.put(12,2,"*→" if event.get("damage",0) else "←*",5)
-            canvas.put(12,0,f"-{event.get('damage',0)}",5)
-    else:
-        canvas.put(13,2,{"dorf":"⌂", "wald":"▲ ▲", "werkstatt":"⚙", "archiv":"≡"}.get(row["area"],"·"),2)
-    for cy,line in enumerate(canvas.cells):
-        for cx,(char,color) in enumerate(line):
-            if char!=" ": put(screen,y+3+cy,x+2+cx,char,color)
-    put(screen,y+11,x+2,f"DU    {bar(row['hp'],100,10)} {row['hp']}",4)
-    put(screen,y+13,x+2,f"BOSS  {bar(row['boss_hp'],240,10)} {row['boss_hp']}",6)
-    put(screen,y+15,x+2,row["area"].upper(),2)
-    status={"playing":"Unterwegs", "won":"Weihnachten gerettet!", "lost":"Neuer Versuch?"}[row["status"]]
-    put(screen,y+16,x+2,status,4 if row["status"]=="won" else 1)
-    record=merge_bests(row.get("bests"))
-    put(screen,y+18,x+2,"Bestzeit: "+(duration(record["best"]) if record else "—"),5)
+    edge=4 if live else 3
+    compact=h<7 or w<16
+    if not compact: box(screen,y,x,h,w,edge)
+    inner=w-2
+    score=str(row["score"])+"p"
+    def line(at,text,color=1,bold=False):
+        put(screen,y+at,x+1,fit(text,inner),color,bold)
+    name=fit(row["name"],max(1,inner-len(score)-1))
+    first=0 if compact else 1
+    line(first,name+" "+score,5,True)
+    fighting=row.get("boss_started",False)
+    place="Grinch" if fighting else row["area"]
+    if row["status"]=="won": place="SIEG"
+    elif row["status"]=="lost": place="Niederlage"
+    line(first+1,f"{place}  ♥{row['hp']}" + (f"  ◆{row['boss_hp']}" if fighting else ""),edge)
+    scene_h=h-(4 if compact else 6)
+    if scene_h>0:
+        # Render the same scene and moves as the player's HUD using public game state.
+        state=dict(row,visited=row.get("visited",[]))
+        tick=now if live else row["updated"]
+        if fighting and scene_h>=6 and inner>=25:
+            events=state.get("events",[])
+            if events and not {"kind","hp_before","boss_before"}<=events[-1].keys():
+                state["events"]=[]
+            canvas=combat_frame(min(inner,90),min(scene_h,24),state,tick)
+        elif not fighting and scene_h>=9 and inner>=48:
+            canvas=world_frame(min(inner,96),min(scene_h,25),state,
+                               POSITIONS.get(row["area"],POSITIONS["dorf"]),tick)
+        else:
+            canvas=Canvas(min(inner,70),min(scene_h,14))
+            if fighting:
+                overlay(canvas,hero_frame(canvas.w//2,canvas.h,tick,row.get("avatar"),True),0,0)
+                overlay(canvas,boss_frame(canvas.w//2,canvas.h,tick),canvas.w//2,0)
+                if live and row.get("events"):
+                    event=row["events"][-1]
+                    attack_effect(canvas,event,now-event["at"],(canvas.w//4,canvas.h-1),(3*canvas.w//4,0))
+            else:
+                overlay(canvas,hero_frame(canvas.w,canvas.h,tick,row.get("avatar")),0,0)
+        top=y+first+2+(scene_h-canvas.h)//2
+        left=x+1+(inner-canvas.w)//2
+        for cy,cells in enumerate(canvas.cells):
+            for cx,(ch,color) in enumerate(cells):
+                if ch!=" ": put(screen,top+cy,left+cx,ch,color)
+    bag=", ".join(row.get("bag",[])) or "leer"
+    prefix="Rucksack " if inner>=30 else "Bag "
+    # A long bag scrolls even on compact cards.
+    room=max(1,inner-len(prefix))
+    if len(bag)>room:
+        loop=bag+"   "; offset=int(now*2)%len(loop)
+        bag=(loop+loop)[offset:offset+room]
+    last=h-1 if compact else h-2
+    line(last-1,prefix+bag,5)
+    label=row.get("command_label") or "bereit"
+    line(last,("▶ " if live and row.get("command_active") else "$ ")+label,2)
 
 
-def paint_board(screen,rows,now,view=0,page=0,selected=None):
+def paint_board(screen,rows,now,page=0):
     screen.erase()
     h,w=screen.getmaxyx()
-    if w<44 or h<15:
-        put(screen,1,1,"LIVE-SCOREBOARD · Terminal vergroessern",2)
+    if h<8 or w<18:
+        put(screen,0,0,"LIVE-SCOREBOARD",2)
         return 1
-    box(screen,0,1,h-1,w-2,3)
-    put(screen,1,3,"❄ FROSTBYTE / LIVE-SCOREBOARD",2,True)
-    put(screen,2,3,f"{len(rows)} HELDEN   ·   {sum(online(r,now) for r in rows)} ONLINE   ·   {sum(r['status']=='won' for r in rows)} SIEGE",3)
-    ordered=ranking(rows,view)
-    details=w>=110 and h>=28
-    available=w-45 if details else w-8
-    layout=columns(available)
-    put(screen,4,3,"[ PUNKTE ]   Bestzeit" if view==0 else "Punkte   [ BESTZEIT ]",5,True)
-    header=table_line(dict(rank="#",avatar="",name="SPIELER",score="PUNKTE",time="ZEIT" if view==0 else "BESTZEIT",status="STATUS",area="ORT"),layout)
-    put(screen,6,3,header,2,True)
-    put(screen,7,3,"─"*min(available,w-7),3)
-    per_page=max(1,h-12)
-    pages=max(1,math.ceil(len(ordered)/per_page)); page%=pages
-    for index,row in enumerate(ordered[page*per_page:(page+1)*per_page],page*per_page+1):
-        y=8+(index-1)%per_page
-        elapsed=merge_bests(row.get("bests"))["best"] if view else max(0,now-row["started"]) if row["status"]=="playing" else row["elapsed"]
-        live=online(row,now)
-        status={"won":"SIEG", "lost":"VERLOREN", "playing":"SPIELT" if live else "OFFLINE"}[row["status"]]
-        values=dict(rank=index,avatar="●▰",name=row["name"],score=row["score"],time=duration(elapsed),status=status,area=row["area"])
-        put(screen,y,3,table_line(values,layout),4 if row["status"]=="won" else 1 if live else 3,row["slot"]==selected)
-        avatar=row.get("avatar",DEFAULT)
-        ax=3+layout[0][1]+3
-        put(screen,y,ax,"●",HAIR.get(avatar.get("hair"),7))
-        put(screen,y,ax+1,"▰",SHIRTS.get(avatar.get("shirt"),4))
-    if not ordered: put(screen,9,3,"Noch keine Bestzeit." if view else "Warte auf die ersten Helden …",1)
-    if details and ordered:
-        focus=next((r for r in ordered if r["slot"]==selected),ordered[page*per_page])
-        spotlight(screen,4,w-37,34,h-8,focus,now)
-    put(screen,h-3,3,f"1 Punkte · 2 Bestzeit · ↑↓ Charakter · ←→ Seite {page+1}/{pages} · Q Ende",2)
-    return pages
+    ordered=ranking(rows)
+    live=[r for r in ordered if online(r,now)]
+    offline=[r for r in ordered if not online(r,now)]
+    groups=[g for g in (live,offline) if g]
+    pages=[]
+    for group in groups:
+        cols,lines=grid_shape(len(group),w-1,h-2)
+        step=cols*lines
+        pages.extend(group[i:i+step] for i in range(0,len(group),step))
+    page%=max(1,len(pages))
+    marker=f"  ← {page+1}/{len(pages)} →" if len(pages)>1 else ""
+    put(screen,0,1,fit(f"LIVE-SCOREBOARD   {len(live)} ONLINE"+marker,w-2),2,True)
+    if not pages:
+        put(screen,3,2,"Warte auf Spieler …",3)
+        return 1
+    visible=pages[page]
+    if not online(visible[0],now): put(screen,1,1,"Zuletzt gespielt",3)
+    cols,lines=grid_shape(len(visible),w-1,h-2)
+    for i,row in enumerate(visible):
+        gy,gx=divmod(i,cols)
+        y=2+gy*(h-2)//lines; x=gx*(w-1)//cols
+        tile(screen,row,y,x,2+(gy+1)*(h-2)//lines-y,(gx+1)*(w-1)//cols-x,now)
+    return len(pages)
 
 
 def board_hud(screen,url):
     colors()
     try: curses.curs_set(0)
     except curses.error: pass
-    screen.keypad(True); screen.timeout(120)
-    page=view=0; selected=None; rows=[]; fetched=0; error=False
+    screen.keypad(True); screen.timeout(130)
+    page=0; rows=[]; fetched=0; error=False
     while True:
         now=time.time()
-        if now-fetched>=.8:
+        if now-fetched>=.4:
             try:
-                with urllib.request.urlopen(url+"/api/scores",timeout=2) as response: payload=json.load(response)
-                rows=payload["players"]; error=False
+                with urllib.request.urlopen(url+"/api/scores",timeout=2) as response: rows=json.load(response)["players"]
+                error=False
             except (OSError,ValueError,KeyError): error=True
             fetched=now
-        ordered=ranking(rows,view)
-        if ordered and selected not in [r["slot"] for r in ordered]: selected=ordered[0]["slot"]
-        pages=paint_board(screen,rows,now,view,page,selected)
-        if error: put(screen,3,3,"Verbindung wird wiederhergestellt …",6)
+        pages=paint_board(screen,rows,now,page)
+        if error: put(screen,1,1,"Verbinde …",6)
         screen.refresh()
         key=screen.getch()
         if key in (ord("q"),ord("Q"),27): return
         if key in (curses.KEY_RIGHT,ord("n")): page=(page+1)%pages
         if key in (curses.KEY_LEFT,ord("p")): page=(page-1)%pages
-        if key in (curses.KEY_DOWN,curses.KEY_UP) and ordered:
-            index=next((i for i,r in enumerate(ordered) if r["slot"]==selected),0)
-            index=(index+(1 if key==curses.KEY_DOWN else -1))%len(ordered)
-            selected=ordered[index]["slot"]; page=index//max(1,screen.getmaxyx()[0]-12)
-        if key in (ord("1"),ord("2"),9):
-            view=(1-view) if key==9 else key-ord("1"); page=0
-        if key in (curses.KEY_RIGHT,curses.KEY_LEFT,ord("n"),ord("p")) and ordered:
-            selected=ordered[min(len(ordered)-1,page*max(1,screen.getmaxyx()[0]-12))]["slot"]
 
 
 def watch():

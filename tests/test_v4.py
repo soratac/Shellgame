@@ -27,6 +27,19 @@ class ProgressionTests(unittest.TestCase):
         self.assertEqual((s['area'],s['boss_hp'],s['hp']),('zitadelle',236,hp-7))
         self.assertEqual(s['events'][-1]['kind'],'ping')
 
+    def test_storm_service_changes_counterattack_and_resets(self):
+        for disabled,expected in [(False,74),(True,72)]:
+            s=fresh("Elf")
+            act(s,"observe",cwd="zitadelle")
+            act(s,"enter_boss")
+            if disabled:
+                act(s,"disable",["eissturm"])
+                self.assertIn("disabled",act(s,"services")["message"])
+            for i in range(3): act(s,"attack")
+            self.assertEqual(s["hp"],expected)
+            act(s,"reset")
+            self.assertTrue(s["storm_service"])
+
     def test_two_places_cannot_win_even_without_drivers(self):
         s=self.fight(['dorf','wald'])
         self.assertEqual(s['boss_hp'],1)
@@ -70,7 +83,7 @@ class ProgressionTests(unittest.TestCase):
         with patch('frost.render.time.time',return_value=10.95):
             c=combat_frame(96,19,s,10.95)
         text='\n'.join(''.join(ch for ch,_ in row) for row in c.cells)
-        for word in ['Elf','KRAMPUS','/100','/240','-22','-7']: self.assertIn(word,text)
+        for word in ['Elf','GRINCH','/100','/240','-22','-7']: self.assertIn(word,text)
         with patch('frost.render.time.time',return_value=10.1):
             self.assertNotEqual(c.cells,combat_frame(96,19,s,10.1).cells)
 

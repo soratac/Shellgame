@@ -3,6 +3,7 @@ import re
 import time
 import hashlib
 from .trail import BOSS_IP, discovered
+from .items import pickup, ITEMS
 from .avatar import DEFAULT, HAIR, SHIRTS
 from .records import migrate, bests as merge_bests
 
@@ -11,7 +12,7 @@ AREAS = {
     "wald": ("Fluesterwald", "Frost zwischen den Tannen. Unter den Wurzeln leuchtet Magie."),
     "werkstatt": ("Elfenwerkstatt", "Das Geschenkband steht still. Die Elfen brauchen deine Hilfe."),
     "archiv": ("Nordlichtarchiv", "Alte Logdateien verraten die Schwaechen des Frostkoenigs."),
-    "zitadelle": ("Eiszitadelle", "KRAMPUS.EXE bewacht den Weihnachtsstern. Dein Zug!"),
+    "zitadelle": ("Eiszitadelle", "Der Grinch bewacht den Weihnachtsstern. Dein Zug!"),
 }
 SPELL_FILES = {
     "funke.spell": ("dorf", "funke"), "frost.spell": ("wald", "frost"),
@@ -25,6 +26,8 @@ cd ~/welt/wald         Weitergehen
 
 Folge der Spur auf der Karte. Am Fundort erscheint der SSH-Befehl.
 Im Kampf: ping -c 4 BOSS-IP oder ~/rucksack/funke.
+ls -a zeigt Verstecke. Einzigartige Funde mit mv bergen.
+systemctl status zeigt Bossdienste. restart beginnt eine neue Runde.
 Tab hilft beim Tippen. aussehen aendert deinen Charakter.
 neustart | neustart alles (eigene Rekorde)
 """
@@ -34,7 +37,7 @@ def fresh(name="", now=None, bests=None):
     return dict(version=5, name=name, started=now if now is not None else time.time(),
                 ended=None, hp=100, boss_hp=240, score=0, area="dorf", visited=[],
                 spells={}, rewards=[], status="playing", method=None, shield=0, frozen=0,
-                armor=True, blizzard=True, loop_hits=[], bests=merge_bests(bests), bag=[], deliveries={},
+                storm_service=True, combat_turn=0, armor=True, blizzard=True, loop_hits=[], bests=merge_bests(bests), bag=[], deliveries={},
                 boss_started=False, battle_items=[], avatar=dict(DEFAULT), avatar_set=False, events=[], event_seq=0,
                 message="Nimm den Funken mit: cp funke ~/rucksack/")
 
@@ -64,22 +67,27 @@ def win(s, method, now):
 def counter(s, damage=7):
     if s["frozen"]:
         s["frozen"] -= 1
-        return " Krampus ist eingefroren."
+        return " Grinch ist eingefroren."
     if s["shield"]:
         s["shield"] -= 1
         return " Dein Schild faengt den Angriff ab."
+    s["combat_turn"] += 1
+    heavy = damage == 7 and s["storm_service"] and s["combat_turn"] % 3 == 0
+    if heavy: damage += 5
     damage = damage if s["blizzard"] else max(1, damage // 3)
     s["hp"] = max(0, s["hp"] - damage)
     if s["hp"] == 0:
         s["status"] = "lost"
         return " DEIN LICHT ERLISCHT. Starte mit neustart erneut."
-    return f" Eissturm: -{damage} HP."
+    return f" {'Sturmböe' if heavy else 'Eissturm'}: -{damage} HP."
 
 
 def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=""):
     now = time.time() if now is None else now
     migrate(s)
     args = list(args)
+    s.setdefault("storm_service", True)
+    s.setdefault("combat_turn", 0)
     s.setdefault("bag", [])
     s.setdefault("deliveries", {})
     s.setdefault("boss_started", False)
@@ -110,6 +118,8 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
         s.update(fresh(s["name"], now=now, bests={} if args == ["alles"] else s["bests"]))
         s.update(avatar=avatar, avatar_set=avatar_set)
         message = "Neuer Lauf. Auf ins Dorf!"
+    elif action == "services":
+        message = "eissturm.service   " + ("enabled" if s["storm_service"] else "disabled")
     elif action in ("status", "map", "inventory", "help", "modules"):
         if action == "help":
             message = HELP
@@ -119,7 +129,7 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
             message = "Module          Status      Welt: simulierte Treiber\n" + "\n".join(
                 f"{module:16}{'geladen' if s[key] else 'entfernt'}" for module, key in [("frost_armor", "armor"), ("blizzard", "blizzard")])
         else:
-            message = f"{s['name']} | HP {s['hp']}/100 | Krampus {s['boss_hp']}/240 | {s['score']} Punkte | {s['status']}"
+            message = f"{s['name']} | HP {s['hp']}/100 | Grinch {s['boss_hp']}/240 | {s['score']} Punkte | {s['status']}"
     elif s["status"] != "playing":
         message = "" if action in ("observe", "bag", "deliver") else "Lauf beendet. Neuer Versuch: neustart"
         result["stop"] = action in ("cast", "attack", "unload", "use", "ping")
@@ -155,7 +165,7 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
     elif action == "use":
         item = args[0] if args else ""
         if item not in s["bag"]:
-            return {"ok": False, "message": f"Zuerst mitnehmen: cp {item or 'DATEI'} ~/rucksack/", "stop": False}
+            return {"ok": False, "message": f"Mit {pickup(item)} mitnehmen: {ITEMS.get(item, ('DATEI',))[0]} → ~/rucksack/", "stop": False}
         return _act(s, "heal" if item in ("kakao", "beeren") else "cast", [item], now=now)
     elif action == "deliver":
         place = args[0] if args else ""
@@ -185,7 +195,7 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
         if code == 0 and first in {"ls", "cat", "pwd", "cp", "mkdir", "grep", "find", "sort", "uniq", "head", "tail", "wc", "sed", "awk", "tree"}:
             reward(s, "shell:" + first, 10)
         if code not in (0, 130) and s["boss_started"]:
-            message = "Ein fehlgeschlagener Shell-Befehl weckt Krampus." + counter(s, 10)
+            message = "Ein fehlgeschlagener Shell-Befehl weckt Grinch." + counter(s, 10)
     elif action == "collect":
         item = args[0].split("/")[-1] if args else ""
         found = SPELL_FILES.get(item)
@@ -228,15 +238,25 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
             if s["hp"] == 0:
                 s["status"] = "lost"
             message = "Das passt noch nicht. Ein Funken trifft dich: -5 HP. Lies AUFGABE.txt."
-    elif action in ("attack", "cast", "unload", "ping"):
+    elif action in ("attack", "cast", "unload", "ping", "disable"):
         if s["area"] != "zitadelle" or not s["boss_started"]:
             result["ok"] = False
-            message = "Entdecke die Spur und verbinde dich per ssh mit Krampus."
+            message = "Entdecke die Spur und verbinde dich per ssh mit Grinch."
         else:
             spell = args[0] if args else ""
             damage = 0
             method = "spell" if action in ("cast", "ping") else "staff"
-            if action == "unload":
+            if action == "disable":
+                if spell != "eissturm":
+                    result["ok"] = False
+                    message = "Unbekannter Spieldienst. Liste: systemctl status"
+                elif not s["storm_service"]:
+                    return {"ok":True, "message":"eissturm.service ist bereits deaktiviert.", "stop":False}
+                else:
+                    s["storm_service"] = False
+                    reward(s, "service:eissturm", 100)
+                    message = "Sturmböe deaktiviert. +100 Punkte."
+            elif action == "unload":
                 key = {"frost_armor": "armor", "blizzard": "blizzard"}.get(spell)
                 if key and s[key]:
                     s[key] = False
@@ -298,7 +318,7 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
     if message and action not in ("help", "status", "inventory", "map", "modules"):
         s["message"] = message
     result["message"] = message
-    result["stop"] = result["stop"] or (s["status"] == "lost" and action in ("cast", "attack", "unload", "ping"))
+    result["stop"] = result["stop"] or (s["status"] == "lost" and action in ("cast", "attack", "unload", "ping", "disable"))
     return result
 
 
@@ -314,7 +334,7 @@ def act(s, action, args=(), **kwargs):
     """Record bounded combat events; rendering never delays the shell or loop."""
     before_hp, before_boss = s["hp"], s["boss_hp"]
     result = _act(s, action, args, **kwargs)
-    if action not in ("reset","name") and (before_hp!=s["hp"] or before_boss!=s["boss_hp"] or action in ("cast","attack","unload","use")):
+    if action not in ("reset","name") and (before_hp!=s["hp"] or before_boss!=s["boss_hp"] or action in ("cast","attack","unload","use","disable","ping")):
         s["event_seq"] += 1
         s["events"].append(dict(id=s["event_seq"], at=kwargs.get("now",time.time()),
             kind=action, spell=args[0] if args else "stab", hp_before=before_hp,
