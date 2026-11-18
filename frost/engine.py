@@ -29,7 +29,7 @@ Folge der Spur auf der Karte. Am Fundort zeigt nmap grinch seine IP.
 ls -a zeigt Verstecke. Einzigartige Funde mit mv bergen.
 systemctl status zeigt Bossdienste. restart beginnt eine neue Runde.
 tipp gibt einen von drei Hinweisen pro Runde. Tab hilft beim Tippen. aussehen aendert deinen Charakter.
-neustart | neustart alles (eigene Rekorde)
+restart | restart alles (eigene Rekorde)
 """
 
 
@@ -82,7 +82,7 @@ def counter(s, damage=7):
     sound = "gale" if heavy else "claw"
     if s["hp"] == 0:
         s["status"] = "lost"
-        return " DEIN LICHT ERLISCHT. Starte mit neustart erneut.", sound
+        return " DEIN LICHT ERLISCHT. Starte mit restart erneut.", sound
     return f" {'Sturmböe' if heavy else 'Eissturm'}: -{damage} HP.", sound
 
 
@@ -121,7 +121,7 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
         message="Dein Winterheld ist bereit."
     elif action == "reset":
         if args not in ([], ["normal"], ["alles"]):
-            return {"ok": False, "message": "neustart | neustart alles", "stop": False}
+            return {"ok": False, "message": "restart | restart alles", "stop": False}
         avatar, avatar_set = s["avatar"], s["avatar_set"]
         s.update(fresh(s["name"], now=now, bests={} if args == ["alles"] else s["bests"]))
         s.update(avatar=avatar, avatar_set=avatar_set)
@@ -153,7 +153,7 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
         else:
             message = f"{s['name']} | HP {s['hp']}/100 | Grinch {s['boss_hp']}/240 | {s['score']} Punkte | {s['status']}"
     elif s["status"] != "playing":
-        message = "" if action in ("observe", "bag", "deliver") else "Lauf beendet. Neuer Versuch: neustart"
+        message = "" if action in ("observe", "bag", "deliver") else "Lauf beendet. Neuer Versuch: restart"
         result["stop"] = action in ("cast", "attack", "unload", "use", "ping")
     elif action == "scan":
         place = hiding_place(s, now)
@@ -351,7 +351,7 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
         message = "Unbekannte Spielaktion. Nutze hilfe."
     if s["status"] == "lost" and s["ended"] is None:
         s["ended"] = now
-        message += " VERLOREN. Mit neustart beginnt ein neuer Lauf."
+        message += " VERLOREN. Mit restart beginnt ein neuer Lauf."
     if message and action not in ("help", "status", "inventory", "map", "modules"):
         s["message"] = message
     result["message"] = message

@@ -190,7 +190,17 @@ def main():
         fcntl.ioctl(s.fd,termios.TIOCSWINSZ,struct.pack("HHHH",32,90,0,0)); s.drain(.6)
         s.send("printf 'RESIZE_%s\\n' OK\r"); s.expect("RESIZE_OK")
         fcntl.ioctl(s.fd,termios.TIOCSWINSZ,struct.pack("HHHH",42,120,0,0)); s.drain(.5)
-        s.send("aussehen\r"); s.expect("CHARAKTER"); s.send("\r"); s.drain(.3)
+        s.send("aussehen\r"); s.expect("CHARAKTER")
+        # Editor at 120×42: advance hair colour and commit with the mouse.
+        s.send("\x1b[<0;57;23M\x1b[<0;57;23m")
+        s.expect("schwarz")
+        s.send("\x1b[<0;60;34M\x1b[<0;60;34m")
+        wait_state(lambda v:v["avatar"]["hair"]=="schwarz")
+        s.send("aussehen\r"); s.expect("CHARAKTER")
+        s.send("\x1b[<0;31;23M\x1b[<0;31;23m")
+        s.expect("blond")
+        s.send("\r")
+        wait_state(lambda v:v["avatar"]["hair"]=="blond")
         s.send("printf 'AVATAR_%s\\n' RETURN\r"); s.expect("AVATAR_RETURN")
         limits=run("exec","-T","player01","sh","-c","cat /sys/fs/cgroup/memory.max /sys/fs/cgroup/memory.swap.max /sys/fs/cgroup/pids.max /sys/fs/cgroup/cpu.max",capture_output=True,text=True).stdout.splitlines()
         assert limits==["268435456","0","96","50000 100000"],limits
@@ -259,12 +269,13 @@ def main():
         s.drain(.5)
         assert set(state()["bag"])<=set(state()["battle_items"])
         s.send("while true; do ~/rucksack/funke; done\r")
-        s.expect("ENTER - ZUR SHELL",timeout=15)
+        s.expect("Zur Shell",timeout=15)
         won=wait_state(lambda v:v["status"]=="won")
         assert won["method"]=="loop",won
         result=capture("victory-screen")
         assert "WEIHNACHTEN GERETTET" in result and "PUNKTE" in result,result
-        s.send("\r")
+        # Press the festival's return button in the full-screen inner terminal.
+        s.send("\x1b[<0;60;41M\x1b[<0;60;41m")
         s.drain(.5)
         s.send("printf 'LOOP_%s\\n' FINISHED\r")
         s.expect("LOOP_FINISHED")
@@ -312,10 +323,10 @@ def main():
         s.expect("Rucksack")
         assert state()["name"]=="TestElf01" and state()["status"]=="won"
         print("PASS: direct slot login restores the same player and finished run",flush=True)
-        s.send("neustart\r")
+        s.send("restart\r")
         s.expect("Neuer Lauf")
         wait_state(lambda v:v["score"]==40 and v["bag"]==[] and "best" in v["bests"])
-        s.send("neustart alles\r")
+        s.send("restart alles\r")
         s.expect("Neuer Lauf")
         wait_state(lambda v:not v["bests"])
         s.send("touch ~/reset-test-marker\r")

@@ -5,44 +5,42 @@ import time
 from pathlib import Path
 
 from .client import request
-from .render import colors, put, box, fit
+from .render import colors, put, fit
+from .showcase import blit, button, enable_buttons, festival, mouse_press
 
 
 def result_screen(screen, state):
     colors()
-    try: curses.curs_set(0)
-    except curses.error: pass
-    screen.timeout(120)
-    won = state["status"] == "won"
-    tick = 0
+    enable_buttons(screen)
+    screen.timeout(100)
+    won=state["status"]=="won"
+    started=time.monotonic()
     while True:
-        h, w = screen.getmaxyx()
+        h,w=screen.getmaxyx()
         screen.erase()
-        if h < 16 or w < 44:
-            put(screen, 1, 1, "GEWONNEN!" if won else "VERSUCH BEENDET", 5, True)
-            put(screen, 3, 1, f"{state['score']} Punkte / {state['elapsed']:.2f}s", 1)
-            put(screen, 5, 1, "ENTER - ZUR SHELL", 2)
-        else:
-            box(screen, 1, 2, h-3, w-4, 2)
-            for i in range(12):
-                put(screen, 3+(i*7+tick//5) % max(1,h-9), 4+(i*17) % max(1,w-9), "·", 3)
-            width = min(64,w-10)
-            left = (w-width)//2
-            top = max(3,(h-16)//2)
-            title = "WEIHNACHTEN GERETTET!" if won else "DEIN LICHT KOMMT ZURUECK."
-            for row,text in enumerate(["       *       ","      /|\\      ","  ---< + >---  ","      \\|/      ","       *       "]):
-                put(screen,top+row,(w-len(text))//2,text,5 if won else 3,True)
-            put(screen,top+6,left,fit(title,width,center=True),5 if won else 6,True)
-            put(screen,top+8,left,fit(state["name"],width,center=True),1)
-            put(screen,top+10,left,fit(f"{state['score']} PUNKTE     {state['elapsed']:.2f} SEKUNDEN",width,center=True),2,True)
-            if won:
-                method={"loop":"SIEG", "driver":"TREIBER-TRICK", "spell":"ZAUBER", "staff":"ZUCKERSTAB"}.get(state["method"],"SIEG")
-                put(screen,top+11,left,fit(f"{method}  /  {state['hp']} LEBEN UEBRIG",width,center=True),3)
-            put(screen,min(h-5,top+14),left,fit("[ ENTER - ZUR SHELL ]",width,center=True),4,True)
-            put(screen,h-3,4,"Noch eine Runde? Tippe danach: neustart",3)
+        title="WEIHNACHTEN GERETTET!" if won else "DEIN LICHT ERLISCHT"
+        y=1 if h>=12 else 0
+        put(screen,y,max(0,(w-len(title))//2),title,5 if won else 12,True)
+        footer=max(y+1,h-5)
+        sky_h=footer-y-1
+        if sky_h>=3 and w>=12:
+            blit(screen,festival(w-2,sky_h,time.monotonic()-started,won),y+1,1)
+        method={"loop":"Loop","staff":"Zuckerstab","spell":"Zauber","driver":"Treiber-Trick"}.get(state.get("method"))
+        name=state["name"]+(f"  ·  {method}" if won and method else "")
+        stats=f"{state['score']} PUNKTE   {state['elapsed']:.2f} s   {state['hp']} LP"
+        put(screen,footer,1,fit(name,w-2,center=True),1,True)
+        put(screen,footer+1,1,fit(stats,w-2,center=True),5 if won else 3)
+        action="↵  Zur Shell"
+        row=min(h-1,footer+3)
+        target=button(screen,row,max(0,(w-len(action)-4)//2),action)
+        if footer+4<h:
+            put(screen,footer+4,1,fit("Neue Runde mit restart",w-2,center=True),3)
         screen.refresh()
-        if screen.getch() in (10,13,curses.KEY_ENTER,27): return
-        tick += 1
+        key=screen.getch()
+        if key in (10,13,curses.KEY_ENTER,27): return
+        if key==curses.KEY_MOUSE:
+            click=mouse_press()
+            if click and click[1]==row and click[0] in target: return
 
 
 def maybe_show():
@@ -57,7 +55,7 @@ def maybe_show():
     event=(state.get("events") or [{}])[-1]
     time.sleep(max(0,min(1.4,event.get("at",0)+1.4-time.time())))
     from .terminal import fullscreen
-    with fullscreen():
+    with fullscreen(mouse=True):
         try: curses.wrapper(result_screen,state)
         except KeyboardInterrupt: pass
 

@@ -25,13 +25,13 @@ CONTROL='/tmp/frost-terminal.sock'
 
 
 @contextlib.contextmanager
-def fullscreen():
+def fullscreen(mouse=False):
     def resize(value):
         if not os.environ.get('FROST_TERMINAL'): return
         try:
             with socket.socket(socket.AF_UNIX,socket.SOCK_STREAM) as sock:
                 sock.settimeout(2); sock.connect(CONTROL)
-                sock.sendall(b'1' if value else b'0'); sock.recv(1)
+                sock.sendall((b'2' if mouse else b'1') if value else b'0'); sock.recv(1)
         except OSError: pass
     resize(True)
     try: yield
@@ -46,6 +46,7 @@ def frame(screen):
     tty.setraw(0)
     h,w=screen.getmaxyx()
     zoom=False
+    dialog_mouse=False
     def dimensions():
         rows,cols=screen.getmaxyx()
         top=min(rows-7,max(10,round(rows*.62))) if rows>=18 else max(4,rows//2)
@@ -143,7 +144,7 @@ def frame(screen):
                 terminal.resize(lines=sh,columns=sw)
                 fcntl.ioctl(master,termios.TIOCSWINSZ,struct.pack('HHHH',sh,sw,0,0))
                 previous_size=size
-            wanted=not zoom and terminal.alternate is None and cols>=len(indicator(music))+4
+            wanted=dialog_mouse or (not zoom and terminal.alternate is None and cols>=len(indicator(music))+4)
             if wanted!=tracking:
                 os.write(1,b"\x1b[?1000h\x1b[?1006h" if wanted else b"\x1b[?1000l\x1b[?1006l")
                 tracking=wanted
@@ -151,7 +152,9 @@ def frame(screen):
             if listener in ready:
                 with listener.accept()[0] as conn:
                     conn.settimeout(.2)
-                    zoom=conn.recv(1)==b'1'
+                    mode=conn.recv(1)
+                    zoom=mode in (b'1',b'2')
+                    dialog_mouse=mode==b'2'
                     rows,cols,top,sh,sw=dimensions()
                     terminal.resize(lines=sh,columns=sw)
                     terminal.erase_in_display(2)
@@ -166,7 +169,7 @@ def frame(screen):
             if 0 in ready:
                 data=os.read(0,8192)
                 if not data: break
-                if tracking: data=mouse.feed(data,click)
+                if tracking and not zoom: data=mouse.feed(data,click)
                 elif mouse.pending: data=mouse.flush()+data
                 if (1<<5) in terminal.mode:
                     for key in (b'A',b'B',b'C',b'D',b'H',b'F'):

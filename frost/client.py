@@ -53,7 +53,7 @@ def check_travel():
     location=area()
     if state.get("boss_started"):
         if location!="zitadelle":
-            print("Das Tor ist zu. Kein Rueckweg im Bosskampf; neu anfangen: neustart")
+            print("Das Tor ist zu. Kein Rueckweg im Bosskampf; neu anfangen: restart")
             return 44
         return 0
     return 0

@@ -58,17 +58,17 @@ ping() {
     esac
 }
 fliehen() { cd "$HOME/welt/dorf"; }
-neustart() {
+restart() {
     local mode=${1:-normal}
+    [[ $mode == game ]] && mode=normal
     if [[ $# -gt 1 || ! $mode =~ ^(normal|alles)$ ]]; then
-        printf 'neustart | neustart alles (auch eigene Rekorde)\n'; return
+        printf 'restart | restart alles (auch eigene Rekorde)\n'; return 2
     fi
     # Restore world as the unprivileged player; never follow home symlinks as root.
     /usr/bin/python3 -m frost.world reset || return
     command frost reset "$mode"
     builtin cd "$HOME/welt/dorf"
 }
-restart() { if [[ $# == 0 || "$*" == game ]]; then neustart; else printf 'restart [game]\n'; fi; }
 systemctl() {
     case "$1" in
         list-unit-files|status|'') command frost services ;;
@@ -80,7 +80,7 @@ complete -W 'disable status list-unit-files eissturm.service' systemctl
 aussehen() { /usr/bin/python3 -c 'from frost.login import edit_avatar; edit_avatar()'; }
 complete -W 'funke frost stern schild' zauber
 complete -W 'kakao beeren' heilen
-complete -W 'alles' neustart
+complete -W 'alles game' restart
 complete -W '-r frost_armor blizzard' modprobe
 complete -f sammeln abgeben
 

@@ -44,7 +44,7 @@
 - Isolierter SSH-Test mit zwei Spielern und Zuschauer im eigenen Compose-Projekt `frostbyte-check`: Namensfenster, Tab/Tab Tab, echte `cp`-Befehle, Questabgabe, Beeren benutzen, Verbrauch der Datei, ausführbarer Funkenzauber, echte Bash-Endlosschleife, Sofortsieg und automatisch wieder bedienbare Shell.
 - Vollbild-Gewinnanzeige mit Punkten und Laufzeit erschien tatsächlich im SSH-Terminal und wurde mit Enter geschlossen. Fester PTY-Rahmen vorhanden; keine tmux-Fenster oder F2/F3/F4-Bedienung.
 - Neues Scoreboard per SSH geöffnet und zwischen Punkte- und Speedrun/Loop-Ansicht gewechselt.
-- Normaler Neustart erhält Bestzeiten, `neustart alles` entfernt sie.
+- Normaler Neustart erhält Bestzeiten, `restart alles` entfernt sie.
 - **Gesamtreset nur im Testprojekt ausgeführt**: Vorschau ändert nichts; Sicherungen enthalten die vorherigen Zustände; Namen, Scoreboard und komplette Spieler-Homes sind nach bestätigtem Reset leer. SSH-Hostschlüssel bleiben gleich und der nächste Login zeigt wieder das Namensfenster.
 - Produktivupdate mit vorheriger Offline-Sicherung unter `backups/`. Keine produktiven Spielstände zurückgesetzt. Namen und vorhandene Bestzeiten aller 23 Plätze gegen die Sicherung geprüft. Alle 25 produktiven Container laufen mit erfolgreichem Healthcheck.
 

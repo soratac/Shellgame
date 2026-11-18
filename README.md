@@ -4,7 +4,7 @@ Ein Weihnachtsabenteuer in einer echten Linux-Shell: automatisch erzeugte, getre
 
 ## Spielen
 
-Der gemeinsame Einstieg öffnet direkt den Frostbyte-Charaktereditor. Hier Name, Geschlecht, Haartyp, Haarfarbe und Shirtfarbe wählen. **↑/↓** oder **Tab** wechselt das Feld, **←/→** ändert die Auswahl, **Enter** startet. Mit `aussehen` kannst du das Aussehen später ändern. Sie bleiben bei `neustart` erhalten.
+Der gemeinsame Einstieg öffnet direkt den Frostbyte-Charaktereditor. Hier Name, Geschlecht, Haartyp, Haarfarbe und Shirtfarbe wählen. **↑/↓** oder **Tab** wechselt das Feld, **←/→** ändert die Auswahl, **Enter** startet. Die Pfeile neben den Werten und die Schaltfläche sind auch anklickbar. Die animierte 3D-Vorschau zeigt Änderungen sofort. Mit `aussehen` kannst du das Aussehen später ändern. Dein Aussehen bleibt bei `restart` erhalten.
 
 Im Dorf starten:
 
@@ -73,7 +73,7 @@ Beispiel: `cp post/wunschzettel.txt abgabe/gerettet.txt` löst die Dorfaufgabe a
 
 Aufgebrauchte Gegenstände verschwinden aus dem Rucksack. Erneutes Kopieren füllt keine verbrauchten Ladungen auf. Nur ein Gegenstand im Rucksack kann über seinen Dateibefehl benutzt werden. Bereits vor dem Update erlernte Zauber erscheinen beim ersten Login als Dateien im Rucksack.
 
-Dein 3D-Charakter steht links unten, der grüne Grinch rechts oben. `ping -c 4 127.12.24.1` wirkt als Echo-Zauber mit vier Treffern à 1 HP. Der Rucksack zeigt während der Erkundung und im Kampf die Dateien aus `~/rucksack`. Zauber fliegen zum Gegner, Gegenangriffe zurück; beide Lebensleisten bewegen sich und zeigen Treffer als Zahlen. Der Kampf läuft rundenweise. Lesen und Nachdenken kosten keine Leben. Normale Gegenangriffe kosten 7 Leben; der Panzer vermindert deinen Schaden um 8. Fehlgeschlagene Shell-Befehle im Bossraum und falsche Kampfaktionen kosten zusätzlich Leben. Vor dem Kampf fragt ein schwebendes Fenster nach deiner Zustimmung und erklärt Angreifen und Heilen. Nach **Ja** gibt es keinen Rückweg; neue Funde und Aufgaben zählen erst im nächsten Lauf. Bereits mitgebrachte Gegenstände bleiben nutzbar. Mit `neustart` kannst du jederzeit eine neue Runde beginnen.
+Dein 3D-Charakter steht links unten, der grüne Grinch rechts oben. `ping -c 4 127.12.24.1` wirkt als Echo-Zauber mit vier Treffern à 1 HP. Der Rucksack zeigt während der Erkundung und im Kampf die Dateien aus `~/rucksack`. Zauber fliegen zum Gegner, Gegenangriffe zurück; beide Lebensleisten bewegen sich und zeigen Treffer als Zahlen. Der Kampf läuft rundenweise. Lesen und Nachdenken kosten keine Leben. Normale Gegenangriffe kosten 7 Leben; der Panzer vermindert deinen Schaden um 8. Fehlgeschlagene Shell-Befehle im Bossraum und falsche Kampfaktionen kosten zusätzlich Leben. Vor dem Kampf fragt ein schwebendes Fenster nach deiner Zustimmung und erklärt Angreifen und Heilen. Nach **Ja** gibt es keinen Rückweg; neue Funde und Aufgaben zählen erst im nächsten Lauf. Bereits mitgebrachte Gegenstände bleiben nutzbar. Beim Sieg steigen über dem Dorf Raketen auf und der Weihnachtsstern erscheint in 3D. Mit **Zur Shell** kehrst du zur Eingabe zurück. Mit `restart` kannst du jederzeit eine neue Runde beginnen.
 
 Punkte gibt es einmal je Ort (40), Zauberfund (80), Aufgabe (150), Heilquelle (25), unterstützter Shell-Befehlsart (10), Angriffsart (30), entferntem Treiber (120) und Sieg (500).
 
@@ -95,13 +95,13 @@ Diese Befehle verändern nur das Spiel, keine Kernelmodule der VM.
 Im Spiel:
 
 ```bash
-neustart           # Neue Runde, eigene Bestzeiten bleiben
-neustart alles     # Auch die eigenen Bestzeiten löschen
+restart           # Neue Runde, eigene Bestzeiten bleiben
+restart alles     # Auch die eigenen Bestzeiten löschen
 ```
 
-Diese Befehle setzen `~/welt` und `~/rucksack` zurück. Name und sonstige eigene Dateien bleiben erhalten. `neustart alles` betrifft nur deinen Spielerplatz.
+Diese Befehle setzen `~/welt` und `~/rucksack` zurück. Name und sonstige eigene Dateien bleiben erhalten. `restart alles` betrifft nur deinen Spielerplatz.
 
-`restart` und `restart game` starten ebenfalls die eigene Runde neu.
+Auch `restart game` startet die eigene Runde neu.
 
 **Als Veranstalter auf developer / der VM:**
 
