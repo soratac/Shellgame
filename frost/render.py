@@ -270,7 +270,7 @@ def hero_mesh(hair,shirt,gender,style,step):
     if gender=="weiblich":
         mesh+=beast_segment((0,-.73,0),(0,-.30,0),(.69,.39),(.40,.33),shirt)
         mesh+=cube(.31,.02,-.32,.22,.51,.14,6)
-    mesh += cube(0,.66,-.04,.81,.78,.72,10)
+    mesh += cube(0,.66,-.04,.81,.78,.72,25)
     mesh += cube(0,1.00,-.055,.92,.32,.85,hair)
     mesh += cube(0,.67,.32,.85,.55,.24,hair)
     if style=="Dutt":
@@ -317,20 +317,30 @@ def hero_mesh(hair,shirt,gender,style,step):
 
 
 def face_details(canvas, camera, tick, profile=False):
-    eyes=[]
-    for side in (-1,1):
-        x,y,depth=camera((side*.23,.71,-.48))
-        eyes.append((round(x),round(y),depth))
-    if profile and abs(eyes[0][0]-eyes[1][0])<3:
-        eyes=[min(eyes,key=lambda eye:eye[2])]
-    elif eyes[0][:2]==eyes[1][:2]:
-        x,y,depth=eyes[0]
-        eyes[0]=(x-1,y,depth)
-    for x,y,_ in eyes:
-        canvas.put(x,y,"─" if tick%4.3>4.12 else "•",22)
-    if canvas.h>=12:
-        x,y,_=camera((0,.43,-.46))
-        canvas.put(round(x),max(round(y),max(e[1] for e in eyes)+1),"─",22)
+    # Paint inside the visible face. Hair, scarf and silhouette keep their depth.
+    skin = {(x,y) for y,row in enumerate(canvas.cells) for x,(_,ink) in enumerate(row) if ink==25}
+    if not skin:
+        return
+    for x,y in skin:
+        canvas.put(x,y,"█",25)
+    eyes = [camera((side*.19,.68,-.40)) for side in (-1,1)]
+    gap = abs(eyes[1][0]-eyes[0][0])
+    if profile and gap<3:
+        eyes = [min(eyes,key=lambda eye:eye[2])]
+    blink = tick%4.3 > 4.12
+    painted = set()
+    for ex,ey,_ in eyes:
+        x,y = min(skin,key=lambda cell: (cell[0]-ex)**2 + 2*(cell[1]-ey)**2)
+        # A single solid iris reads cleanly at map scale. A portrait has room
+        # for a little catchlight in the iris and a relaxed, curved eyelid.
+        mark = ("˘" if gap>=3 else "─") if blink else ("◕" if gap>=3 else "▪")
+        canvas.put(x,y,mark,22)
+        painted.add((x,y))
+    if gap>=3:
+        mx,my,_=camera((0,.43,-.40))
+        mouth=(round(mx),round(my))
+        if mouth in skin and mouth not in painted:
+            canvas.put(*mouth,"˘",26)
 
 
 def hero_frame(w,h,tick,avatar,back=False,walking=False):
@@ -389,8 +399,9 @@ def colors():
     for i, color in enumerate(palette, 1):
         curses.init_pair(i, color if curses.COLORS >= 256 else [7,6,4,2,3,1,3,7,5,7,4,6,4,6,3,1,2,7,2,7][i-1], -1)
 
-    for pair,fg,bg,small_fg,small_bg in ((21,231,22,7,2),(22,16,224,0,7),
-                                        (23,231,22,7,2),(24,16,222,0,3)):
+    for pair,fg,bg,small_fg,small_bg in ((21,231,22,7,2),(22,52,223,0,7),
+                                        (23,195,23,7,4),(24,122,-1,6,-1),
+                                        (25,223,223,7,7),(26,131,223,1,7)):
         curses.init_pair(pair,fg if curses.COLORS>=256 else small_fg,bg if curses.COLORS>=256 else small_bg)
 
 
@@ -398,7 +409,7 @@ def put(screen, y, x, text, color=1, bold=False):
     h,w = screen.getmaxyx()
     if 0 <= y < h and 0 <= x < w:
         try:
-            screen.addnstr(y,x,text,max(0,w-x-1),curses.color_pair(color) | (curses.A_BOLD if bold or color in (21,23,24) else 0))
+            screen.addnstr(y,x,text,max(0,w-x-1),curses.color_pair(color) | (curses.A_BOLD if bold or color==21 else 0))
         except curses.error:
             pass
 

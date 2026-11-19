@@ -59,7 +59,11 @@ class RenderTests(unittest.TestCase):
             avatar=appearance({"gender":"weiblich","style":style,"hair":"schwarz"})
             for w,h in ((13,7),(32,18)):
                 frame=hero_frame(w,h,.5,avatar)
-                self.assertEqual(sum(cell==("•",22) for row in frame.cells for cell in row),2)
+                eyes=[ch for row in frame.cells for ch,ink in row if ink==22]
+                self.assertGreaterEqual(len(eyes),2)
+                self.assertTrue(all(ch in ("◕","▪") for ch in eyes))
+                closed=hero_frame(w,h,4.2,avatar)
+                self.assertNotEqual(eyes,[ch for row in closed.cells for ch,ink in row if ink==22])
             frames.append(frame.cells)
         self.assertNotEqual(frames[0],frames[1])
         self.assertNotEqual(frames[1],frames[2])

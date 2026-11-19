@@ -89,16 +89,20 @@ def enable_buttons(screen):
     except curses.error: pass
 
 
-def button(screen,y,x,label):
-    # A separate warm keycap and evergreen action face remain legible on 8-color terminals.
-    key, _, action = label.partition("  ")
-    segments = ((" "+key+" ",24), (" "+action.strip()+" › ",23)) if action else ((" "+label+" ",23),)
-    _,width=screen.getmaxyx()
-    start=x
-    for text,pair in segments:
-        put(screen,y,x,text,pair,True)
-        x+=len(text)
-    return range(start,min(width-1,x))
+def button(screen, y, center, action, framed=False):
+    _,width = screen.getmaxyx()
+    text = "   "+action+"    ↵ Enter   "
+    if len(text)+2>=width:
+        text = " "+action+" ↵ "
+    span = min(len(text)+2,max(0,width-1))
+    start = max(0,min(width-span-1,center-span//2))
+    if framed and span>=2:
+        put(screen,y-1,start,"╭"+"─"*(span-2)+"╮",24)
+        put(screen,y+1,start,"╰"+"─"*(span-2)+"╯",24)
+    put(screen,y,start,"│" if framed else "▏",24)
+    put(screen,y,start+1,text,23,True)
+    put(screen,y,start+span-1,"│" if framed else "▕",24)
+    return range(start,start+span)
 
 
 @lru_cache(maxsize=1)

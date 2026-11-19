@@ -115,7 +115,7 @@ def frame(screen):
             except (ValueError,TypeError): return -1
         inks=color(char.fg),color(char.bg)
         if inks not in pairs:
-            pair=25+len(pairs)
+            pair=27+len(pairs)
             if pair>=min(240,curses.COLOR_PAIRS): pair=0
             else:
                 try: curses.init_pair(pair,*inks)

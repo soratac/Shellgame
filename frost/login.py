@@ -49,30 +49,25 @@ def draw_editor(screen, name, avatar, field, existing, tick, changed, error):
         label, part = FIELDS[i]
         row = base+(i-first)*spacing
         focus = i == field
-        tint = 5 if focus else 1
-        put(screen, row, x, ("› " if focus else "  ")+label, tint, focus)
+        tint = 24 if focus else 1
+        put(screen, row, x, ("▸ " if focus else "  ")+label, tint, focus)
         value_x = x+13
         right = left+panel-1
         if part:
             value = fit(avatar[part], max(1, right-value_x-3), center=True)
-            put(screen, row, value_x, "‹", 2, True)
-            put(screen, row, value_x+2, value, 23 if focus else tint, focus)
-            put(screen, row, right, "›", 2, True)
+            put(screen, row, value_x, "◂" if focus else "‹", tint if focus else 3, focus)
+            put(screen, row, value_x+2, value, tint, focus)
+            put(screen, row, right, "▸" if focus else "›", tint if focus else 3, focus)
         else:
             value = name+("▏" if focus and int(tick*2)%2 == 0 else "")
             available = max(1, right-value_x+1)
             while cell_width(value) > available:
                 value = value[1:]
-            put(screen, row, value_x, value, 23 if focus else tint, focus)
+            put(screen, row, value_x, value, 1, focus)
         hits[row] = (i, x, right, value_x)
-    action = "ENTER  Übernehmen" if existing else "ENTER  Spielen"
-    target = button(screen, footer, left+max(1,(width-len(action)-4)//2), action)
-    button_rows = range(footer, footer+1)
-    if height >= 18 and target:
-        span = len(target)
-        put(screen, footer-1, target.start, "╭"+"─"*(span-2)+"╮", 12)
-        put(screen, footer+1, target.start, "╰"+"─"*(span-2)+"╯", 3)
-        button_rows = range(footer-1, footer+2)
+    framed = height>=18
+    target = button(screen,footer,left+width//2,"Übernehmen" if existing else "Spielen",framed)
+    button_rows = range(footer-int(framed),footer+int(framed)+1)
     if error:
         put(screen, heading+1, left+2, fit(error, width-4), 6)
     screen.refresh()
@@ -117,7 +112,7 @@ def name_dialog(screen):
                 if start <= x <= end and (index or not existing):
                     field = index
                     if index and x >= arrows:
-                        key = curses.KEY_LEFT if x < arrows+2 else curses.KEY_RIGHT
+                        key = curses.KEY_LEFT if x < (arrows+end+1)//2 else curses.KEY_RIGHT
         if key in ("\n", "\r", curses.KEY_ENTER):
             if not existing:
                 if not request("name", [name])["ok"]:

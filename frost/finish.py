@@ -30,9 +30,8 @@ def result_screen(screen, state):
         stats=f"{state['score']} PUNKTE   {state['elapsed']:.2f} s   {state['hp']} LP"
         put(screen,footer,1,fit(name,w-2,center=True),1,True)
         put(screen,footer+1,1,fit(stats,w-2,center=True),5 if won else 3)
-        action="↵  Zur Shell"
         row=min(h-1,footer+3)
-        target=button(screen,row,max(0,(w-len(action)-4)//2),action)
+        target=button(screen,row,w//2,"Zur Shell")
         if footer+4<h:
             put(screen,footer+4,1,fit("Neue Runde mit restart",w-2,center=True),3)
         screen.refresh()
