@@ -102,8 +102,16 @@ class Manager:
 
     def admit(self):
         containers=self.docker.call('GET','/containers/json')
-        players = [row['Id'] for row in containers if row['Labels'].get(LABEL) or
-                   (row['Image']==self.config['image'] and row['Labels'].get('com.docker.compose.service','').startswith('player'))]
+        players = []
+        for row in containers:
+            labels = row['Labels']
+            direct = labels.get('com.docker.compose.service','').startswith('player')
+            # Docker reports the previous image by digest after a rebuild.
+            frost_service = (labels.get('frost.home') == 'checkpoint'
+                             or labels.get('com.docker.compose.project') == self.config['project']
+                             or row['Image'] == self.config['image'])
+            if labels.get(LABEL) or (direct and frost_service):
+                players.append(row['Id'])
 
         def resident(ident):
             try:

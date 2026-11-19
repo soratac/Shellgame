@@ -94,6 +94,12 @@ class SpawnerLimitsTests(unittest.TestCase):
         docker=Mock()
         rows=[{"Id":ident,"Image":"frostbyte:local","Labels":{"frost.managed":"shell-game"}}
               for ident in ("one","two","three")]
+        rows.extend([
+            {"Id":"direct","Image":"sha256:old","Labels":{"com.docker.compose.service":"player01",
+                                                          "com.docker.compose.project":"shell-game"}},
+            {"Id":"unrelated","Image":"other","Labels":{"com.docker.compose.service":"player01",
+                                                        "com.docker.compose.project":"other"}},
+        ])
         def call(method,path):
             if path=="/containers/json": return rows
             if "/one/" in path: stats={"anon":20*MIB,"file":110*MIB}
@@ -101,11 +107,11 @@ class SpawnerLimitsTests(unittest.TestCase):
             else: stats={}
             return {"memory_stats":{"usage":190*MIB,"stats":stats}}
         docker.call.side_effect=call
-        manager=SimpleNamespace(docker=docker,config={"image":"frostbyte:local"})
+        manager=SimpleNamespace(docker=docker,config={"image":"frostbyte:local","project":"shell-game"})
         with patch("frost.spawner.check_capacity") as check:
             Manager.admit(manager)
             root,count,credit,policy=check.call_args.args
-            self.assertEqual((root,count),("/run/controller",3))
+            self.assertEqual((root,count),("/run/controller",4))
             self.assertEqual(credit(),38*MIB)
 
     def test_full_join_queue_rejects_immediately(self):
