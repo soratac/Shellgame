@@ -92,6 +92,8 @@ Sobald er erstmals auf höchstens 190 und später 95 LP fällt, lädt der Grinch
 
 Punkte gibt es einmal je Ort (40), Zauberfund (80), Aufgabe (150), Heilquelle (25), unterstützter Shell-Befehlsart (10), Angriffsart (30), entferntem Treiber (120) und Sieg (500).
 
+Bei einem Sieg addiert Frostbyte einen **Zeitbonus** zur Punktzahl im Scoreboard. Er startet bei 4.800 Punkten und sinkt in den ersten fünf Minuten um 12 Punkte pro voller Sekunde. Danach sinkt er um 2 Punkte pro Sekunde, bis er bei 15 Minuten null erreicht. Ein Sieg nach 2 Minuten bringt so 3.360 Zusatzpunkte, nach 3 Minuten 2.640 und nach 10 Minuten 600. Für alle Wege zählt dieselbe Uhr vom Rundenstart bis zum Sieg. Der Endbildschirm schlüsselt Spielpunkte und Zeitbonus auf.
+
 ### Grinchs Schutz brechen
 
 ```bash

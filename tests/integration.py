@@ -335,6 +335,7 @@ def main():
         assert won["method"]=="loop",won
         result=capture("victory-screen")
         assert "WEIHNACHTEN GERETTET" in result and "PUNKTE" in result,result
+        assert won["time_bonus"] > 0 and f"{won['time_bonus']} Zeitbonus" in result,result
         # Press the festival's return button in the full-screen inner terminal.
         s.send("\x1b[<0;60;41M\x1b[<0;60;41m")
         s.drain(.5)
@@ -369,6 +370,7 @@ def main():
         hero=next(r for r in payload if r["slot"]=="player01")
         assert hero["avatar"]=={"hair":"blond","shirt":"blau","gender":"weiblich","style":"Locken"},hero
         assert hero["connected"] and "mode" not in hero and "best" in hero["bests"],hero
+        assert hero["score"] == won["score"],hero
         print("PASS: live scoreboard contains chosen avatar, real presence and one shared best time",flush=True)
         print("PASS: tree, direct SSH boss entry, no retreat, framed shell and separate live score login",flush=True)
         s.close(); sessions.remove(s)

@@ -1,6 +1,6 @@
 import unittest
 
-from frost.engine import act, fresh, public
+from frost.engine import act, fresh, public, victory_time_bonus
 
 
 class GameTests(unittest.TestCase):
@@ -79,7 +79,34 @@ class GameTests(unittest.TestCase):
         self.assertEqual(self.s["method"],"loop")
         self.assertTrue(result["stop"])
         self.assertEqual(self.s["boss_hp"],0)
+        self.assertEqual(self.s["time_bonus"],victory_time_bonus(11.5))
         self.assertIn("best",self.s["bests"])
+
+    def test_time_bonus_curve(self):
+        for seconds, expected in ((0,4800),(120,3360),(299.99,1212),(300,1200),
+                                  (600,600),(899.99,2),(900,0),(3600,0)):
+            with self.subTest(seconds=seconds):
+                self.assertEqual(victory_time_bonus(seconds),expected)
+
+    def test_speedrun_beats_a_slow_completion_and_fast_completion_can_win(self):
+        def finish(points, seconds):
+            s = fresh("Elf",now=0)
+            s.update(score=points,area="zitadelle",boss_started=True,boss_hp=1,
+                     armor=False,storm_service=False)
+            act(s,"attack",now=seconds)
+            self.assertEqual(s["status"],"won")
+            total = points + 30 + 500 + victory_time_bonus(seconds)
+            self.assertEqual(s["score"],total)
+            act(s,"attack",now=seconds+1)
+            self.assertEqual(s["score"],total)
+            act(s,"reset",now=seconds+2)
+            self.assertIsNone(s["time_bonus"])
+            self.assertEqual(s["score"],0)
+            return total
+
+        speedrun = finish(750,120)
+        self.assertGreater(speedrun,finish(1900,600))
+        self.assertGreater(finish(1900,180),speedrun)
 
     def test_charged_strikes_persist_until_a_combat_turn_and_only_happen_twice(self):
         import json
@@ -111,6 +138,7 @@ class GameTests(unittest.TestCase):
         self.s.update(charging=True,eclipse_casts=2,boss_hp=1,hp=80,armor=False,storm_service=False)
         self.action("attack")
         self.assertEqual((self.s["boss_hp"],self.s["hp"],self.s["status"]),(0,0,"lost"))
+        self.assertIsNone(self.s["time_bonus"])
 
     def test_either_seal_blocks_lethal_attacks_and_rapid_casts(self):
         for armor, service in ((True,True),(True,False),(False,True)):

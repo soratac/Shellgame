@@ -41,7 +41,7 @@ ECLIPSE_HIT = 46
 
 def fresh(name="", now=None, bests=None):
     return dict(version=5, name=name, started=now if now is not None else time.time(),
-                ended=None, hp=100, boss_hp=240, score=0, area="dorf", visited=[],
+                ended=None, hp=100, boss_hp=240, score=0, time_bonus=None, area="dorf", visited=[],
                 spells={}, rewards=[], status="playing", method=None, shield=0, frozen=0,
                 storm_service=True, combat_turn=0, eclipse_casts=0, charging=False, last_attack=None, armor=True, blizzard=True, loop_hits=[], bests=merge_bests(bests), bag=[], deliveries={},
                 hints_left=HINT_LIMIT, hint_until=0, hint_text="", grinch_found=False, boss_started=False, battle_items=[], avatar=dict(DEFAULT), avatar_set=False, events=[], event_seq=0,
@@ -62,12 +62,23 @@ def public(s, now=None):
             "elapsed": round(max(0, (s["ended"] if s["ended"] is not None else now) - s["started"]), 2)}
 
 
+def victory_time_bonus(elapsed):
+    seconds = max(0, int(elapsed))
+    # The first five minutes are worth 12 points per second saved.
+    if seconds < 300:
+        return 4800 - 12 * seconds
+    return max(0, 1200 - 2 * (seconds - 300))
+
+
 def win(s, method, now):
-    s.update(boss_hp=0, status="won", ended=now, method=method, charging=False)
-    reward(s, "victory", 500)
     elapsed = max(0, now - s["started"])
+    bonus = victory_time_bonus(elapsed)
+    if not reward(s, "victory", 500 + bonus):
+        return
+    s.update(boss_hp=0, status="won", ended=now, method=method, charging=False)
+    s["time_bonus"] = bonus
     s["bests"]["best"] = min(elapsed, s["bests"].get("best", float("inf")))
-    s["message"] = f"WEIHNACHTEN GERETTET! {elapsed:.2f}s / {s['score']} Punkte"
+    s["message"] = f"WEIHNACHTEN GERETTET! {elapsed:.2f}s / {s['score']} Punkte (inkl. {bonus} Zeitbonus)"
 
 
 def boss_lock(s):
