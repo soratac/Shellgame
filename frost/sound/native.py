@@ -14,7 +14,7 @@ from .compose import RATE, soundtrack
 # Pitch contours in Hz. Separate notes give each item its own attack and rhythm.
 PATCHES = {
     "ping": ("bell", .09, (880,880,880,1175)),
-    "stern": ("bell", .085, (523,659,784,1047,1568)),
+    "stern": ("bell", .082, (523,659,784,1047,1319,1568,2093,1047,523)),
     "frost": ("ice", .075, (2217,1865,2489,1245)),
     "funke": ("crash", .12, (620,310,155)),
     "staff": ("crash", .09, (270,80)),
@@ -27,6 +27,10 @@ PATCHES = {
     "loop": ("pulse", .055, (262,392,523,784,1047,1568)),
     "ice_lock": ("ice", .065, (2800,1700,700)),
     "parry": ("bell", .07, (940,1413)),
+    "lance": ("ice", .065, (2440,1770,920,370)),
+    "charge": ("hum", .11, (147,185,220,294,370)),
+    "eclipse": ("crash", .105, (196,65,48,196,55,37)),
+    "eclipse_guard": ("bell", .10, (659,330,990,784,392,1175)),
     "claw": ("crash", .075, (380,210,106)),
     "gale": ("wind", .13, (220,520,980,260,82)),
 }

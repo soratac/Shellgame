@@ -86,7 +86,9 @@ Dorf, Wald, Werkstatt und Archiv haben je eine `AUFGABE.txt`. Erst die richtige 
 
 Aufgebrauchte Gegenstände verschwinden aus dem Rucksack. Erneutes Kopieren füllt keine verbrauchten Ladungen auf. Nur ein Gegenstand im Rucksack kann über seinen Dateibefehl benutzt werden. Bereits vor dem Update erlernte Zauber erscheinen beim ersten Login als Dateien im Rucksack.
 
-Dein 3D-Charakter steht links unten, der grüne Grinch rechts oben. `ping -c 4 127.12.24.1` wirkt als Echo-Zauber mit vier Treffern à 1 HP. Der Rucksack zeigt während der Erkundung und im Kampf die Dateien aus `~/rucksack`. Zauber fliegen zum Gegner, Gegenangriffe zurück; beide Lebensleisten bewegen sich und zeigen Treffer als Zahlen. Der Kampf läuft rundenweise. Lesen und Nachdenken kosten keine Leben. Bei 120 Boss-LP sprengt der Grinch einmal deinen aktiven Schild und Frost. Seine normalen Gegenangriffe kosten dann 11 statt 7 Leben. Der Eispanzer zieht 8 Schaden ab. Wiederholst du denselben Schadensangriff, kommt nur ein Viertel des verbleibenden Schadens durch. Das Echo trifft immer für 4. Fehlgeschlagene Shell-Befehle im Bossraum und falsche Kampfaktionen kosten zusätzlich Leben. Vor dem Kampf fragt ein schwebendes Fenster nach deiner Zustimmung und erklärt Angreifen und Heilen. Nach **Ja** gibt es keinen Rückweg; neue Funde und Aufgaben zählen erst im nächsten Lauf. Bereits mitgebrachte Gegenstände bleiben nutzbar. Beim Sieg steigen über dem Dorf Raketen auf und der Weihnachtsstern erscheint in 3D. Mit **Zur Shell** kehrst du zur Eingabe zurück. Mit `restart` kannst du jederzeit eine neue Runde beginnen.
+Dein 3D-Charakter steht links unten, der grüne Grinch rechts oben. `ping -c 4 127.12.24.1` wirkt als Echo-Zauber mit vier Treffern à 3 LP. Der Rucksack zeigt während der Erkundung und im Kampf die Dateien aus `~/rucksack`. Zauber fliegen zum Gegner, Gegenangriffe zurück; beide Lebensleisten bewegen sich und zeigen Treffer als Zahlen. Der Kampf läuft rundenweise. Lesen und Nachdenken kosten keine Leben. Krallenschlag, Eislanze und Sturmböe kosten 15, 19 und 24 LP. Ab 120 Boss-LP werden die normalen Treffer um 4 LP stärker. Beim Überschreiten dieser Marke sprengt der Grinch einmal bestehenden Schutz. Der Eispanzer zieht 8 Schaden ab und dämpft wiederholte Angriffe. Das Echo durchdringt ihn.
+
+Sobald er erstmals auf höchstens 190 und später 95 LP fällt, lädt der Grinch jeweils eine Runde **Polarnacht** auf. Die Warnung bleibt sichtbar, während du überlegst. Auf deinen nächsten Kampfzug folgen zwei Schläge zu je 46 LP. Ein aktiver Schild fängt beide ab und zerbricht dabei. Frost hält normale Angriffe auf. Kakao heilt einmalig bis zu 35 LP und verbraucht im Kampf einen Zug. Nimm Schild und Kakao vor der Boss-Verbindung mit. Nach dem Betreten ist der Rückweg versperrt. Beim Sieg steigen über dem Dorf Raketen auf. Mit **Zur Shell** kehrst du zur Eingabe zurück. Mit `restart` beginnt eine neue Runde.
 
 Punkte gibt es einmal je Ort (40), Zauberfund (80), Aufgabe (150), Heilquelle (25), unterstützter Shell-Befehlsart (10), Angriffsart (30), entferntem Treiber (120) und Sieg (500).
 
@@ -99,7 +101,7 @@ modprobe -r frost_armor
 modprobe -r blizzard
 ```
 
-Der Grinch setzt bei jedem dritten ungeschützten Zug eine stärkere Sturmböe ein. `systemctl status` zeigt den Spieldienst. Mit `systemctl disable eissturm.service` schaltest du ihn für die Runde ab (+100 Punkte). Alle Funde lassen sich mit `mv` mitnehmen. Schild und Stern müssen verschoben werden.
+Jeder dritte Kampfzug ist für die Sturmböe vorgesehen. Schild und Frost können sie abfangen. `systemctl status` zeigt den Spieldienst. Mit `systemctl disable eissturm.service` schaltest du ihn für die Runde ab (+100 Punkte). Alle Funde lassen sich mit `mv` mitnehmen. Schild und Stern müssen verschoben werden.
 
 Diese Befehle verändern nur das Spiel, keine Kernelmodule der VM.
 

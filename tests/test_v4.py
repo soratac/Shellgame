@@ -9,13 +9,16 @@ class ProgressionTests(unittest.TestCase):
         s=fresh('Elf',now=0)
         for place in places: act(s,'observe',cwd=place,now=1)
         s["rewards"].append("quest:wunschzettel")
+        if "werkstatt" in places: s["rewards"].append("quest:geschenkband")
         act(s,'bag',['funke','kakao','frost','schild'])
         act(s,'observe',cwd='zitadelle'); act(s,'enter_boss')
         act(s,'unload',['blizzard']); act(s,'unload',['frost_armor'])
-        for i in range(12): act(s,'cast',['funke'],now=10+i*3)
+        for i in range(14):
+            move='schild' if s['charging'] and 'schild' in s['bag'] else 'funke'
+            act(s,'cast',[move],now=10+i*3)
         return s
 
-    def test_boss_requires_discovered_address_and_ping_is_four_damage(self):
+    def test_boss_requires_discovered_address_and_ping_hits_four_times(self):
         from frost.trail import hiding_place, BOSS_IP
         s=fresh('Raoul', now=1)
         self.assertFalse(act(s,'connect',[BOSS_IP])['ok'])
@@ -31,7 +34,7 @@ class ProgressionTests(unittest.TestCase):
         self.assertTrue(act(s,'connect',[BOSS_IP])['ok'])
         hp=s['hp']
         self.assertTrue(act(s,'ping',[BOSS_IP])['ok'])
-        self.assertEqual((s['area'],s['boss_hp'],s['hp']),('zitadelle',236,hp-7))
+        self.assertEqual((s['area'],s['boss_hp'],s['hp']),('zitadelle',228,hp-15))
         self.assertEqual(s['events'][-1]['kind'],'ping')
 
     def test_mobile_trail_and_persistent_discovery(self):
@@ -44,7 +47,7 @@ class ProgressionTests(unittest.TestCase):
         self.assertTrue(act(s,"connect",[BOSS_IP],now=381)["ok"])
 
     def test_storm_service_changes_counterattack_and_resets(self):
-        for disabled,expected in [(False,74),(True,72)]:
+        for disabled,expected in [(False,42),(True,36)]:
             s=fresh("Elf")
             act(s,"observe",cwd="zitadelle")
             act(s,"enter_boss")
@@ -56,10 +59,10 @@ class ProgressionTests(unittest.TestCase):
             act(s,"reset")
             self.assertTrue(s["storm_service"])
 
-    def test_two_places_allow_victory(self):
+    def test_ignoring_the_charge_loses(self):
         s=self.fight(['dorf','wald'])
-        self.assertEqual(s['boss_hp'],0)
-        self.assertEqual(s['status'],'won')
+        self.assertGreater(s['boss_hp'],0)
+        self.assertEqual(s['status'],'lost')
         self.assertEqual(route_count(s),2)
 
     def test_three_places_allow_normal_win(self):
@@ -89,7 +92,7 @@ class ProgressionTests(unittest.TestCase):
         act(s,'observe',cwd='zitadelle'); act(s,'enter_boss')
         act(s,'use',['funke'],now=10)
         event=s['events'][-1]
-        self.assertEqual((event['damage'],event['hurt']),(22,7))
+        self.assertEqual((event['damage'],event['hurt']),(22,15))
         for i in range(60): act(s,'attack',now=100+i*3)
         self.assertLessEqual(len(s['events']),24)
 
@@ -114,7 +117,7 @@ class ProgressionTests(unittest.TestCase):
         with patch('frost.render.time.time',return_value=10.95):
             c=combat_frame(96,19,s,10.95)
         text='\n'.join(''.join(ch for ch,_ in row) for row in c.cells)
-        for word in ['Elf','GRINCH','/100','/240','-22','-7']: self.assertIn(word,text)
+        for word in ['Elf','GRINCH','/100','/240','-22','-15']: self.assertIn(word,text)
         with patch('frost.render.time.time',return_value=10.1):
             self.assertNotEqual(c.cells,combat_frame(96,19,s,10.1).cells)
 

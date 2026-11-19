@@ -99,26 +99,28 @@ def spell_motion(c,event,age,start,end):
     if kind=="ping": spell="ping"
     height=max(5,min(19,c.h*.78,c.w*.31))
     sx,sy=start; ex,ey=end
-    if event["hurt"]<0:
+    if event.get("healed") or event["hurt"]<0:
         t=min(1,age/1.32)
         apparition(c,"life",sx+math.sin(t*math.tau)*4,sy-t*height*.64,
                    height*(.62+.36*math.sin(t*math.pi)),age)
     elif spell=="schild" and age<1.1:
         apparition(c,"schild",sx+2,sy-1,height*(.72+.28*math.sin(age*3)),age)
-    if event["damage"] and spell in ("funke","frost","stern","ping","staff") and age<.85:
+    if event["damage"] and spell=="stern" and age<1.18:
+        starfall(c,age,end)
+    if event["damage"] and spell=="ping" and age<1.10:
+        echo_train(c,age,start,end)
+    if event["damage"] and spell in ("funke","frost","staff") and age<.85:
         t=min(1,age/.54)
-        # The falling star enters from above. Other projectiles arc across the court.
+        # Fire, frost and the staff arc across the court.
         x=sx+(ex-sx)*t
         y=sy+(ey-sy)*t-height*.28*math.sin(t*math.pi)
-        if spell=="stern": x,y=ex-(1-t)*c.w*.25,ey-(1-t)*(ey+2)
         size=height*(.75+.25*math.sin(t*math.pi))
         if age>.54: size*=1+(age-.54)*1.35
         apparition(c,spell,x,y,size,age)
         if age>=.46:
             bloom=min(1,(age-.46)/.36)
             radius=height*(.25+.72*bloom)
-            mark,color={"funke":("✹",15),"frost":("❄",1),"stern":("★",5),
-                        "ping":("◦",2),"staff":("╱",20)}[spell]
+            mark,color={"funke":("✹",15),"frost":("❄",1),"staff":("╱",20)}[spell]
             for i in range(10):
                 a=i*math.tau/10
                 dx,dy=math.cos(a)*radius*1.65,math.sin(a)*radius*.7
@@ -166,8 +168,83 @@ def spell_motion(c,event,age,start,end):
             for side in (-1,1):
                 x=ex+side*round(height*.65)
                 apparition(c,"frost",x,ey+1,height*.71,age)
-    if event["hurt"]>0 and .55<age<1.35:
+    sounds=event.get("sounds",[])
+    for sound in sounds:
+        boss_magic(c,sound,age,start,end)
+    if event["hurt"]>0 and .55<age<1.35 and (not sounds or "claw" in sounds):
         t=min(1,(age-.55)/.52)
         counter=("gale" if "gale" in event["sounds"] else "claw") if "sounds" in event else ("gale" if event["hurt"]>=12 else "claw")
         apparition(c,counter,ex+(sx-ex)*t,ey+(sy-ey)*t,
                    height*(.57+.57*t),age)
+
+
+def shockwave(c,x,y,r,ink,mark,points=20):
+    for i in range(points):
+        angle=i*math.tau/points
+        c.put(round(x+r*math.cos(angle)),round(y+r*.40*math.sin(angle)),mark,ink)
+
+
+def starfall(c,age,end):
+    x,y=end
+    # A constellation contracts into the falling star, then breaks into gold rays.
+    t=min(1,age/.52)
+    cx=round(x-(1-t)*c.w*.52)
+    cy=round(y-(1-t)*(y+2))
+    radius=max(4,min(c.w*.30,c.h*1.7))
+    if age<.64:
+        for i in range(1,7):
+            c.put(cx-i*2,cy-i//2,"✧" if i%2 else "·",20 if i%2 else 5)
+        apparition(c,"stern",cx,cy,max(5,min(20,c.h*(.55+.43*t))),age)
+    if age>=.45:
+        bloom=min(1,(age-.45)/.72)
+        reach=radius*math.sin(bloom*math.pi*.55)
+        for i in range(12):
+            a=i*math.tau/12
+            dx,dy=math.cos(a)*reach,math.sin(a)*reach*.48
+            c.line(round(x+dx*bloom*.62),round(y+dy*bloom*.62),round(x+dx),round(y+dy),
+                   "━" if abs(dy)<.5 else "╲" if dx*dy>0 else "╱",20 if i%2 else 5)
+            c.put(round(x+dx),round(y+dy),"★" if i%3==0 else "✧",5)
+        shockwave(c,x,y,reach*.80,5,"✦")
+        c.put(x-1,y,"✦★✦",20)
+
+
+def echo_train(c,age,start,end):
+    sx,sy=start
+    ex,ey=end
+    for pulse in range(4):
+        t=(age-.12*pulse)/.52
+        if 0<=t<=1:
+            x,y=sx+(ex-sx)*t,sy+(ey-sy)*t
+            shockwave(c,x,y,2+3*t,2 if pulse%2 else 20,"◦",12)
+            c.put(round(x),round(y),"◉",2)
+        elif 1<t<1.40:
+            shockwave(c,ex,ey,2+(t-1)*14,5,"·")
+
+
+def boss_magic(c,sound,age,start,end):
+    sx,sy=start
+    ex,ey=end
+    if sound=="charge":
+        shockwave(c,ex,ey,3+(1-(age%0.7)/.7)*min(c.w*.22,c.h),9,"◆")
+    elif sound in ("eclipse","eclipse_guard"):
+        for hit,delay in enumerate((.48,.90)):
+            t=(age-delay)/.36
+            if not 0<=t<=1.45: continue
+            x=round(ex+(sx-ex)*min(1,t)); y=round(ey+(sy-ey)*min(1,t))
+            slope=1 if hit else -1
+            for n in range(-2,3):
+                c.line(x+n-3,y-3*slope,x+n+3,y+3*slope,"╲" if slope==1 else "╱",9 if n%2 else 20)
+            if t>=.85:
+                shockwave(c,sx,sy,3+(t-.85)*17,2 if sound=="eclipse_guard" else 6,"✷")
+            if sound=="eclipse_guard": apparition(c,"schild",sx+2,sy,max(5,min(12,c.h*.7)),age)
+    elif sound=="lance" and .52<age<1.27:
+        t=min(1,(age-.52)/.48)
+        x,y=round(ex+(sx-ex)*t),round(ey+(sy-ey)*t)
+        c.line(x,y,x+max(3,c.w//7),y-2,"◆",12)
+        c.put(x-1,y,"◀",1)
+    elif sound=="gale" and .52<age<1.3:
+        t=min(1,(age-.52)/.60)
+        x,y=ex+(sx-ex)*t,ey+(sy-ey)*t
+        for i in range(26):
+            a=i*.7+age*11
+            c.put(round(x+math.cos(a)*(3+i*.24)),round(y+i*.24-3+math.sin(a)),"❄" if i%4==0 else "·",2)

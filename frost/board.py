@@ -104,6 +104,7 @@ class Board:
         activity={"command_label":bounded_command(label),"command_active":data.get("command_active") is True,
                   "command_history":[bounded_command(cmd) for cmd in history[:HISTORY_SIZE]]}
         selected["grinch_found"] = data.get("grinch_found") is True
+        selected["charging"] = data.get("charging") is True
         selected["boss_started"] = data.get("boss_started") is True
         selected["visited"] = [p for p in POSITIONS if p in data.get("visited",[])] if isinstance(data.get("visited",[]),list) else []
         selected["events"]=[]
@@ -119,7 +120,7 @@ class Board:
             for key,allowed in [("kind",("use","cast","attack","disable","unload","heal","observe","ping","bag","scan")),
                                 ("spell",(*ITEMS,"stab","eissturm","frost_armor","blizzard"))]:
                 if event.get(key) in allowed: values[key]=event[key]
-            for key,limit in [("boss_before",240),("hp_before",100)]:
+            for key,limit in [("boss_before",240),("hp_before",100),("healed",100)]:
                 if isinstance(event.get(key),int) and 0<=event[key]<=limit: values[key]=event[key]
             sounds=event.get("sounds")
             if isinstance(sounds,list) and all(isinstance(v,str) and v in music_http.SOUNDS for v in sounds):

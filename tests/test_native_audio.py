@@ -22,7 +22,7 @@ class NativeAudioTests(unittest.TestCase):
         self.assertRegex(tune.packet(0,40),rb"^\x1b\[3;[0-9]+;[0-9]+,~$")
         self.assertEqual(tune.packet(.01,40),b"")
         self.assertEqual(tune.packet(.1,0,["stern"]),b"")
-        self.assertEqual(tune.packet(.11,100,["stern"]),b"\x1b[7;2;13;25,~")
+        self.assertEqual(tune.packet(.11,100,["stern"]),b"\x1b[7;2;1;5;8;13;20;25,~")
 
     def test_music_wraps_mid_block(self):
         mix = Mix()

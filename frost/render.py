@@ -8,12 +8,12 @@ import unicodedata
 from .geometry import Canvas, cube, cone, beast_segment, overlay, projector, project_mesh
 from .client import request
 from .trail import hiding_place, discovered
-from .engine import HINT_LIMIT
+from .engine import HINT_LIMIT, ECLIPSE_HIT
 from .avatar import HAIR, SHIRTS
 from .items import BAG_ICONS, bag_count
 
 from .snow import flakes
-from .spell_art import apparition, spell_motion
+from .spell_art import apparition, spell_motion, shockwave
 from .scenery import POSITIONS, atlas_frame, atlas_point
 
 
@@ -96,6 +96,15 @@ def combat_frame(w,h,s,tick):
     hp,bhp=s["hp"],s["boss_hp"]
     if active:
         hp=smooth_life(hp,event["hp_before"],(age-(.12 if event["hurt"]<0 else .55))/.7)
+        healed=event.get("healed",0)
+        peak=event["hp_before"]+healed
+        if healed:
+            hp=smooth_life(peak,event["hp_before"],age/.38)
+            if age>=.52: hp=smooth_life(s["hp"],peak,(age-.52)/.58)
+        if "eclipse" in event.get("sounds",[]):
+            mid=max(0,peak-ECLIPSE_HIT)
+            if age>=.55: hp=smooth_life(mid,peak,(age-.55)/.22)
+            if age>=.99: hp=smooth_life(s["hp"],mid,(age-.99)/.22)
         bhp=smooth_life(bhp,event["boss_before"],(age-.13)/.72)
     right=w//2+2
     meter=max(3,min(28,w//2-12))
@@ -105,7 +114,7 @@ def combat_frame(w,h,s,tick):
     bx = right + round(slide*bw)
     hx = 1-round(slide*bw)
     b_hit = active and event["damage"]>0 and .28<age<.48
-    p_hit = active and event["hurt"]>0 and .8<age<1.05
+    p_hit = active and event["hurt"]>0 and (.8<age<1.05 or ("eclipse" in event.get("sounds",[]) and 1.18<age<1.36))
     monster_w=max(6,w*3//5)
     monster_h=max(5,h-2)
     monster_x=bx-(monster_w-bw)//2
@@ -117,6 +126,9 @@ def combat_frame(w,h,s,tick):
         size=max(3,min(7,h//4))
         apparition(c,"shade",min(w//2-1,meter+10),2+.7*math.sin(tick*2),size,tick)
         apparition(c,"life",w-(meter+8)-3,h-3+.6*math.sin(tick*2.3),size,tick+.5)
+    if s.get("charging") and s.get("status")=="playing":
+        radius=3+(1-(tick%1.3)/1.3)*min(w*.16,h*.8)
+        shockwave(c,end[0],end[1],radius,9,"✧")
     if active: attack_effect(c,event,age,start,end)
     boss_bar=health_gauge(bhp,240,meter,event["boss_before"] if active else bhp,age,tick,s["boss_hp"])
     player_bar=health_gauge(hp,100,meter,event["hp_before"] if active else hp,age,tick,s["hp"])
@@ -171,28 +183,26 @@ def attack_effect(c,event,age,start,end):
             burst(end,(age-.32)/.68,mark,color)
             if spell=="funke":
                 for i in range(4): shot((age-i*.055)/.44,"━✦",5 if i%2 else 6,-round(2*math.sin(phase*math.pi)))
-            if spell=="stern" and age<.50:
-                for i in range(4): c.put(end[0]-5+i*3,round(phase*(end[1]+2))-i%2,"╲★",5)
-            if kind=="ping" or spell=="ping":
-                for i in range(4): shot((age-i*.13)/.38,"◉",2)
             elif spell=="frost":
                 for dy in (-1,0,1): shot(age/.47,"❄",2,round(dy*math.sin(phase*math.pi)))
-            elif spell=="stern":
-                c.put(end[0],max(0,end[1]-round((1-phase)*6)),"★",5)
-                if .3<age<.6: c.put(end[0]-2,end[1]+1,"· ✧ ·",1)
             elif kind=="attack":
                 shot(age/.30,"╱━",1)
-            else:
+            elif spell not in ("stern","ping") and kind!="ping":
                 shot(age/.44,"✦»",6,-round(2*math.sin(phase*math.pi)))
-        if event["hurt"]>0:
+        if event["hurt"]>0 and not set(event.get("sounds",[])).intersection(("lance","eclipse","gale")):
             burst(start,(age-.84)/.62,"❄" if event["hurt"]>=12 else "✴",6)
             strong=event["hurt"]>=12
             for dy in ((-1,0,1) if strong else (0,)):
                 shot(1-(age-.6)/.35,"❄" if strong else "«✹",2 if strong else 6,dy)
         spell_motion(c,event,age,start,end)
         if event["damage"]>0 and age>.25: c.put(end[0]+2,max(0,end[1]-2),f"-{event['damage']}",5)
-        if event["hurt"]>0 and age>.85: c.put(start[0]-4,max(2,start[1]-2),f"-{event['hurt']}",6)
-        if event["hurt"]<0: c.put(start[0]-3,start[1]-1,f"+{-event['hurt']}",4)
+        healed=event.get("healed",0)
+        hit=max(0,event["hurt"]+healed)
+        if hit and age>.85:
+            label="2 × 46" if "eclipse" in event.get("sounds",[]) else f"-{hit}"
+            c.put(start[0]-4,max(2,start[1]-2),label,6)
+        recovery=healed or max(0,-event["hurt"])
+        if recovery and age<.65: c.put(start[0]-3,start[1]-1,f"+{recovery}",4)
 
 
 def beast_posture(breath,lunge,recoil):
@@ -321,26 +331,22 @@ def face_details(canvas, camera, tick, profile=False):
     skin = {(x,y) for y,row in enumerate(canvas.cells) for x,(_,ink) in enumerate(row) if ink==25}
     if not skin:
         return
-    for x,y in skin:
-        canvas.put(x,y,"█",25)
     eyes = [camera((side*.19,.68,-.40)) for side in (-1,1)]
     gap = abs(eyes[1][0]-eyes[0][0])
     if profile and gap<3:
         eyes = [min(eyes,key=lambda eye:eye[2])]
     blink = tick%4.3 > 4.12
-    painted = set()
+    painted = []
     for ex,ey,_ in eyes:
         x,y = min(skin,key=lambda cell: (cell[0]-ex)**2 + 2*(cell[1]-ey)**2)
         # A single solid iris reads cleanly at map scale. A portrait has room
         # for a little catchlight in the iris and a relaxed, curved eyelid.
         mark = ("˘" if gap>=3 else "─") if blink else ("◕" if gap>=3 else "▪")
         canvas.put(x,y,mark,22)
-        painted.add((x,y))
-    if gap>=3:
-        mx,my,_=camera((0,.43,-.40))
-        mouth=(round(mx),round(my))
-        if mouth in skin and mouth not in painted:
-            canvas.put(*mouth,"˘",26)
+        painted.append((x,y))
+    if canvas.h>=12:
+        mx,my,_=camera((0,.43,-.46))
+        canvas.put(round(mx),max(round(my),max(y for _,y in painted)+1),"─",26)
 
 
 def hero_frame(w,h,tick,avatar,back=False,walking=False):
@@ -359,9 +365,11 @@ def boss_frame(w,h,tick,won=False,event=None,age=99):
     def pulse(start,duration):
         phase=(age-start)/duration
         return math.sin(phase*math.pi) if 0<phase<1 else 0
-    lunging=event and any(s in ("claw","gale") for s in event.get("sounds",[]))
+    lunging=event and any(s in ("claw","gale","lance","eclipse","eclipse_guard") for s in event.get("sounds",[]))
     if event and "sounds" not in event: lunging=event.get("hurt",0)>0
     lunge=round(5*pulse(.48,.54)) if lunging else 0
+    if event and any(sound in ("eclipse","eclipse_guard") for sound in event.get("sounds",[])):
+        lunge=round(5*(pulse(.45,.32)+pulse(.88,.32)))
     recoil=round(3*pulse(.20,.36)) if event and event.get("damage",0)>0 else 0
     breath=round(2*math.sin(tick*1.8))
     return monster_pose(w,h,breath,lunge,recoil)
@@ -401,7 +409,7 @@ def colors():
 
     for pair,fg,bg,small_fg,small_bg in ((21,231,22,7,2),(22,52,223,0,7),
                                         (23,195,23,7,4),(24,122,-1,6,-1),
-                                        (25,223,223,7,7),(26,131,223,1,7)):
+                                        (25,223,-1,7,-1),(26,16,224,0,7)):
         curses.init_pair(pair,fg if curses.COLORS>=256 else small_fg,bg if curses.COLORS>=256 else small_bg)
 
 
@@ -455,7 +463,7 @@ def paint(screen,state,tick,position=None,walking=False):
     if not state:
         put(screen,1,2,"Verbinde …",2); return
     if h<10 or w<50:
-        put(screen,0,1,"FROSTBYTE · Terminal vergroessern",2)
+        put(screen,0,1,"POLARNACHT → ~/rucksack/schild" if state.get("charging") else "FROSTBYTE · Terminal vergroessern",2)
         put(screen,2,1,f"Du {state['hp']}/100   Boss {state['boss_hp']}/240",4); return
     put(screen,0,2,"❄ FROSTBYTE",2,True)
     score=f"{state['score']} PTS"
@@ -502,6 +510,14 @@ def paint(screen,state,tick,position=None,walking=False):
             elif event["damage"] or spell in titles:
                 title=titles.get(spell,"ECHOWELLE" if kind=="ping" else "ZUCKERSTABSCHLAG")
                 hint="✦ "+title+(f"   −{event['damage']} LP" if event["damage"] else ""); color=2
+        if state.get("charging") and state.get("status")=="playing":
+            hint="POLARNACHT → ~/rucksack/schild"
+            color=6
+        elif event and .52<age<1.48:
+            moves={"claw":"KRALLENSCHLAG","lance":"EISLANZE","gale":"STURMBÖE",
+                   "eclipse":"POLARNACHT · 2 × 46 LP","eclipse_guard":"POLARNACHT · BEIDE BLOCKIERT"}
+            for sound in event.get("sounds",[]):
+                if sound in moves: hint,color=moves[sound],6 if sound!="eclipse_guard" else 4
         put(screen,1,sx,hint,color,True)
         scene=combat_frame(scene_w,scene_h,state,tick)
     else:

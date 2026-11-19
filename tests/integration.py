@@ -300,8 +300,8 @@ def main():
         with urllib.request.urlopen(stream_url, timeout=6) as stream:
             assert volume_event(stream)==50
             s.send("ping -c 4 127.12.24.1\r")
-            assert volume_event(stream)==["ping","claw"]
-        wait_state(lambda v:v["boss_hp"]==236)
+            assert volume_event(stream)==["ping","lance"]
+        wait_state(lambda v:v["boss_hp"]==228)
         s.send("cd ../dorf; printf 'LOCK_%s\\n' \"$PWD\"\r")
         s.expect("LOCK_/home/player/welt/zitadelle")
         s.send("builtin cd ../dorf\r")
@@ -320,6 +320,13 @@ def main():
                 s.expect(title)
                 assert volume_event(stream)[0]==module
         print("PASS: both modprobe commands animate the arena and reach the SSH player's audio stream",flush=True)
+        s.send("~/rucksack/stern\r")
+        s.expect("POLARNACHT")
+        wait_state(lambda v:v["charging"])
+        s.send("~/rucksack/schild\r")
+        wait_state(lambda v:not v["charging"] and "eclipse_guard" in v["events"][-1]["sounds"])
+        s.send("~/rucksack/kakao\r")
+        wait_state(lambda v:"heal:kakao" in v["rewards"])
         s.send("while true; do ~/rucksack/funke; done\r")
         s.expect("Zur Shell",timeout=15)
         won=wait_state(lambda v:v["status"]=="won")

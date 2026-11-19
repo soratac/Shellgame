@@ -26,9 +26,9 @@ class LinuxPlayTests(unittest.TestCase):
         act(s,"enter_boss")
         s["hp"]=30
         act(s,"use",["kakao"])
-        self.assertEqual(s["hp"],65)
+        self.assertEqual(s["hp"],50)
         act(s,"use",["kakao"])
-        self.assertEqual(s["hp"],65)
+        self.assertEqual(s["hp"],50)
 
     def test_file_delivery_deduplicates_wrong_attempts_and_rewards(self):
         s=fresh("Elf")

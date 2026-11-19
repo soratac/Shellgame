@@ -53,7 +53,7 @@ nmap() {
 ping() {
     case "$*" in
         grinch) printf 'Folge der Spur: karte, dann nmap grinch.\n' ;;
-        '-c 4 127.12.24.1'|'127.12.24.1') _frost_action ping 127.12.24.1 ;;
+        '-c 4 127.12.24.1'|'-c 127.12.24.1'|'127.12.24.1') _frost_action ping 127.12.24.1 ;;
         *) printf 'Echo-Zauber: ping -c 4 BOSS-IP\n' ;;
     esac
 }

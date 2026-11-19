@@ -47,7 +47,8 @@ function playTurn(ctx, bus, sounds) {
             case "frost":
                 notes([2217,1865,2489,1245],.053,.22,"sine",.36); rush(at+.35,5700,1400,.26,.58); break;
             case "stern":
-                notes([523,659,784,1047,1568],.055,.30,"triangle",.37); tone(at+.36,"sine",1047,2093,.43,.38); break;
+                notes([523,659,784,1047,1319,1568,2093],.055,.32,"triangle",.37);
+                tone(at+.43,"sine",2093,523,.44,.4); rush(at+.46,1400,95,.24,.56); break;
             case "schild":
                 tone(at,"sine",184,180,.55,.55); tone(at,"sine",493,440,.38,.40); break;
             case "ping":
@@ -68,6 +69,14 @@ function playTurn(ctx, bus, sounds) {
                 tone(at,"sine",2800,700,.10,.32); rush(at+.03,4100,2400,.14,.38); break;
             case "parry":
                 notes([940,1413],.025,.25,"triangle",.55); break;
+            case "lance":
+                notes([2489,1760,1245,440],.06,.16,"sine",.44); break;
+            case "charge":
+                tone(at,"triangle",98,392,.68,.48); notes([147,185,220,294],.12,.18,"sine",.28); break;
+            case "eclipse":
+                [0,.40].forEach(dt=>{rush(at+dt,1800,80,.25,.78); tone(at+dt,"sawtooth",125,37,.28,.52);}); break;
+            case "eclipse_guard":
+                notes([659,330,990,784,392,1175],.083,.19,"triangle",.48); break;
             case "claw":
                 rush(at,2200,240,.23,.78); tone(at+.07,"sawtooth",106,48,.24,.38); break;
             case "gale":

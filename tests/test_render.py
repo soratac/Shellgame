@@ -59,6 +59,7 @@ class RenderTests(unittest.TestCase):
             avatar=appearance({"gender":"weiblich","style":style,"hair":"schwarz"})
             for w,h in ((13,7),(32,18)):
                 frame=hero_frame(w,h,.5,avatar)
+                self.assertTrue(any(ch in "░▒▓" and ink==25 for row in frame.cells for ch,ink in row))
                 eyes=[ch for row in frame.cells for ch,ink in row if ink==22]
                 self.assertGreaterEqual(len(eyes),2)
                 self.assertTrue(all(ch in ("◕","▪") for ch in eyes))

@@ -1,13 +1,10 @@
 GRINCH
 
-Die Spur auf der Karte verrät seinen Standort.
-Adresse entdeckt? ssh IP startet das Duell.
+Polarnacht lädt eine Runde. Jetzt ~/rucksack/schild einsetzen!
+Der Schild fängt beide Schläge ab. Ohne Schutz drohen 2 × 46 LP.
 
-~/rucksack/funke   Angriff
-ping -c 4 IP       Echo-Zauber
-~/rucksack/kakao   Heilung
+~/rucksack/kakao   +35 LP, kostet einen Kampfzug
+~/rucksack/stern   stärkster Zauber, zwei Ladungen
+ping -c 4 IP       vier Echos mit je 3 Schaden
 
-nmap grinch am markierten Ort verrät die IP.
-
-systemctl status zeigt die Dienste des Grinch.
-systemctl disable eissturm.service verhindert seinen schweren dritten Angriff.
+Lesen kostet keinen Zug. systemctl status zeigt den Sturmdienst.

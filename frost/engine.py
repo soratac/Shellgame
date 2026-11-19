@@ -35,13 +35,15 @@ restart | restart alles (eigene Rekorde)
 
 
 HINT_LIMIT = 3
+ECLIPSE_THRESHOLDS = (190, 95)
+ECLIPSE_HIT = 46
 
 
 def fresh(name="", now=None, bests=None):
     return dict(version=5, name=name, started=now if now is not None else time.time(),
                 ended=None, hp=100, boss_hp=240, score=0, area="dorf", visited=[],
                 spells={}, rewards=[], status="playing", method=None, shield=0, frozen=0,
-                storm_service=True, combat_turn=0, last_attack=None, armor=True, blizzard=True, loop_hits=[], bests=merge_bests(bests), bag=[], deliveries={},
+                storm_service=True, combat_turn=0, eclipse_casts=0, charging=False, last_attack=None, armor=True, blizzard=True, loop_hits=[], bests=merge_bests(bests), bag=[], deliveries={},
                 hints_left=HINT_LIMIT, hint_until=0, hint_text="", grinch_found=False, boss_started=False, battle_items=[], avatar=dict(DEFAULT), avatar_set=False, events=[], event_seq=0,
                 message="Rette den Wunschzettel: cat AUFGABE.txt")
 
@@ -61,32 +63,44 @@ def public(s, now=None):
 
 
 def win(s, method, now):
-    s.update(boss_hp=0, status="won", ended=now, method=method)
+    s.update(boss_hp=0, status="won", ended=now, method=method, charging=False)
     reward(s, "victory", 500)
     elapsed = max(0, now - s["started"])
     s["bests"]["best"] = min(elapsed, s["bests"].get("best", float("inf")))
     s["message"] = f"WEIHNACHTEN GERETTET! {elapsed:.2f}s / {s['score']} Punkte"
 
 
-def counter(s, damage=7):
-    if s["frozen"]:
-        s["frozen"] -= 1
-        return " Grinch ist eingefroren.", "ice_lock"
-    if s["shield"]:
-        s["shield"] -= 1
-        return " Dein Schild faengt den Angriff ab.", "parry"
+def counter(s, penalty=0):
     s["combat_turn"] += 1
-    heavy = damage == 7 and s["storm_service"] and s["combat_turn"] % 3 == 0
-    if damage == 7 and s["boss_hp"] <= 120:
-        damage += 4
-    if heavy: damage += 5
-    damage = damage if s["blizzard"] else max(1, damage // 3)
-    s["hp"] = max(0, s["hp"] - damage)
-    sound = "gale" if heavy else "claw"
-    if s["hp"] == 0:
-        s["status"] = "lost"
-        return " DEIN LICHT ERLISCHT. Starte mit restart erneut.", sound
-    return f" {'Sturmböe' if heavy else 'Eissturm'}: -{damage} HP.", sound
+    if s["charging"]:
+        s["charging"] = False
+        if s["shield"]:
+            s["shield"] = 0
+            return " Dein Schild fängt beide Schläge der Polarnacht ab!", "eclipse_guard"
+        damage = 2*ECLIPSE_HIT
+        sound, title = "eclipse", "Polarnacht · 2 × 46"
+    elif s["eclipse_casts"] < len(ECLIPSE_THRESHOLDS) and s["boss_hp"] <= ECLIPSE_THRESHOLDS[s["eclipse_casts"]]:
+        s["charging"] = True
+        s["eclipse_casts"] += 1
+        return " Grinch lädt POLARNACHT! Nächster Zug: ~/rucksack/schild", "charge"
+    else:
+        if s["frozen"]:
+            s["frozen"] -= 1
+            return " Grinch ist eingefroren.", "ice_lock"
+        if s["shield"]:
+            s["shield"] -= 1
+            return " Dein Schild fängt den Angriff ab.", "parry"
+        attacks = (("claw","Krallenschlag",15), ("lance","Eislanze",19),
+                   ("gale","Sturmböe",24))
+        sound,title,damage = attacks[(s["combat_turn"]-1)%3]
+        if sound=="gale" and not s["storm_service"]:
+            sound,title,damage = attacks[0]
+        damage += penalty + (4 if s["boss_hp"]<=120 else 0)
+        if not s["blizzard"]:
+            damage = max(1,damage//3)
+    s["hp"] = max(0,s["hp"]-damage)
+    if not s["hp"]: s["status"] = "lost"
+    return f" {title}: −{damage} LP.", sound
 
 
 def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=""):
@@ -95,6 +109,9 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
     args = list(args)
     s.setdefault("storm_service", True)
     s.setdefault("combat_turn", 0)
+    if "eclipse_casts" not in s:
+        s["eclipse_casts"] = sum(s["boss_hp"]<=hp for hp in ECLIPSE_THRESHOLDS)
+    s.setdefault("charging", False)
     s.setdefault("bag", [])
     s.setdefault("deliveries", {})
     s.setdefault("boss_started", False)
@@ -136,6 +153,7 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
         else:
             place=hiding_place(s,now)
             if s["status"]!="playing": hint="Mit restart beginnt die nächste Runde."
+            elif s["boss_started"] and s["charging"]: hint="Polarnacht abwehren: ~/rucksack/schild"
             elif s["boss_started"]: hint="Angreifen: angreifen" if s["hp"]>40 or "kakao" not in s["bag"] else "Heilen: ~/rucksack/kakao"
             elif discovered(s): hint=f"Verbinden: ssh {BOSS_IP}"
             elif s["area"]=="dorf" and not unlocked(s,"funke"): hint="Dorfaufgabe: cat AUFGABE.txt"
@@ -164,7 +182,7 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
         if s["area"] == place or discovered(s):
             s["grinch_found"] = True
             reward(s,"echo:gefunden",40)
-            message = f"Grinch gefunden · {BOSS_IP}  →  ssh {BOSS_IP}"
+            message = f"Grinch gefunden · {BOSS_IP}  →  ssh {BOSS_IP} · Schild und Kakao einpacken!"
         else:
             message = "Kein Grinch-Signal an diesem Ort."
     elif action == "connect":
@@ -232,7 +250,7 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
         if code == 0 and first in {"ls", "cat", "pwd", "cp", "mkdir", "grep", "find", "sort", "uniq", "head", "tail", "wc", "sed", "awk", "tree"}:
             reward(s, "shell:" + first, 10)
         if code not in (0, 130) and s["boss_started"]:
-            reply, result["counter_sound"] = counter(s, 10)
+            reply, result["counter_sound"] = counter(s, 3)
             message = "Ein fehlgeschlagener Shell-Befehl weckt Grinch." + reply
     elif action == "collect":
         item = args[0].split("/")[-1] if args else ""
@@ -260,7 +278,11 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
             old = s["hp"]
             s["hp"] = min(100, s["hp"] + source[1])
             result["sound"] = item
-            message = f"{item}: +{s['hp'] - old} HP."
+            result["healed"] = s["hp"]-old
+            message = f"{item}: +{result['healed']} HP."
+            if s["boss_started"]:
+                reply,result["counter_sound"] = counter(s)
+                message += reply
         else:
             message = "Schon aufgebraucht."
     elif action == "submit":
@@ -287,6 +309,7 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
         else:
             spell = args[0] if args else ""
             damage = 0
+            rapid_cast = False
             method = "spell" if action in ("cast", "ping") else "staff"
             if action == "disable":
                 if spell != "eissturm":
@@ -313,8 +336,8 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
                 if args != [BOSS_IP] or "ping" not in s["bag"]:
                     return {"ok": False, "message": "Dafür brauchst du das Echo und die Boss-IP.", "stop": False}
                 result["sound"] = "ping"
-                damage = 4
-                message = "Echo-Zauber: 4 Treffer mit je 1 Schaden."
+                damage = 12
+                message = "Echo-Zauber: 4 Treffer mit je 3 Schaden."
             elif action == "attack":
                 result["sound"] = "staff"
                 damage = 24
@@ -333,6 +356,8 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
                     s["shield"] = 3
                 if spell == "funke":
                     s["loop_hits"] = [t for t in s["loop_hits"] if now - t < 2.0] + [now]
+                    # During the speedrun burst the boss cannot answer at shell-loop speed.
+                    rapid_cast = len(s["loop_hits"])>=2 and now-s["loop_hits"][-2]<.4 and s.get("last_attack")=="funke"
                     if len(s["loop_hits"]) >= 6:
                         reward(s, "exploit:loop", 200)
                         result["sound"] = "loop"
@@ -354,12 +379,14 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
                     message += " Der Grinch gerät in Wut und sprengt deinen Schutz!"
                 reward(s, "combat:" + attack_name, 30)
                 message += f" -{damage} Boss-HP."
-            if s["boss_hp"] == 0:
+            # A released double strike lands even if this attack also fells the boss.
+            if s["charging"] or (s["boss_hp"] and not rapid_cast):
+                reply, result["counter_sound"] = counter(s, 0 if result["ok"] else 5)
+                message += reply
+            if s["boss_hp"] == 0 and s["hp"] > 0:
                 win(s, "driver" if not s["armor"] or not s["blizzard"] else method, now)
                 result.update(message=s["message"], stop=True)
                 return result
-            reply, result["counter_sound"] = counter(s, 7 if result["ok"] else 12)
-            message += reply
     else:
         result["ok"] = False
         message = "Unbekannte Spielaktion. Nutze hilfe."
@@ -386,7 +413,7 @@ def act(s, action, args=(), **kwargs):
     if action not in ("reset","name") and (sounds or before_hp!=s["hp"] or before_boss!=s["boss_hp"] or action in ("cast","attack","unload","use","disable","ping","scan") or (action=="bag" and set(s["bag"])-before_bag)):
         s["event_seq"] += 1
         s["events"].append(dict(id=s["event_seq"], at=kwargs.get("now",time.time()),
-            sounds=sounds, kind=action, spell=(sorted(set(s["bag"])-before_bag)[0] if action=="bag" else args[0] if args else "stab"), hp_before=before_hp,
+            sounds=sounds, healed=result.get("healed",0), kind=action, spell=(sorted(set(s["bag"])-before_bag)[0] if action=="bag" else args[0] if args else "stab"), hp_before=before_hp,
             boss_before=before_boss, hp=s["hp"], boss_hp=s["boss_hp"],
             damage=before_boss-s["boss_hp"], hurt=before_hp-s["hp"]))
         s["events"]=s["events"][-24:]

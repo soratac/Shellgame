@@ -22,10 +22,11 @@ def melody():
 
 
 LEAD = melody()
-EFFECT = {"funke": (8,17), "frost": (20,15), "stern": (13,25), "schild": (5,12),
+EFFECT = {"funke": (8,17), "frost": (20,15), "stern": (1,5,8,13,20,25), "schild": (5,12),
           "ping": (18,18), "staff": (4,1), "kakao": (6,10), "beeren": (5,9),
           "disable": (11,3), "frost_armor": (23,7), "blizzard": (21,4), "loop": (1,25),
-          "ice_lock": (16,16), "parry": (10,15), "gale": (13,3), "claw": (6,2)}
+          "ice_lock": (16,16), "parry": (10,15), "gale": (13,3), "claw": (6,2),
+          "lance": (24,12), "charge": (2,5,9,14), "eclipse": (10,2,10,2), "eclipse_guard": (15,22)}
 
 
 class TerminalTune:
@@ -41,8 +42,8 @@ class TerminalTune:
             return b""
         volume = max(1, round(level*7/100))
         if sounds:
-            return b"".join(f"\x1b[{volume};2;{a};{b},~".encode()
-                            for sound in sounds for a,b in (EFFECT[sound],))
+            return b"".join(("\x1b["+str(volume)+";2;"+";".join(map(str,EFFECT[sound]))+",~").encode()
+                            for sound in sounds)
         note = LEAD[step % len(LEAD)]
         if changed and note:
             pitch, duration = note

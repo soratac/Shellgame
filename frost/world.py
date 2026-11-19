@@ -53,11 +53,18 @@ def main():
         placeholder=inbox/".gitkeep"
         if placeholder.is_file() and placeholder.stat().st_size==0: placeholder.unlink()
     previous_version=marker.read_text().strip() if marker.exists() else ""
-    migrating = previous_version != "10"
+    migrating = previous_version != "11"
     gated_paths={ITEMS[k][0] for k in SPELL_QUEST}
     if migrating or reset:
         source = Path("/opt/frost/world")
         legacy = json.loads(Path(__file__).with_name("legacy_world.json").read_text())
+        if previous_version=="10" and not reset:
+            relative="zitadelle/BOSS.txt"
+            guide=target/relative
+            if guide.is_file() and not guide.is_symlink() and hashlib.sha256(guide.read_bytes()).hexdigest() in legacy[relative]:
+                shutil.copy2(source/relative,guide)
+            marker.write_text("11\n")
+            return
         if previous_version and not reset:
             from .client import request
             state=request()["state"]
@@ -78,7 +85,7 @@ def main():
                 if not path.exists() or (not path.is_symlink() and hashlib.sha256(path.read_bytes()).hexdigest() in legacy.get(relative,[])):
                     shutil.copy2(source/relative,path)
             sync_rewards(state)
-            marker.write_text("10\n")
+            marker.write_text("11\n")
             return
         for relative, digest in legacy.items():
             path = target/relative
@@ -112,7 +119,7 @@ def main():
                         source_item=target/ITEMS[name][0]
                         if source_item.is_file() and source_item.read_bytes()==script(name).encode():
                             source_item.unlink()
-        marker.write_text("10\n")
+        marker.write_text("11\n")
 
 
 if __name__=="__main__": main()

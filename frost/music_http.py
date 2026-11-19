@@ -14,7 +14,7 @@ KEY = re.compile(r"[a-zA-Z0-9_-]{16}")
 
 
 SOUNDS = frozenset(("funke", "frost", "stern", "schild", "ping", "staff", "kakao", "beeren",
-                    "disable", "frost_armor", "blizzard", "loop", "ice_lock", "parry", "gale", "claw"))
+                    "disable", "frost_armor", "blizzard", "loop", "ice_lock", "parry", "gale", "claw", "lance", "charge", "eclipse", "eclipse_guard"))
 
 
 def recent_sounds(events, after):
