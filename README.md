@@ -53,9 +53,9 @@ Für den mehrstimmigen Soundtrack und die gemischten Effekte auf einem Rechner m
 python3 scripts/spielmusik.py -J jump spiel@10.0.0.60
 ```
 
-Bei direkter Verbindung entfällt `-J jump`. Der Starter spielt „Schneefunken“ automatisch ab und mischt Treffer, Zauber, Heilung und Bossangriffe dazu. Mit dem Schließen der SSH-Sitzung endet auch die Wiedergabe. Du brauchst lokal Python 3.9+, OpenSSH und eines der Programme `aplay` (unter Debian/Ubuntu im Paket `alsa-utils`), `paplay`, SoX (`play`) oder `ffplay`. Der Starter verwendet die lokale Standard-Tonausgabe. Die Spielereignisse laufen über dieselbe SSH-Verbindung.
+Bei direkter Verbindung entfällt `-J jump`. Der Starter spielt „Schneefunken“ automatisch ab und mischt Treffer, Zauber, Heilung und Bossangriffe dazu. Mit dem Schließen der SSH-Sitzung endet auch die Wiedergabe. Du brauchst lokal Python 3.9+, OpenSSH und eines der Programme `aplay` (unter Debian/Ubuntu im Paket `alsa-utils`), `paplay`, SoX (`play`) oder `ffplay`. Ist keine lokale Audioausgabe verfügbar, öffnet der Starter eine normale SSH-Sitzung. Die Spielereignisse laufen über dieselbe SSH-Verbindung.
 
-Unten rechts ändern **[−]** und **[+]** die Lautstärke. Ein Klick auf die Prozentzahl schaltet stumm und wieder laut. An der Shell funktionieren `musik 30` und `musik mute`. Im Regler `musik` ändern **← / →** die Lautstärke, **M** schaltet stumm und **Enter** schließt ihn.
+Die Spiel-Shell öffnet sich direkt am Prompt. Ohne lokale Audioverbindung bleibt der Regler beim Einstieg ausgeblendet. Mit dem Audiostarter oder nach `musik link` erscheint er unten rechts. **[−]** und **[+]** ändern die Lautstärke. Ein Klick auf die Prozentzahl schaltet stumm und wieder laut. An der Shell funktionieren `musik 30` und `musik mute`. Im Regler `musik` ändern **← / →** die Lautstärke, **M** schaltet stumm und **Enter** schließt ihn.
 
 Bei einem gewöhnlichen `ssh spiel@HOST` bleibt der persönliche Browserlink über `musik link` verfügbar. Dafür muss das Gerät den Musikport erreichen (Standard **8094/tcp**). Die Adresse wird über `GAME_HOST`, `MUSIC_PORT` oder `MUSIC_URL` in `.env` festgelegt.
 

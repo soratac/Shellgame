@@ -114,6 +114,10 @@ def main():
             session.send(name+"\t\x1bOC\t\x1bOC\t\x1bOC\t\x1bOC\r")
             session.expect("Rucksack")
             session.drain(.5)
+            for banner in (b"Dorfaufgabe:", b"Terminalton:", b"Terminalton aktiv", b"Ton im Browser starten"):
+                assert banner not in session.output, banner
+            if slot=="player01":
+                assert "♪ Musik".encode() not in session.output
             if args.load_only:
                 def drain(session=session):
                     while not drain_stop.is_set(): session.drain(.1)
@@ -136,7 +140,7 @@ def main():
             print(f"PASS: {args.players} concurrent interactive gateway players plus a separate live scoreboard viewer",flush=True)
             return
         s=sessions[0]
-        s.send("\x1b[<0;100;42M\x1b[<0;100;42m")
+        s.send("musik link\r")
         s.expect("http://127.0.0.1:")
         s.send("musik\r")
         s.expect("Enter zurück")
@@ -154,7 +158,6 @@ def main():
         track_samples=soundtrack()
         native=sessions[1]
         recording=folder/"terminal.pcm"
-        assert b"Terminalton aktiv" in native.output and b"Musik im Browser:" not in native.output
         native.send("musik 0\r")
         deadline=time.monotonic()+6
         while time.monotonic()<deadline:

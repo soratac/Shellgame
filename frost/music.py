@@ -77,10 +77,6 @@ def controls(args):
         result = request("music", args)
         print(indicator(result["music"]) if result["ok"] else result["message"])
         return 0 if result["ok"] else 1
-    if native:
-        print("Terminalton aktiv", flush=True)
-    else:
-        print(f"Im Browser öffnen und ▶ drücken:\n{music_link()}", flush=True)
     if not sys.stdin.isatty():
         return 0
     print("← → Lautstärke   M stumm   Enter zurück", flush=True)

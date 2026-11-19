@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Play Frostbyte with local terminal audio over one OpenSSH connection."""
+from contextlib import ExitStack
 import os
 import signal
 import subprocess
@@ -60,10 +61,14 @@ def main():
         raise SystemExit(128 + signum)
     signal.signal(signal.SIGTERM, terminate)
     try:
-        with Output() as mixer:
+        with ExitStack() as stack:
+            ssh_command = ["ssh","-tt",*sys.argv[1:]]
+            try:
+                mixer = stack.enter_context(Output())
+            except OSError:
+                os.execvp("ssh", ssh_command)
             env = {**os.environ, "TERM":"frost-audio"}
-            print("Frostbyte · Terminalton aktiv",flush=True)
-            with subprocess.Popen(["ssh","-tt",*sys.argv[1:]],env=env,stdout=subprocess.PIPE) as ssh:
+            with subprocess.Popen(ssh_command,env=env,stdout=subprocess.PIPE) as ssh:
                 try:
                     relay(ssh.stdout,sys.stdout.buffer,mixer.change,mixer.play)
                     return ssh.wait()

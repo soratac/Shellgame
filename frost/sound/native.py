@@ -116,10 +116,9 @@ class Output:
             raise OSError("Für Ton auf deinem Rechner wird aplay (alsa-utils), paplay, SoX (play) oder ffplay benötigt.")
         self.mix = Mix()
         self.stop = threading.Event()
-        self.starting = True
         for command in commands:
             try:
-                self.proc = subprocess.Popen(command,stdin=subprocess.PIPE,stdout=subprocess.DEVNULL,bufsize=0)
+                self.proc = subprocess.Popen(command,stdin=subprocess.PIPE,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,bufsize=0)
             except OSError:
                 continue
             self.worker = threading.Thread(target=self.write,daemon=True)
@@ -127,7 +126,6 @@ class Output:
             try:
                 self.proc.wait(timeout=.25)
             except subprocess.TimeoutExpired:
-                self.starting = False
                 return self.mix
             except BaseException:
                 self.__exit__(None,None,None)
@@ -147,8 +145,7 @@ class Output:
                 due = max(time.monotonic(),due+size/RATE)
                 self.stop.wait(max(0,due-time.monotonic()))
         except (BrokenPipeError,OSError):
-            if not self.stop.is_set() and not self.starting:
-                print("Audiogerät nicht erreichbar. Bitte die lokale Tonausgabe prüfen.",file=sys.stderr,flush=True)
+            return
 
     def __exit__(self,*exc):
         self.stop.set()

@@ -89,6 +89,7 @@ def frame(screen):
     music={"level":40,"muted":False}
     state=None; fetched=0; painted=0; previous_size=None
     local_music = bool(os.environ.get("FROST_LOCAL_MUSIC") or os.environ.get("FROST_NATIVE_AUDIO"))
+    show_mixer = local_music
     local_sfx = bool(os.environ.get("FROST_LOCAL_SFX"))
     tune = None if local_music else TerminalTune(time.monotonic())
     last_sound = time.time()
@@ -134,7 +135,7 @@ def frame(screen):
     notice_until=0
     def click(x,y):
         nonlocal music,notice,notice_until
-        if y!=rows-1: return
+        if not show_mixer or y!=rows-1: return
         action=mixer_action(music,cols,x)
         if not action: return
         try:
@@ -157,7 +158,7 @@ def frame(screen):
                 terminal.resize(lines=sh,columns=sw)
                 fcntl.ioctl(master,termios.TIOCSWINSZ,struct.pack('HHHH',sh,sw,0,0))
                 previous_size=size
-            wanted=dialog_mouse or (not zoom and terminal.alternate is None and cols>=len(indicator(music))+4)
+            wanted=dialog_mouse or (show_mixer and not zoom and terminal.alternate is None and cols>=len(indicator(music))+4)
             if wanted!=tracking:
                 os.write(1,b"\x1b[?1000h\x1b[?1006h" if wanted else b"\x1b[?1000l\x1b[?1006l")
                 tracking=wanted
@@ -195,6 +196,7 @@ def frame(screen):
                     snapshot=request()
                     state=snapshot['state']
                     music=snapshot['music']
+                    show_mixer = local_music or snapshot.get('music_link_open', False)
                     # Read as the player: show ordinary files as well as game items.
                     with os.scandir(Path.home()/"rucksack") as entries:
                         names = sorted("".join(c if c.isprintable() else "?" for c in e.name)[:40]
@@ -234,7 +236,7 @@ def frame(screen):
                     put(screen,top-1,1,notice,5,True)
                 box(screen,top,0,rows-top,cols-1,2)
                 label=indicator(music)
-                if cols>=len(label)+4:
+                if show_mixer and cols>=len(label)+4:
                     put(screen,rows-1,cols-3-len(label),label,2)
 
             sy,sx=(0,0) if zoom else (top+1,2)

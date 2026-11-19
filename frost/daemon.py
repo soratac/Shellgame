@@ -136,6 +136,7 @@ class Handler(socketserver.StreamRequestHandler):
                     DIRTY.set()
                 if action == "status":
                     result["music"] = MIXER.display()
+                    result["music_link_open"] = MIXER.key is not None
                 result["state"] = public(STATE)
             self.wfile.write(json.dumps(result, ensure_ascii=False).encode() + b"\n")
         except (OSError, ValueError, TypeError, KeyError):
