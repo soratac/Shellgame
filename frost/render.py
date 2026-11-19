@@ -8,7 +8,7 @@ import unicodedata
 from .geometry import Canvas, cube, cone, beast_segment, overlay, projector, project_mesh
 from .client import request
 from .trail import hiding_place, discovered
-from .engine import HINT_LIMIT, ECLIPSE_HIT
+from .engine import HINT_LIMIT, ECLIPSE_HIT, boss_lock
 from .avatar import HAIR, SHIRTS
 from .items import BAG_ICONS, bag_count
 
@@ -36,7 +36,7 @@ def world_frame(w,h,s,position,tick,walking=False):
     marked=None if discovered(s) else hiding_place(s)
     x,y=atlas_point(w,h,position)
     hh=max(4,min(8,h//2))
-    left=max(0,min(w-13,x+5 if x<w*.5 else x-17))
+    left=max(0,min(w-13,round(x+5-22*x/max(1,w-1))))
     top=max(0,min(h-hh-1,y-hh//2))
     overlay(c,hero_frame(13,hh,tick,s.get("avatar"),walking=walking),left,top)
     c.put(left+5,top+hh,"DU",5)
@@ -52,7 +52,10 @@ def world_frame(w,h,s,position,tick,walking=False):
         lx,ly=atlas_point(w,h,pos)
         label=("▸ " if name==s["area"] else "")+name+(" ✧" if name==marked else "")
         lx=max(0,min(w-len(label)-2,lx-len(label)//2-1))
-        c.put(lx,min(h-1,ly+offset)," "+label+" ",5 if name==marked else 4 if name==s["area"] else 1)
+        row=min(h-1,ly+offset)
+        if any(ink==22 for _,ink in c.cells[row][lx:lx+len(label)+2]):
+            row = row+1 if row<h-1 else row-1
+        c.put(lx,row," "+label+" ",5 if name==marked else 4 if name==s["area"] else 1)
     return c
 
 
@@ -120,7 +123,7 @@ def combat_frame(w,h,s,tick):
     monster_x=bx-(monster_w-bw)//2
     overlay(c,boss_frame(monster_w,monster_h,tick,event=event,age=age),
             monster_x+int(b_hit),0,6 if b_hit else None)
-    overlay(c, hero_frame(bw,bheight,tick,s.get("avatar"),back=True),hx-int(p_hit),h-bheight,6 if p_hit else None)
+    overlay(c, hero_frame(bw,bheight,tick,s.get("avatar"),back=True),hx-int(p_hit),h-bheight,6 if p_hit else None,preserve=(22,))
     start,end = (w//4+3,h-3),(3*w//4-2,max(2,bheight//2))
     if w>=37 and h>=7:
         size=max(3,min(7,h//4))
@@ -326,23 +329,22 @@ def hero_mesh(hair,shirt,gender,style,step):
     return mesh
 
 
-def face_details(canvas, camera, tick, profile=False):
+def face_details(canvas, camera, profile=False):
     # Paint inside the visible face. Hair, scarf and silhouette keep their depth.
     skin = {(x,y) for y,row in enumerate(canvas.cells) for x,(_,ink) in enumerate(row) if ink==25}
-    if not skin:
+    if not skin and canvas.h>8:
         return
     eyes = [camera((side*.19,.68,-.40)) for side in (-1,1)]
     gap = abs(eyes[1][0]-eyes[0][0])
     if profile and gap<3:
         eyes = [min(eyes,key=lambda eye:eye[2])]
-    blink = tick%4.3 > 4.12
+    eye_row = round(sum(eye[1] for eye in eyes)/len(eyes))
     painted = []
     for ex,ey,_ in eyes:
-        x,y = min(skin,key=lambda cell: (cell[0]-ex)**2 + 2*(cell[1]-ey)**2)
-        # A single solid iris reads cleanly at map scale. A portrait has room
-        # for a little catchlight in the iris and a relaxed, curved eyelid.
-        mark = ("˘" if gap>=3 else "─") if blink else ("◕" if gap>=3 else "▪")
-        canvas.put(x,y,mark,22)
+        x,y = round(ex),eye_row
+        if canvas.h>8:
+            x,y = min(skin,key=lambda cell: ((cell[0]-ex)**2 + 2*(cell[1]-ey)**2,cell))
+        canvas.put(x,y,"•",22)
         painted.append((x,y))
     if canvas.h>=12:
         mx,my,_=camera((0,.43,-.46))
@@ -355,9 +357,11 @@ def hero_frame(w,h,tick,avatar,back=False,walking=False):
                    avatar.get("gender","männlich"),avatar.get("style","kurz"),
                    round(math.sin(tick*7)) if walking else 0)
     angle=(-.94 if back else -.30)+math.sin(tick*1.6)*.12
+    if h<=8 and not back:
+        angle=-.30  # Keep the small face on the same cells throughout the walking cycle.
     camera=projector(w,h,angle,2.85)
     canvas=project_mesh(w,h,angle,mesh,project=camera)
-    face_details(canvas,camera,tick,profile=back)
+    face_details(canvas,camera,profile=back)
     return canvas
 
 
@@ -407,7 +411,7 @@ def colors():
     for i, color in enumerate(palette, 1):
         curses.init_pair(i, color if curses.COLORS >= 256 else [7,6,4,2,3,1,3,7,5,7,4,6,4,6,3,1,2,7,2,7][i-1], -1)
 
-    for pair,fg,bg,small_fg,small_bg in ((21,231,22,7,2),(22,52,223,0,7),
+    for pair,fg,bg,small_fg,small_bg in ((21,231,22,7,2),(22,16,223,0,7),
                                         (23,195,23,7,4),(24,122,-1,6,-1),
                                         (25,223,-1,7,-1),(26,16,224,0,7)):
         curses.init_pair(pair,fg if curses.COLORS>=256 else small_fg,bg if curses.COLORS>=256 else small_bg)
@@ -493,7 +497,7 @@ def paint(screen,state,tick,position=None,walking=False):
     if fight:
         event=(state.get("events") or [None])[-1]
         age=time.time()-event["at"] if event else 9
-        hint=hud_hint(state)
+        hint=(boss_lock(state) if time.time()>=state.get("hint_until",0) else "") or hud_hint(state)
         color=5
         if 0<=age<1.5:
             spell=event.get("spell","")

@@ -32,7 +32,7 @@ Die goldene Spur ✧ zeigt den aktuellen Aufenthaltsort des Grinch. Er wechselt 
 |---|---|
 | Hier umsehen | `ls` |
 | Alle Orte als Baum ansehen | `tree ~/welt` |
-| Einen Gegenstand mitnehmen | `mv DATEI ~/rucksack/` |
+| Einen Gegenstand mitnehmen | `cp DATEI ~/rucksack/` oder `mv DATEI ~/rucksack/` |
 | Rucksack ansehen | `ls ~/rucksack/` |
 | Gegenstand benutzen | `~/rucksack/funke` (Name entsprechend ersetzen) |
 | Kurze Erklärung lesen | `cat DATEI` |
@@ -92,16 +92,19 @@ Sobald er erstmals auf höchstens 190 und später 95 LP fällt, lädt der Grinch
 
 Punkte gibt es einmal je Ort (40), Zauberfund (80), Aufgabe (150), Heilquelle (25), unterstützter Shell-Befehlsart (10), Angriffsart (30), entferntem Treiber (120) und Sieg (500).
 
-### Profi-Wege
+### Grinchs Schutz brechen
 
 ```bash
-# Im Bossraum: spielinterne Treiber entfernen
-lsmod
+# Beide Befehle sind für den Sieg nötig
 modprobe -r frost_armor
+systemctl disable eissturm.service
+
+# Optional: weitere Gegenangriffe abschwächen
+lsmod
 modprobe -r blizzard
 ```
 
-Jeder dritte Kampfzug ist für die Sturmböe vorgesehen. Schild und Frost können sie abfangen. `systemctl status` zeigt den Spieldienst. Mit `systemctl disable eissturm.service` schaltest du ihn für die Runde ab (+100 Punkte). Alle Funde lassen sich mit `mv` mitnehmen. Schild und Stern müssen verschoben werden.
+Jeder dritte Kampfzug ist für die Sturmböe vorgesehen. Schild und Frost können sie abfangen. `systemctl status` zeigt den Spieldienst. Mit `systemctl disable eissturm.service` schaltest du ihn für die Runde ab (+100 Punkte). Solange Panzer oder Dienst aktiv sind, behält der Grinch seinen letzten LP. Alle Funde lassen sich mit `cp` oder `mv` in den Rucksack legen.
 
 Diese Befehle verändern nur das Spiel, keine Kernelmodule der VM.
 

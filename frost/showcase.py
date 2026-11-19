@@ -125,7 +125,7 @@ def studio(w,h,avatar,tick,changed):
         d=5+z
         return w*.5+x*scale*8/d,h*.48-(y+.14*z)*scale*4.5/d,d
     c=project_mesh(w,h,0,pedestal()+mesh,project=camera)
-    face_details(c,camera,tick)
+    face_details(c,camera)
     for i in range(7):
         a=tick*.71+i*math.tau/7
         x=round(w*.5+math.cos(a)*w*.36)

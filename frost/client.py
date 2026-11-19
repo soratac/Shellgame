@@ -25,11 +25,13 @@ def area():
         return None
 
 
-def sync_files():
-    from .items import ITEMS, DELIVERIES, MOVE_ITEMS, script
-    bag = Path.home() / "rucksack"
-    found = []
-    state=None
+def sync_files(state=None):
+    from .items import DELIVERIES
+    if state is None:
+        state = request()["state"]
+    if state.get("boss_started"):
+        sync_bag()
+        return
     for place, filename in DELIVERIES.items():
         try:
             with (Path.home()/"welt"/place/"abgabe"/filename).open(encoding="utf-8", errors="replace") as f:
@@ -40,13 +42,18 @@ def sync_files():
         state=result["state"]
         if result.get("message"): print(result["message"])
     from .world import sync_rewards
-    sync_rewards(state if state is not None else request()["state"])
+    sync_rewards(state)
+    sync_bag()
 
+
+def sync_bag():
+    from .items import ITEMS, is_item_script
+    bag = Path.home() / "rucksack"
+    found = []
     for name in ITEMS:
         try:
             with (bag/name).open("r", encoding="utf-8") as f:
-                source = Path.home()/"welt"/ITEMS[name][0]
-                if f.read(2048) == script(name) and (name not in MOVE_ITEMS or not source.exists()):
+                if is_item_script(name, f.read(2049)):
                     found.append(name)
         except (OSError, UnicodeError):
             pass
@@ -126,8 +133,8 @@ def main():
                 os.kill(os.getpid(),signal.SIGINT)
             return 42
         # Also covers `builtin cd` and compound shell commands before the next prompt.
-        request("observe", cwd=area())
-        sync_files()
+        observed=request("observe", cwd=area())
+        sync_files(observed["state"])
     result = request(action, args, **kwargs)
     if action == "submit" and result["ok"]:
         from .world import sync_rewards
@@ -139,7 +146,7 @@ def main():
         if item in ITEMS and (state["spells"].get(item)==0 or "heal:"+item in state["rewards"]):
             (Path.home()/"rucksack"/item).unlink(missing_ok=True)
     if quiet and result["state"]["status"] == "playing":
-        sync_files()
+        sync_files(result["state"])
     if action == "map":
         from .render import static_map
         print(static_map(result["state"]))

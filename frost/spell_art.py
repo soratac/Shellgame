@@ -116,6 +116,22 @@ def spell_motion(c,event,age,start,end):
         y=sy+(ey-sy)*t-height*.28*math.sin(t*math.pi)
         size=height*(.75+.25*math.sin(t*math.pi))
         if age>.54: size*=1+(age-.54)*1.35
+        # Each projectile leaves its own wake along the same curved flight path.
+        for i in range(7,0,-1):
+            trail=t-i*.036
+            if trail<=0: continue
+            tx=round(sx+(ex-sx)*trail)
+            ty=round(sy+(ey-sy)*trail-height*.28*math.sin(trail*math.pi))
+            if spell=="funke":
+                flicker=round(math.sin(i*2-age*18)*height*.13)
+                c.put(tx,ty+flicker,"✺" if i<4 else "·",15 if i%2 else 5)
+            elif spell=="frost":
+                branch=1+(i%3)
+                for side in (-1,1):
+                    c.line(tx,ty,tx-branch,ty+side*branch,"╱" if side>0 else "╲",12)
+                    c.put(tx-branch,ty+side*branch,"❄",1)
+            else:
+                c.put(tx,ty+round(i*.22),"╱",20 if i<4 else 6)
         apparition(c,spell,x,y,size,age)
         if age>=.46:
             bloom=min(1,(age-.46)/.36)
@@ -205,6 +221,15 @@ def starfall(c,age,end):
                    "━" if abs(dy)<.5 else "╲" if dx*dy>0 else "╱",20 if i%2 else 5)
             c.put(round(x+dx),round(y+dy),"★" if i%3==0 else "✧",5)
         shockwave(c,x,y,reach*.80,5,"✦")
+        # Secondary stars burst in sequence around the central impact.
+        for index in range(5):
+            t=bloom-.10*index
+            if not 0<t<.58: continue
+            angle=index*math.tau/5-.3
+            bx=round(x+radius*.68*math.cos(angle))
+            by=round(y+radius*.30*math.sin(angle))
+            shockwave(c,bx,by,1+t*radius*.46,20 if index%2 else 5,"✧",12)
+            c.put(bx,by,"★",5)
         c.put(x-1,y,"✦★✦",20)
 
 
@@ -237,14 +262,26 @@ def boss_magic(c,sound,age,start,end):
             if t>=.85:
                 shockwave(c,sx,sy,3+(t-.85)*17,2 if sound=="eclipse_guard" else 6,"✷")
             if sound=="eclipse_guard": apparition(c,"schild",sx+2,sy,max(5,min(12,c.h*.7)),age)
+    elif sound=="claw" and .58<age<1.4:
+        t=min(1,(age-.58)/.50)
+        x,y=round(ex+(sx-ex)*t),round(ey+(sy-ey)*t)
+        reach=max(2,min(6,c.h//4))
+        for offset in (-3,0,3):
+            c.line(x+offset-reach,y+reach,x+offset+reach,y-reach,"╱",6)
+            c.put(x+offset-reach,y+reach,"✴",20)
     elif sound=="lance" and .52<age<1.27:
         t=min(1,(age-.52)/.48)
         x,y=round(ex+(sx-ex)*t),round(ey+(sy-ey)*t)
         c.line(x,y,x+max(3,c.w//7),y-2,"◆",12)
+        for side in (-1,1):
+            c.line(x,y,x+max(3,c.w//10),y+side*2,"╲" if side>0 else "╱",2)
         c.put(x-1,y,"◀",1)
+        if t>.82: shockwave(c,sx,sy,3+(t-.82)*44,1,"❄")
     elif sound=="gale" and .52<age<1.3:
         t=min(1,(age-.52)/.60)
         x,y=ex+(sx-ex)*t,ey+(sy-ey)*t
+        for ring in (0,1):
+            shockwave(c,round(x),round(y-ring*2),3+(t+ring*.35)*min(10,c.h*.6),12,"◦",16)
         for i in range(26):
             a=i*.7+age*11
             c.put(round(x+math.cos(a)*(3+i*.24)),round(y+i*.24-3+math.sin(a)),"❄" if i%4==0 else "·",2)

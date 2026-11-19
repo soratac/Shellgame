@@ -27,7 +27,7 @@ cd ~/welt/wald         Weitergehen
 
 Folge der Spur auf der Karte. Am Fundort zeigt nmap grinch seine IP.
 
-ls -a zeigt Verstecke. Einzigartige Funde mit mv bergen.
+ls -a zeigt Verstecke. Mit cp oder mv kommt jeder Fund in den Rucksack.
 systemctl status zeigt Bossdienste. restart beginnt eine neue Runde.
 tipp gibt einen von drei Hinweisen pro Runde. Tab hilft beim Tippen. aussehen aendert deinen Charakter.
 restart | restart alles (eigene Rekorde)
@@ -68,6 +68,14 @@ def win(s, method, now):
     elapsed = max(0, now - s["started"])
     s["bests"]["best"] = min(elapsed, s["bests"].get("best", float("inf")))
     s["message"] = f"WEIHNACHTEN GERETTET! {elapsed:.2f}s / {s['score']} Punkte"
+
+
+def boss_lock(s):
+    if s["armor"]:
+        return "Eispanzer lösen: modprobe -r frost_armor"
+    if s["storm_service"]:
+        return "Sturmsiegel lösen: systemctl disable eissturm.service"
+    return ""
 
 
 def counter(s, penalty=0):
@@ -154,6 +162,7 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
             place=hiding_place(s,now)
             if s["status"]!="playing": hint="Mit restart beginnt die nächste Runde."
             elif s["boss_started"] and s["charging"]: hint="Polarnacht abwehren: ~/rucksack/schild"
+            elif s["boss_started"] and boss_lock(s): hint=boss_lock(s)
             elif s["boss_started"]: hint="Angreifen: angreifen" if s["hp"]>40 or "kakao" not in s["bag"] else "Heilen: ~/rucksack/kakao"
             elif discovered(s): hint=f"Verbinden: ssh {BOSS_IP}"
             elif s["area"]=="dorf" and not unlocked(s,"funke"): hint="Dorfaufgabe: cat AUFGABE.txt"
@@ -197,7 +206,7 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
             s["boss_started"] = True
             s["boss_entered_at"] = now
             s["battle_items"] = list(s["bag"])
-            message = "Das Tor ist zu. Kaempfen: ~/rucksack/funke. Kein Rueckweg bis Sieg oder Niederlage."
+            message = "Grinchs Schutz brechen: modprobe -r frost_armor und systemctl disable eissturm.service."
     elif s["boss_started"] and action in ("collect", "deliver", "submit"):
         if action != "deliver":
             message = "Das Tor ist geschlossen. Im Kampf gibt es keine neuen Funde oder Aufgaben."
@@ -309,6 +318,7 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
         else:
             spell = args[0] if args else ""
             damage = 0
+            lock = boss_lock(s)
             rapid_cast = False
             method = "spell" if action in ("cast", "ping") else "staff"
             if action == "disable":
@@ -357,8 +367,10 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
                 if spell == "funke":
                     s["loop_hits"] = [t for t in s["loop_hits"] if now - t < 2.0] + [now]
                     # During the speedrun burst the boss cannot answer at shell-loop speed.
-                    rapid_cast = len(s["loop_hits"])>=2 and now-s["loop_hits"][-2]<.4 and s.get("last_attack")=="funke"
-                    if len(s["loop_hits"]) >= 6:
+                    hits = s["loop_hits"]
+                    rapid_cast = (not lock and len(hits)>=2 and s.get("last_attack")=="funke"
+                                  and now-hits[0] < .4*(len(hits)-1))
+                    if not lock and len(s["loop_hits"]) >= 6:
                         reward(s, "exploit:loop", 200)
                         result["sound"] = "loop"
                         win(s, "loop", now)
@@ -373,6 +385,9 @@ def _act(s, action, args=(), *, now=None, cwd=None, code=0, command="", content=
                     message += " Der Eispanzer wehrt Wiederholungen ab. Wechsle den Angriff!"
                 s["last_attack"] = attack_name
                 damage = min(damage, s["boss_hp"])
+                if lock and damage == s["boss_hp"]:
+                    damage = max(0, damage-1)
+                    message += " Letzter LP geschützt! " + lock
                 s["boss_hp"] -= damage
                 if 0 < s["boss_hp"] <= 120 < s["boss_hp"] + damage:
                     s["shield"] = s["frozen"] = 0

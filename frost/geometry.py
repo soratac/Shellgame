@@ -48,10 +48,11 @@ def beast_segment(base, tip, lower, upper, color):
     return mesh
 
 
-def overlay(canvas, layer, left, top, flash=None):
+def overlay(canvas, layer, left, top, flash=None, preserve=()):
     for y,row in enumerate(layer.cells):
         for x,(char,color) in enumerate(row):
-            if char != " ": canvas.put(left+x,top+y,char,flash or color)
+            if char != " ":
+                canvas.put(left+x,top+y,char,color if flash is None or color in preserve else flash)
 
 
 def projector(w,h,angle,extent):

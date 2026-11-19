@@ -31,7 +31,7 @@ class GameTests(unittest.TestCase):
         self.assertEqual(self.s["status"],"lost")
         self.assertGreater(self.s["boss_hp"],0)
 
-    def test_shield_and_cocoa_can_win_without_advanced_commands(self):
+    def test_shield_and_cocoa_cannot_finish_through_boss_lock(self):
         self.solved("wunschzettel","waldzeichen","geschenkband")
         self.visit("wald")
         self.action("bag",["funke","frost","schild","kakao"])
@@ -42,9 +42,8 @@ class GameTests(unittest.TestCase):
                 self.action("attack",now=120+i*3)
             else:
                 self.action("use",[move],now=120+i*3)
-        self.assertEqual(self.s["status"],"won")
-        self.assertGreater(self.s["hp"],0)
-        self.assertLess(self.s["hp"],50)
+        self.assertNotEqual(self.s["status"],"won")
+        self.assertEqual(self.s["boss_hp"],1)
 
     def test_switching_attacks_breaks_guard_but_healing_does_not(self):
         self.solved("wunschzettel")
@@ -74,6 +73,8 @@ class GameTests(unittest.TestCase):
         self.solved("wunschzettel")
         self.action("collect",["funke.spell"])
         self.visit("zitadelle")
+        self.action("unload",["frost_armor"])
+        self.action("disable",["eissturm"])
         for i in range(6): result=self.action("cast",["funke"],now=111+i*.1)
         self.assertEqual(self.s["method"],"loop")
         self.assertTrue(result["stop"])
@@ -107,9 +108,21 @@ class GameTests(unittest.TestCase):
 
     def test_unshielded_charge_lands_on_a_finishing_blow(self):
         self.visit("zitadelle")
-        self.s.update(charging=True,eclipse_casts=2,boss_hp=1,hp=80)
+        self.s.update(charging=True,eclipse_casts=2,boss_hp=1,hp=80,armor=False,storm_service=False)
         self.action("attack")
         self.assertEqual((self.s["boss_hp"],self.s["hp"],self.s["status"]),(0,0,"lost"))
+
+    def test_either_seal_blocks_lethal_attacks_and_rapid_casts(self):
+        for armor, service in ((True,True),(True,False),(False,True)):
+            with self.subTest(armor=armor,service=service):
+                self.s=fresh("Elf")
+                self.visit("zitadelle")
+                self.s.update(armor=armor,storm_service=service,boss_hp=1,eclipse_casts=2,
+                              spells={"funke":-1},frozen=10)
+                for i in range(7):
+                    self.action("cast",["funke"],now=120+i*.1)
+                self.assertEqual((self.s["status"],self.s["boss_hp"]),("playing",1))
+                self.assertNotIn("victory",self.s["rewards"])
 
     def test_driver_route(self):
         for area in ("dorf","wald","werkstatt"): self.visit(area)
@@ -118,6 +131,7 @@ class GameTests(unittest.TestCase):
         self.visit("zitadelle")
         self.action("unload",["frost_armor"])
         self.action("unload",["blizzard"])
+        self.action("disable",["eissturm"])
         for _ in range(14):
             if self.s["charging"]: self.action("use",["schild"])
             else: self.action("attack")
@@ -130,11 +144,17 @@ class GameTests(unittest.TestCase):
             self.visit(area)
             self.action("collect",[file])
         self.visit("zitadelle")
-        for i,spell in enumerate(["funke","frost","schild","stern","funke","frost","schild","stern","funke"]):
+        self.action("unload",["blizzard"])
+        self.action("unload",["frost_armor"])
+        self.action("disable",["eissturm"])
+        spells=iter(["funke","frost","stern","funke","frost","stern"])
+        for i in range(8):
+            spell="schild" if self.s["charging"] else next(spells)
             self.action("cast",[spell],now=120+i*4)
+            if self.s["status"]!="playing": break
         self.assertEqual(self.s["status"],"won")
         self.assertGreater(self.s["hp"],0)
-        self.assertEqual(self.s["method"],"spell")
+        self.assertEqual(self.s["method"],"driver")
 
     def test_no_farming(self):
         self.solved("waldzeichen")

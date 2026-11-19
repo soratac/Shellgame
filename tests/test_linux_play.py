@@ -19,6 +19,37 @@ class LinuxPlayTests(unittest.TestCase):
         self.assertEqual(s["spells"]["frost"],2)
         self.assertEqual(s["rewards"].count("spell:frost"),1)
 
+    def test_all_copied_and_moved_items_sync_from_old_and_current_worlds(self):
+        import shutil
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import patch
+        from frost.client import sync_files
+        from frost.items import ITEMS, SPELL_QUEST, script
+
+        for transfer in (shutil.copy2,shutil.move):
+            for legacy in (False,True):
+                with self.subTest(transfer=transfer.__name__,legacy=legacy), tempfile.TemporaryDirectory() as folder:
+                    home=Path(folder)
+                    state=fresh("Elf")
+                    state["rewards"].extend("quest:"+q for q in SPELL_QUEST.values())
+                    bag=home/"rucksack"
+                    bag.mkdir()
+                    for name,(relative,_) in ITEMS.items():
+                        source=home/"welt"/relative
+                        source.parent.mkdir(exist_ok=True,parents=True)
+                        source.write_text(script(name,legacy=legacy))
+                        transfer(source,bag/name)
+
+                    def local_request(action="status",args=(),**kwargs):
+                        return {**act(state,action,args,**kwargs),"state":state}
+
+                    with patch("pathlib.Path.home",return_value=home), patch("frost.client.request",local_request):
+                        sync_files()
+                    self.assertEqual(set(state["bag"]),set(ITEMS))
+                    state["hp"]=25
+                    self.assertEqual(act(state,"use",["kakao"])["healed"],35)
+
     def test_carried_healing_works_at_boss_once(self):
         s=fresh("Elf")
         act(s,"bag",["kakao"])

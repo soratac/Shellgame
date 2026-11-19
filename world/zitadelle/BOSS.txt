@@ -1,5 +1,9 @@
 GRINCH
 
+Sein letzter LP bleibt geschützt, bis beide Siegel fallen.
+modprobe -r frost_armor
+systemctl disable eissturm.service
+
 Polarnacht lädt eine Runde. Jetzt ~/rucksack/schild einsetzen!
 Der Schild fängt beide Schläge ab. Ohne Schutz drohen 2 × 46 LP.
 

@@ -12,7 +12,7 @@ class ProgressionTests(unittest.TestCase):
         if "werkstatt" in places: s["rewards"].append("quest:geschenkband")
         act(s,'bag',['funke','kakao','frost','schild'])
         act(s,'observe',cwd='zitadelle'); act(s,'enter_boss')
-        act(s,'unload',['blizzard']); act(s,'unload',['frost_armor'])
+        act(s,'unload',['blizzard']); act(s,'unload',['frost_armor']); act(s,'disable',['eissturm'])
         for i in range(14):
             move='schild' if s['charging'] and 'schild' in s['bag'] else 'funke'
             act(s,'cast',[move],now=10+i*3)
@@ -75,6 +75,7 @@ class ProgressionTests(unittest.TestCase):
         s["rewards"].append("quest:wunschzettel")
         act(s,'observe',cwd='dorf'); act(s,'bag',['funke'])
         act(s,'observe',cwd='zitadelle'); act(s,'enter_boss')
+        act(s,'unload',['frost_armor']); act(s,'disable',['eissturm'])
         for i in range(6): act(s,'use',['funke'],now=10+i*.1)
         self.assertEqual(s['method'],'loop')
         self.assertEqual(route_count(s),1)

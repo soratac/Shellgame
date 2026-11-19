@@ -62,12 +62,23 @@ class RenderTests(unittest.TestCase):
                 self.assertTrue(any(ch in "░▒▓" and ink==25 for row in frame.cells for ch,ink in row))
                 eyes=[ch for row in frame.cells for ch,ink in row if ink==22]
                 self.assertGreaterEqual(len(eyes),2)
-                self.assertTrue(all(ch in ("◕","▪") for ch in eyes))
-                closed=hero_frame(w,h,4.2,avatar)
-                self.assertNotEqual(eyes,[ch for row in closed.cells for ch,ink in row if ink==22])
+                self.assertEqual(set(eyes),{"•"})
+                if h<=8:
+                    def eye_cells(frame):
+                        return {(x,y) for y,row in enumerate(frame.cells) for x,(_,ink) in enumerate(row) if ink==22}
+                    for t in (0,.25,.75,2,4.2):
+                        self.assertEqual(eye_cells(frame),eye_cells(hero_frame(w,h,t,avatar,walking=True)))
             frames.append(frame.cells)
         self.assertNotEqual(frames[0],frames[1])
         self.assertNotEqual(frames[1],frames[2])
+
+    def test_map_labels_leave_both_eyes_visible_while_walking(self):
+        from frost.render import world_frame, POSITIONS
+        state=fresh("Elf")
+        for w,h in ((35,7),(53,12),(80,18)):
+            for position in POSITIONS.values():
+                frame=world_frame(w,h,state,position,1,walking=True)
+                self.assertEqual(sum(ink==22 for row in frame.cells for _,ink in row),2)
 
     def test_combat_shows_current_values_during_damage(self):
         import time

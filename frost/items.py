@@ -16,6 +16,7 @@ def bag_count(item,state):
     charges=state.get("spells",{}).get(item)
     if item in ("funke","ping") or charges==-1: return "∞"
     if charges is not None: return f"×{charges}"
+    if "heal:"+item in state.get("rewards", []): return "×0"
     return "×1" if item in ITEMS else ""
 
 
@@ -32,9 +33,6 @@ def unlocked(state, item):
             or item in state["spells"] or (item=="ping" and item in state.get("bag", [])))
 
 
-MOVE_ITEMS = {"schild", "stern"}
-
-
 def pickup(item):
     return "mv"
 
@@ -42,3 +40,10 @@ def pickup(item):
 def script(item, legacy=False):
     verb = 'cp' if legacy else pickup(item)
     return f'#!/bin/sh\n# {ITEMS[item][1]}\n# Mitnehmen: {verb} {item} ~/rucksack/\n# Benutzen: ~/rucksack/{item}\nexec /usr/local/bin/frost use {item}\n'
+
+def is_item_script(item, content):
+    # Released wrappers differ in their instructions. Match the executable part.
+    lines = content.splitlines()
+    return (len(content) <= 2048 and lines[:1] == ["#!/bin/sh"]
+            and [line for line in lines[1:] if line and not line.startswith("#")] ==
+                [f"exec /usr/local/bin/frost use {item}"])
