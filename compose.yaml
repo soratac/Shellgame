@@ -2222,6 +2222,7 @@
         "spawner-home:/home/player",
         "./secrets/spawner/shadow:/run/bootstrap/shadow:ro",
         "./secrets/spawner/authorized_keys:/run/bootstrap/authorized_keys:ro",
+        "/proc/meminfo:/run/frost-host-meminfo:ro",
         "/var/run/docker.sock:/var/run/docker.sock",
         "controller-socket:/run/controller",
         "./secrets/spawner/spawn-config.json:/run/bootstrap/spawn-config.json:ro"
@@ -2245,6 +2246,9 @@
         "interval": "10s",
         "timeout": "4s",
         "retries": 3
+      },
+      "environment": {
+        "JOIN_RAM_POLICY": "${JOIN_RAM_POLICY:-reserved}"
       }
     },
     "gateway": {

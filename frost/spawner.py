@@ -1,4 +1,5 @@
 """Create fixed, resource-limited player containers. Only root gateway RPC is accepted."""
+from concurrent.futures import ThreadPoolExecutor
 import base64
 import io
 import ipaddress
@@ -101,9 +102,28 @@ class Manager:
 
     def admit(self):
         containers=self.docker.call('GET','/containers/json')
-        active=sum(1 for row in containers if row['Labels'].get(LABEL) or
-                   (row['Image']==self.config['image'] and row['Labels'].get('com.docker.compose.service','').startswith('player')))
-        check_capacity("/run/controller",active)
+        players = [row['Id'] for row in containers if row['Labels'].get(LABEL) or
+                   (row['Image']==self.config['image'] and row['Labels'].get('com.docker.compose.service','').startswith('player'))]
+
+        def resident(ident):
+            try:
+                snapshot = self.docker.call('GET',f'/containers/{ident}/stats?stream=false&one-shot=true')
+            except (DockerError,OSError):
+                # A stopping container or missing metrics receives no credit.
+                return 0
+            stats = snapshot.get('memory_stats',{}).get('stats',{})
+            used = stats.get('anon', stats.get('total_rss', stats.get('rss',0)))
+            return min(PLAYER_MEMORY,max(0,used)) if isinstance(used,int) else 0
+
+        def resident_bytes():
+            with ThreadPoolExecutor(max_workers=4) as pool:
+                return sum(pool.map(resident,players))
+
+        try:
+            check_capacity("/run/controller",len(players),resident_bytes,os.environ.get("JOIN_RAM_POLICY","reserved"))
+        except ValueError as exc:
+            print(f"Beitritt abgelehnt: {exc}",flush=True)
+            raise
 
     def new_join(self):
         if not self.join_queue.acquire(blocking=False):

@@ -169,7 +169,8 @@ def main(argv=None):
         controller.pop("ports",None)
         controller.pop("networks",None); controller["network_mode"]="none"
         controller.update(cpus="1.0",mem_limit="512m",memswap_limit="512m",pids_limit=128)
-        controller["volumes"] += ["/var/run/docker.sock:/var/run/docker.sock", "controller-socket:/run/controller",
+        controller["environment"]={"JOIN_RAM_POLICY":"${JOIN_RAM_POLICY:-reserved}"}
+        controller["volumes"] += ["/proc/meminfo:/run/frost-host-meminfo:ro","/var/run/docker.sock:/var/run/docker.sock", "controller-socket:/run/controller",
                                   "./secrets/spawner/spawn-config.json:/run/bootstrap/spawn-config.json:ro"]
         controller["healthcheck"]={"test":["CMD","python3","-I","-c","from frost.dynamic import Client; assert Client().call('ping')"],"interval":"10s","timeout":"4s","retries":3}
         write_private(secret_dir/"spawner"/"spawn-config.json",json.dumps({"project":"shell-game","image":"frostbyte:local","network_pool":env["PLAYER_NETWORK_POOL"]}))
